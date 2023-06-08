@@ -43,12 +43,9 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 	<-quit
-	// global.Sugar.Info("开始关闭服务...")
 	//(设置5秒超时时间)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	if err := s.Shutdown(ctx); err != nil {
-		// global.Sugar.Fatal("服务器关闭失败:", err)
 	}
-	// global.Sugar.Info("服务已关闭")
 }

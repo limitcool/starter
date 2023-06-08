@@ -2,9 +2,8 @@ package code
 
 var MsgFlags = map[int]string{
 	Success:                 "Ok",
-	Unknown:                 "服务器开小差啦，稍后再来试一试",
 	InvalidParams:           "请求参数错误",
-	ErrorUnknown:            "未知错误",
+	ErrorUnknown:            "服务器开小差啦，稍后再来试一试",
 	ErrorNotExistCert:       "不存在的认证类型",
 	UserNoLogin:             "用户未登录",
 	UserNotFound:            "用户不存在",
@@ -27,5 +26,5 @@ func GetMsg(code int) string {
 	if ok {
 		return msg
 	}
-	return MsgFlags[Unknown]
+	return MsgFlags[ErrorUnknown]
 }
