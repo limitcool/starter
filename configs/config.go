@@ -4,10 +4,22 @@ import (
 	"time"
 )
 
+type DBDriver string
+
+const (
+	DriverMysql    DBDriver = "mysql"
+	DriverSqlite   DBDriver = "sqlite3"
+	DriverPostgres DBDriver = "postgres"
+	DriverMssql    DBDriver = "mssql"
+	DriverOracle   DBDriver = "oracle"
+	DriverMongo    DBDriver = "mongo"
+)
+
 type Config struct {
-	App     App
-	Mysql   Mysql
-	JwtAuth JwtAuth
+	App      App
+	Driver   DBDriver
+	Database Database
+	JwtAuth  JwtAuth
 }
 
 // Config app config
@@ -16,7 +28,7 @@ type App struct {
 }
 
 // Config mysql config
-type Mysql struct {
+type Database struct {
 	UserName        string
 	Password        string
 	DBName          string

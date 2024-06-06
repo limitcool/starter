@@ -3,28 +3,36 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
+	"github.com/charmbracelet/log"
+	"github.com/limitcool/lib"
 	"github.com/limitcool/starter/global"
-	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/database"
 	"github.com/limitcool/starter/routers"
 
 	"github.com/spf13/viper"
 )
 
 func main() {
+	lib.SetDebugMode(func() {
+		log.Info("Debug Mode")
+		log.SetLevel(log.DebugLevel)
+		log.SetReportCaller(true)
+	})
 
+	log.SetPrefix("🌏 starter ")
 	viper.SetConfigFile("./configs/config.yaml")
 	viper.ReadInConfig()
 	err := viper.Unmarshal(&global.Config)
 	if err != nil {
 		log.Fatal("viper unmarshal err = ", err)
 	}
-	model.NewMySQL(global.Config)
+	database.NewDB(*global.Config)
 
 	router := routers.NewRouter()
 	s := &http.Server{

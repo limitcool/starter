@@ -71,7 +71,6 @@ func AutoResponse(ctx *gin.Context, data interface{}, err error) {
 			errcode = e.GetErrCode()
 			errmsg = e.GetErrMsg()
 		} else {
-			// logx.Debug("未定义的错误:", err)
 			if gstatus, ok := status.FromError(causeErr); ok { // grpc err错误
 				grpcCode := uint32(gstatus.Code())
 				if IsCodeErr(cast.ToInt(grpcCode)) { //区分自定义错误跟系统底层、db等错误，底层、db错误不能返回给前端

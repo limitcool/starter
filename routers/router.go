@@ -9,8 +9,8 @@ import (
 // Load loads the middlewares, routes, handlers.
 func NewRouter() *gin.Engine {
 	gin.SetMode(gin.DebugMode)
-	g := gin.Default()
-	g.Use(middleware.Cors())
+	g := gin.New()
+	g.Use(gin.Recovery(), middleware.LoggerWithCharmbracelet(), middleware.Cors())
 	// v1 router
 	apiV1 := g.Group("/api/v1")
 	// apiV1.Use()
