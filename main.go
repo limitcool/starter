@@ -32,15 +32,15 @@ func main() {
 	if err != nil {
 		log.Fatal("viper unmarshal err = ", err)
 	}
-	database.NewDB(*global.Config)
-
+	db := database.NewDB(*global.Config)
+	db.AutoMigrate()
 	router := routers.NewRouter()
 	s := &http.Server{
 		Addr:           fmt.Sprint("0.0.0.0:", global.Config.App.Port),
 		Handler:        router,
 		MaxHeaderBytes: 1 << 20,
 	}
-	fmt.Printf("Listen: %s:%d\n", "http://127.0.0.1", global.Config.App.Port)
+	log.Infof("Listen: %s:%d\n", "http://127.0.0.1", global.Config.App.Port)
 	go func() {
 		// 服务连接 监听
 		if err := s.ListenAndServe(); err != nil {
@@ -55,5 +55,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	if err := s.Shutdown(ctx); err != nil {
+		// 处理错误，例如记录日志、返回错误等
+		log.Infof("Error during shutdown: %v", err)
 	}
 }

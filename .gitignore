@@ -2,3 +2,5 @@ configs/config.yaml
 README.md
 /gen
 *.db
+*.jpg
+*.png
