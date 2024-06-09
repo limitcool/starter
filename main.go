@@ -26,7 +26,7 @@ func main() {
 	})
 
 	log.SetPrefix("🌏 starter ")
-	viper.SetConfigFile("./configs/config.yaml")
+	viper.SetConfigFile("./config.yaml")
 	viper.ReadInConfig()
 	err := viper.Unmarshal(&global.Config)
 	if err != nil {

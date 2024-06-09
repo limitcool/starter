@@ -1,4 +1,5 @@
 configs/config.yaml
+*.yaml
 README.md
 /gen
 *.db
