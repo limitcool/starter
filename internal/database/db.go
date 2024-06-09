@@ -6,13 +6,13 @@ import (
 	"os"
 
 	"github.com/glebarez/sqlite"
+	"github.com/limitcool/starter/configs"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 
 	"github.com/charmbracelet/log"
 
-	"github.com/limitcool/starter/configs"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -108,7 +108,8 @@ func newDbConn(c configs.Config) *gorm.DB {
 	case configs.DriverPostgres:
 		sqlDB, err = sql.Open("postgres", dsn)
 	case configs.DriverSqlite:
-		sqlDB, err = sql.Open("sqlite3", dsn) // 注意：SQLite 的驱动名称是 "sqlite3"
+		// sqlDB, err = sql.Open("sqlite3", dsn) // 注意：SQLite 的驱动名称是 "sqlite3"
+
 	default:
 		log.Fatalf("Unsupported database driver: %s", c.Driver)
 	}
