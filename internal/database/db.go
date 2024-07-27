@@ -17,6 +17,8 @@ import (
 	"gorm.io/gorm"
 )
 
+
+
 var DB *gorm.DB
 
 func getDSN(c *configs.Config) string {

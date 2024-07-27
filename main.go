@@ -11,8 +11,10 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/lib"
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/database"
+	"github.com/limitcool/starter/internal/database/mongodb"
 	"github.com/limitcool/starter/routers"
 
 	"github.com/spf13/viper"
@@ -32,8 +34,20 @@ func main() {
 	if err != nil {
 		log.Fatal("viper unmarshal err = ", err)
 	}
-	db := database.NewDB(*global.Config)
-	db.AutoMigrate()
+	switch global.Config.Driver {
+	case "":
+		log.Fatal("driver is empty")
+	case configs.DriverMongo:
+		log.Info("driver is mongo")
+		_, err := mongodb.NewMongoDBConn(context.Background(), &global.Config.Mongo)
+		if err != nil {
+			log.Fatal("mongo connect err = ", err)
+		}
+	default:
+		log.Info("driver is ", global.Config.Driver)
+		db := database.NewDB(*global.Config)
+		db.AutoMigrate()
+	}
 	router := routers.NewRouter()
 	s := &http.Server{
 		Addr:           fmt.Sprint("0.0.0.0:", global.Config.App.Port),

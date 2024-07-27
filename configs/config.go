@@ -20,11 +20,13 @@ type Config struct {
 	Driver   DBDriver
 	Database Database
 	JwtAuth  JwtAuth
+	Mongo    Mongo
 }
 
 // Config app config
 type App struct {
 	Port int
+	Name string
 }
 
 // Config mysql config
@@ -49,4 +51,12 @@ type Database struct {
 type JwtAuth struct {
 	AccessSecret string
 	AccessExpire int64
+}
+
+// Config MongoDB config
+type Mongo struct {
+	URI      string
+	User     string
+	Password string
+	DB       string
 }
