@@ -11,6 +11,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/lib"
+	"github.com/limitcool/starter/common/redis"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/database"
@@ -36,7 +37,7 @@ func main() {
 	}
 	switch global.Config.Driver {
 	case "":
-		log.Fatal("driver is empty")
+		// log.Fatal("driver is empty")
 	case configs.DriverMongo:
 		log.Info("driver is mongo")
 		_, err := mongodb.NewMongoDBConn(context.Background(), &global.Config.Mongo)
@@ -47,6 +48,10 @@ func main() {
 		log.Info("driver is ", global.Config.Driver)
 		db := database.NewDB(*global.Config)
 		db.AutoMigrate()
+	}
+	_, _, err = redis.NewRedisClient(global.Config)
+	if err != nil {
+		log.Fatal("redis connect err = ", err)
 	}
 	router := routers.NewRouter()
 	s := &http.Server{

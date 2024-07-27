@@ -21,6 +21,7 @@ type Config struct {
 	Database Database
 	JwtAuth  JwtAuth
 	Mongo    Mongo
+	Redis    map[string]Redis
 }
 
 // Config app config
@@ -59,4 +60,18 @@ type Mongo struct {
 	User     string
 	Password string
 	DB       string
+}
+
+// Redis配置结构
+type Redis struct {
+	Addr         string
+	Password     string
+	DB           int
+	MinIdleConn  int
+	DialTimeout  time.Duration
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
+	PoolSize     int
+	PoolTimeout  time.Duration
+	EnableTrace  bool
 }
