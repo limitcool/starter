@@ -11,7 +11,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/lib"
-	"github.com/limitcool/starter/common/redis"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/database"
@@ -36,23 +35,23 @@ func main() {
 		log.Fatal("viper unmarshal err = ", err)
 	}
 	switch global.Config.Driver {
-	case "":
-		// log.Fatal("driver is empty")
 	case configs.DriverMongo:
 		log.Info("driver is mongo")
 		_, err := mongodb.NewMongoDBConn(context.Background(), &global.Config.Mongo)
 		if err != nil {
 			log.Fatal("mongo connect err = ", err)
 		}
-	default:
+	case configs.DriverMysql, configs.DriverPostgres, configs.DriverSqlite, configs.DriverMssql, configs.DriverOracle:
 		log.Info("driver is ", global.Config.Driver)
 		db := database.NewDB(*global.Config)
 		db.AutoMigrate()
+	default:
+		log.Info("driver is none")
 	}
-	_, _, err = redis.NewRedisClient(global.Config)
-	if err != nil {
-		log.Fatal("redis connect err = ", err)
-	}
+	// _, _, err = redis.NewRedisClient(global.Config)
+	// if err != nil {
+	// 	log.Fatal("redis connect err = ", err)
+	// }
 	router := routers.NewRouter()
 	s := &http.Server{
 		Addr:           fmt.Sprint("0.0.0.0:", global.Config.App.Port),
