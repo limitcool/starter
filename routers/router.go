@@ -2,7 +2,7 @@ package routers
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/internal/handlers"
+	"github.com/limitcool/starter/internal/controller"
 	"github.com/limitcool/starter/internal/middleware"
 )
 
@@ -19,7 +19,7 @@ func NewRouter() *gin.Engine {
 	// }
 	auth := apiV1.Use(middleware.AuthMiddleware())
 	{
-		auth.GET("/ping", handlers.Ping)
+		auth.GET("/ping", controller.Ping)
 	}
 	return g
 }
