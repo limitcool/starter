@@ -1,0 +1,30 @@
+APP:
+  Name:
+  Port: 8080
+JwtAuth:
+  AccessSecret: uOvKLmVfztaXGpNYd4Z0I1SiT7MweJhl
+  AccessExpire: 2592000
+Driver: mysql
+Database:
+  UserName: root
+  Password:
+  DBName:
+  Host:
+  Port: 3306
+  TablePrefix:
+  Charset: utf8mb4
+  ParseTime: true
+  Loc: Asia%2FShanghai
+
+Redis:
+  "default":
+    Addr:
+    Password:
+    DB: 0
+    MinIdleConn: 200
+    DialTimeout: 60s
+    ReadTimeout: 5000ms
+    WriteTimeout: 5000ms
+    PoolSize: 100
+    PoolTimeout: 240s
+    EnableTrace: true
