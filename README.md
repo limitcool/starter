@@ -18,13 +18,3 @@
 go install github.com/go-eagle/eagle/cmd/eagle@latest
 eagle new <project name> -r https://github.com/limitcool/starter -b main
 ```
-
-## PostgreSQL 配置
-
-要使用 PostgreSQL，需要在项目中导入 pgx 驱动：
-
-```go
-import (
-    _ "github.com/jackc/pgx/v6/stdlib" // PostgreSQL driver
-)
-```

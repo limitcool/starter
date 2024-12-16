@@ -105,7 +105,7 @@ func newDbConn(c configs.Config) *gorm.DB {
 	case configs.DriverMysql:
 		sqlDB, err = sql.Open("mysql", dsn)
 	case configs.DriverPostgres:
-		sqlDB, err = sql.Open("postgres", dsn)
+		sqlDB, err = sql.Open("pgx", dsn)
 	case configs.DriverSqlite:
 		// sqlDB, err = sql.Open("sqlite3", dsn) // 注意：SQLite 的驱动名称是 "sqlite3"
 
