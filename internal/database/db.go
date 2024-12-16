@@ -12,12 +12,9 @@ import (
 	"gorm.io/gorm/schema"
 
 	"github.com/charmbracelet/log"
-
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
-
-
 
 var DB *gorm.DB
 
