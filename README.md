@@ -67,15 +67,15 @@ cp configs/config.example.yaml configs/config-prod.yaml
 ### 配置示例
 
 ```yaml
-log:
-  level: info                 # 日志级别: debug, info, warn, error
-  output: [console, file]     # 输出方式: console, file
-  file:
-    path: ./logs/app.log      # 日志文件路径
-    maxSize: 100              # 每个日志文件的最大大小（MB）
-    maxAge: 7                 # 日志文件保留天数
-    maxBackups: 10            # 保留的旧日志文件最大数量
-    compress: true            # 是否压缩旧日志文件
+Log:
+  Level: info                 # 日志级别: debug, info, warn, error
+  Output: [console, file]     # 输出方式: console, file
+  FileConfig:
+    Path: ./logs/app.log      # 日志文件路径
+    MaxSize: 100              # 每个日志文件的最大大小（MB）
+    MaxAge: 7                 # 日志文件保留天数
+    MaxBackups: 10            # 保留的旧日志文件最大数量
+    Compress: true            # 是否压缩旧日志文件
 ```
 
 ### 日志级别
@@ -87,15 +87,15 @@ log:
 
 ### 输出方式
 
-- `console`: 输出到控制台，支持彩色输出
-- `file`: 输出到文件，支持按大小自动分割、自动清理和压缩
+- `Console`: 输出到控制台，支持彩色输出
+- `File`: 输出到文件，支持按大小自动分割、自动清理和压缩
 
 可以同时配置多个输出方式，日志会同时输出到所有配置的目标。如果不配置 output，默认只输出到控制台。
 
 ### 文件输出配置
 
-- `path`: 日志文件路径
-- `maxSize`: 单个日志文件的最大大小（MB），超过后会自动分割
-- `maxAge`: 日志文件保留天数，超过后会自动删除
-- `maxBackups`: 保留的旧日志文件数量
-- `compress`: 是否压缩旧的日志文件
+- `Path`: 日志文件路径
+- `MaxSize`: 单个日志文件的最大大小（MB），超过后会自动分割
+- `MaxAge`: 日志文件保留天数，超过后会自动删除
+- `MaxBackups`: 保留的旧日志文件数量
+- `Compress`: 是否压缩旧的日志文件

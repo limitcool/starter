@@ -79,16 +79,16 @@ type Redis struct {
 
 // LogConfig 日志配置
 type LogConfig struct {
-	Level      string   `yaml:"level"`       // 日志级别: debug, info, warn, error
-	Output     []string `yaml:"output"`      // 输出方式: console, file
-	FileConfig FileLogConfig `yaml:"file"`   // 文件输出配置
+	Level      string        // 日志级别: debug, info, warn, error
+	Output     []string      // 输出方式: console, file
+	FileConfig FileLogConfig // 文件输出配置
 }
 
 // FileLogConfig 文件日志配置
 type FileLogConfig struct {
-	Path        string `yaml:"path"`         // 日志文件路径
-	MaxSize     int    `yaml:"maxSize"`      // 每个日志文件的最大大小（MB）
-	MaxAge      int    `yaml:"maxAge"`       // 日志文件保留天数
-	MaxBackups  int    `yaml:"maxBackups"`   // 保留的旧日志文件最大数量
-	Compress    bool   `yaml:"compress"`     // 是否压缩旧日志文件
+	Path       string // 日志文件路径
+	MaxSize    int    // 每个日志文件的最大大小（MB）
+	MaxAge     int    // 日志文件保留天数
+	MaxBackups int    // 保留的旧日志文件最大数量
+	Compress   bool   // 是否压缩旧日志文件
 }
