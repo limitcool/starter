@@ -8,3 +8,7 @@ README.md
 configs/config-*.yaml
 # 但不忽略示例配置
 !configs/config.example.yaml
+# 日志文件
+/logs/
+*.log
+*.log.*

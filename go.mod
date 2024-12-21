@@ -21,6 +21,7 @@ require (
 	go.opentelemetry.io/otel v1.27.0
 	go.opentelemetry.io/otel/trace v1.27.0
 	google.golang.org/grpc v1.55.0
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gorm.io/driver/mysql v1.5.1
 	gorm.io/driver/postgres v1.4.5
 	gorm.io/gorm v1.25.7

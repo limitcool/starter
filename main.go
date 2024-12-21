@@ -19,11 +19,12 @@ import (
 
 	"github.com/limitcool/starter/pkg/env"
 	"github.com/spf13/viper"
+	"github.com/limitcool/starter/pkg/logger"
 )
 
 func loadConfig() {
 	env := env.Get()
-	log.Info("当前环境:", env)
+	log.Info("current env:", env)
 
 	// 设置默认配置文件
 	viper.SetConfigName("config")
@@ -32,18 +33,18 @@ func loadConfig() {
 
 	// 读取默认配置
 	if err := viper.ReadInConfig(); err != nil {
-		log.Fatal("读取默认配置失败:", err)
+		log.Fatal("read default config err = ", err)
 	}
 
 	// 读取环境配置
 	viper.SetConfigName(fmt.Sprintf("config-%s", env))
 	if err := viper.MergeInConfig(); err != nil {
-		log.Warn("未找到环境配置文件，使用默认配置")
+		log.Warn("config not found, use default config")
 	}
 
 	// 解析配置到结构体
 	if err := viper.Unmarshal(&global.Config); err != nil {
-		log.Fatal("配置解析失败:", err)
+		log.Fatal("config unmarshal err = ", err)
 	}
 }
 
@@ -58,6 +59,9 @@ func main() {
 
 	// 加载配置
 	loadConfig()
+
+	// 初始化日志
+	logger.Setup(global.Config.Log)
 
 	switch global.Config.Driver {
 	case configs.DriverMongo:

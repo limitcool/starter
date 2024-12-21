@@ -1,29 +1,15 @@
 package middleware
 
 import (
-	"os"
 	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/lib"
 )
 
 // LoggerWithCharmbracelet creates a custom Gin middleware that uses charmbracelet/log for logging.
 func LoggerWithCharmbracelet() gin.HandlerFunc {
-	var logger *log.Logger
-	lib.SetDebugMode(func() {
-		log.Info("Gin Debug Mode")
-		logger = log.NewWithOptions(os.Stdout,
-			log.Options{
-				Level:           log.DebugLevel,
-				Prefix:          "🚀 Gin",
-				ReportTimestamp: true,
-				ReportCaller:    true,
-			},
-		)
-	})
-	logger = log.New(os.Stdout)
+	logger := log.Default()
 
 	return func(c *gin.Context) {
 		startTime := time.Now()
