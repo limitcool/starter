@@ -17,8 +17,35 @@ import (
 	"github.com/limitcool/starter/internal/database/mongodb"
 	"github.com/limitcool/starter/routers"
 
+	"github.com/limitcool/starter/pkg/env"
 	"github.com/spf13/viper"
 )
+
+func loadConfig() {
+	env := env.Get()
+	log.Info("当前环境:", env)
+
+	// 设置默认配置文件
+	viper.SetConfigName("config")
+	viper.AddConfigPath("./configs")
+	viper.SetConfigType("yaml")
+
+	// 读取默认配置
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatal("读取默认配置失败:", err)
+	}
+
+	// 读取环境配置
+	viper.SetConfigName(fmt.Sprintf("config-%s", env))
+	if err := viper.MergeInConfig(); err != nil {
+		log.Warn("未找到环境配置文件，使用默认配置")
+	}
+
+	// 解析配置到结构体
+	if err := viper.Unmarshal(&global.Config); err != nil {
+		log.Fatal("配置解析失败:", err)
+	}
+}
 
 func main() {
 	lib.SetDebugMode(func() {
@@ -28,12 +55,10 @@ func main() {
 	})
 
 	log.SetPrefix("🌏 starter ")
-	viper.SetConfigFile("./config.yaml")
-	viper.ReadInConfig()
-	err := viper.Unmarshal(&global.Config)
-	if err != nil {
-		log.Fatal("viper unmarshal err = ", err)
-	}
+
+	// 加载配置
+	loadConfig()
+
 	switch global.Config.Driver {
 	case configs.DriverMongo:
 		log.Info("driver is mongo")

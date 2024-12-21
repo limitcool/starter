@@ -1,0 +1,18 @@
+APP:
+  Port: 8058
+Database:
+  Username: root # 填写你的数据库账号
+  Password: password # 填写你的数据库密码
+  Host: 127.0.0.1 # 填写你的数据库地址
+  Port: 3306
+  DBName: starter
+  TablePrefix:
+  Charset: utf8mb4
+  ParseTime: True
+  Loc: "Local"
+  LogMode: info
+  MaxIdleConns: 10
+  MaxOpenConns: 300
+JwtAuth:
+  AccessSecret: uOvKLmVfztaXGpNYd4Z0I1SiT7MweJhl
+  AccessExpire: 2592000

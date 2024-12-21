@@ -4,3 +4,7 @@ README.md
 *.db
 *.jpg
 *.png
+# 忽略所有环境配置文件
+configs/config-*.yaml
+# 但不忽略示例配置
+!configs/config.example.yaml
