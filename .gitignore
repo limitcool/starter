@@ -12,3 +12,4 @@ configs/config-*.yaml
 /logs/
 *.log
 *.log.*
+build/*

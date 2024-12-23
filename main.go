@@ -18,8 +18,8 @@ import (
 	"github.com/limitcool/starter/routers"
 
 	"github.com/limitcool/starter/pkg/env"
-	"github.com/spf13/viper"
 	"github.com/limitcool/starter/pkg/logger"
+	"github.com/spf13/viper"
 )
 
 func loadConfig() {
