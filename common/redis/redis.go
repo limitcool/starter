@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
-	
+
 	"github.com/limitcool/starter/global"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
@@ -67,7 +68,7 @@ func (r *RedisManager) GetClient(name string) (*redis.Client, error) {
 	defer r.Unlock()
 
 	redisConfig := global.Config.Redis[name]
-	fmt.Printf("redisConfig: %v\n", redisConfig)
+	log.Debug("Creating Redis client", "config", redisConfig)
 	rdb := redis.NewClient(&redis.Options{
 		Addr:         redisConfig.Addr,
 		Password:     redisConfig.Password,

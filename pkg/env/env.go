@@ -29,7 +29,7 @@ func Get() Environment {
 	case "prod", "production":
 		return Prod
 	default:
-		log.Warnf("未知环境: %s, 使用默认开发环境", env)
+		log.Warn("Unknown environment, using default development environment", "env", env)
 		return Dev
 	}
 }

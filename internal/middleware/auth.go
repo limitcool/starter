@@ -2,10 +2,10 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/common/jwtx"
 	"github.com/limitcool/starter/global"
@@ -32,7 +32,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			})
 			return
 		}
-		fmt.Printf("token: %v\n", token)
+		log.Debug("Authentication token received", "token", token)
 		claims, err := jwtx.ParseToken(token, global.Config.JwtAuth.AccessSecret)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, code.ApiResponse{
@@ -41,7 +41,7 @@ func AuthMiddleware() gin.HandlerFunc {
 				Data:      nil,
 			})
 		}
-		fmt.Printf("claims: %v\n", claims)
+		log.Debug("Token claims parsed", "claims", claims)
 		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), global.Token, claims))
 		// 将token存入请求上下文
 		c.Set("token", token)

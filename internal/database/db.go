@@ -110,10 +110,13 @@ func newDbConn(c configs.Config) *gorm.DB {
 		// sqlDB, err = sql.Open("sqlite3", dsn) // 注意：SQLite 的驱动名称是 "sqlite3"
 
 	default:
-		log.Fatalf("Unsupported database driver: %s", c.Driver)
+		log.Fatal("Unsupported database driver", "driver", c.Driver)
 	}
 	if err != nil {
-		log.Fatalf("open %s failed. database name: %s, err: %+v", c.Driver, c.Database.DBName, err)
+		log.Fatal("Failed to open database connection",
+			"driver", c.Driver,
+			"database", c.Database.DBName,
+			"error", err)
 	}
 	if c.Driver != configs.DriverSqlite {
 		sqlDB.SetMaxOpenConns(c.Database.MaxOpenConn)
@@ -123,12 +126,14 @@ func newDbConn(c configs.Config) *gorm.DB {
 
 	db, err := gorm.Open(getGormDriver(&c), gormConfig(&c))
 	if err != nil {
-		log.Fatalf("database connection failed. database name: %s, err: %+v", c.Database.DBName, err)
+		log.Fatal("Database connection failed",
+			"database", c.Database.DBName,
+			"error", err)
 	}
 	db.Set("gorm:table_options", "CHARSET=utf8mb4")
 	err = db.AutoMigrate()
 	if err != nil {
-		log.Fatal("AutoMigrate err =", err)
+		log.Fatal("AutoMigrate failed", "error", err)
 	}
 	return db
 }
@@ -142,7 +147,7 @@ func getGormDriver(c *configs.Config) gorm.Dialector {
 	case configs.DriverSqlite:
 		return sqlite.Open(getDSN(c))
 	default:
-		log.Fatalf("Unsupported database driver: %s", c.Driver)
+		log.Fatal("Unsupported database driver", "driver", c.Driver)
 		return nil
 	}
 }
