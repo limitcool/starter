@@ -7,12 +7,16 @@
 - 提供 gin 框架项目模版
 - 集成 GORM 进行 ORM 映射和数据库操作
   - 支持 PostgreSQL (使用 pgx 驱动)
+  - 支持 MySQL
+  - 支持 SQLite
 - 集成 Viper 进行配置管理
 - 提供常用 gin 中间件和工具
   - 跨域中间件:处理 API 跨域请求,实现 CORS 支持
   - jwt 解析中间件:从请求中解析并验证 JWT Token,用于 API 身份认证
 - 使用 Cobra 命令行框架，提供清晰的子命令结构
 - 支持数据库迁移与服务器启动分离，提高启动速度
+- 完善的数据库迁移系统，支持版本控制和回滚
+- 内置用户、角色、权限和菜单管理系统
 
 ## 快速开始
 
@@ -66,7 +70,97 @@ eagle new <project name> -r https://github.com/limitcool/starter -b main
 
 # 使用指定配置文件执行迁移
 ./<app-name> migrate --config prod.yaml
+
+# 在迁移前清空数据库（危险操作）
+./<app-name> migrate --fresh
+
+# 回滚上一批数据库迁移
+./<app-name> migrate rollback
+
+# 显示数据库迁移状态
+./<app-name> migrate status
+
+# 重置所有数据库迁移
+./<app-name> migrate reset
 ```
+
+## 数据库迁移系统
+
+本项目实现了一个完整的数据库迁移系统，用于管理数据库表结构的创建、更新和回滚。
+
+### 迁移系统特点
+
+- 支持按版本号顺序执行迁移
+- 跟踪已执行的迁移记录
+- 支持事务性迁移，确保数据一致性
+- 提供向上和向下迁移功能
+- 支持批次回滚和完全重置
+
+### 迁移文件结构
+
+迁移定义在 `internal/migration/migrations.go` 文件中，遵循以下结构：
+
+```go
+migrator.Register(&MigrationEntry{
+    Version: "202504080001",        // 版本号格式：年月日序号
+    Name:    "create_users_table",  // 迁移名称
+    Up: func(tx *gorm.DB) error {   // 向上迁移函数
+        return tx.AutoMigrate(&model.User{})
+    },
+    Down: func(tx *gorm.DB) error { // 向下迁移函数
+        return tx.Migrator().DropTable("sys_user")
+    },
+})
+```
+
+### 预定义迁移
+
+系统已预定义了基础的迁移项：
+
+1. 用户表 (`sys_user`)
+2. 角色相关表 (`sys_role`, `sys_user_role`, `sys_role_menu`)
+3. 权限相关表 (`sys_permission`, `sys_role_permission`)
+4. 菜单表 (`sys_menu`)
+
+### 添加新迁移
+
+要添加新的迁移，在 `internal/migration/migrations.go` 文件中：
+
+1. 创建新的注册函数或在已有函数中添加
+2. 确保版本号遵循时间戳顺序
+3. 在 `RegisterAllMigrations` 函数中注册
+
+```go
+// 示例：添加新的业务表迁移
+func RegisterBusinessMigrations(migrator *Migrator) {
+    migrator.Register(&MigrationEntry{
+        Version: "202504080010",
+        Name:    "create_products_table",
+        Up: func(tx *gorm.DB) error {
+            return tx.AutoMigrate(&model.Product{})
+        },
+        Down: func(tx *gorm.DB) error {
+            return tx.Migrator().DropTable("products")
+        },
+    })
+}
+
+// 在RegisterAllMigrations中添加
+func RegisterAllMigrations(migrator *Migrator) {
+    // 已有迁移...
+    RegisterBusinessMigrations(migrator)
+}
+```
+
+### 迁移记录表
+
+系统通过 `sys_migrations` 表跟踪迁移的执行状态，包含以下字段：
+
+- `id`：自增主键
+- `version`：迁移版本号（唯一索引）
+- `name`：迁移名称
+- `created_at`：执行时间
+- `batch`：批次号（用于回滚）
 
 ## 环境配置
 
@@ -162,7 +256,6 @@ Log:
 - `MaxAge`: 日志文件保留天数，超过后会自动删除
 - `MaxBackups`: 保留的旧日志文件数量
 - `Compress`: 是否压缩旧的日志文件
-```
 
 ## 权限系统
 
