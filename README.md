@@ -162,3 +162,67 @@ Log:
 - `MaxAge`: 日志文件保留天数，超过后会自动删除
 - `MaxBackups`: 保留的旧日志文件数量
 - `Compress`: 是否压缩旧的日志文件
+```
+
+## 权限系统
+
+项目集成了Casbin RBAC权限系统和动态菜单系统，实现了以下功能：
+
+1. RBAC (基于角色的访问控制)权限模型
+   - 用户 -> 角色 -> 权限
+   - 支持资源级别和操作级别的权限控制
+
+2. 动态菜单系统
+   - 根据用户角色动态生成菜单
+   - 菜单项与权限关联
+   - 支持多级菜单树结构
+
+3. 权限验证中间件
+   - CasbinMiddleware：基于路径和HTTP方法的权限控制
+   - PermissionMiddleware：基于菜单权限标识的权限控制
+
+4. 数据表结构
+   - sys_user - 用户表
+   - sys_role - 角色表
+   - sys_menu - 菜单表
+   - sys_role_menu - 角色菜单关联表
+   - sys_user_role - 用户角色关联表
+   - casbin_rule - Casbin规则表(自动创建)
+
+5. API接口
+   - 菜单管理：创建、更新、删除、查询
+   - 角色管理：创建、更新、删除、查询
+   - 角色菜单分配
+   - 角色权限分配
+   - 用户角色分配
+
+### 使用方法
+
+1. 角色与菜单关联:
+   ```
+   POST /api/v1/admin/role/menu
+   {
+     "role_id": 1,
+     "menu_ids": [1, 2, 3]
+   }
+   ```
+
+2. 角色与权限关联:
+   ```
+   POST /api/v1/admin/role/permission
+   {
+     "role_code": "admin",
+     "object": "/api/v1/admin/user",
+     "action": "GET"
+   }
+   ```
+
+3. 获取用户菜单:
+   ```
+   GET /api/v1/user/menus
+   ```
+
+4. 获取用户权限:
+   ```
+   GET /api/v1/user/perms
+   ```

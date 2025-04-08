@@ -1,0 +1,179 @@
+package controller
+
+import (
+	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/global"
+	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/services"
+)
+
+// 创建角色
+func CreateRole(c *gin.Context) {
+	var role model.Role
+	if err := c.ShouldBindJSON(&role); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	roleService := services.NewRoleService(global.DB)
+	if err := roleService.CreateRole(&role); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "创建成功"})
+}
+
+// 更新角色
+func UpdateRole(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "无效的角色ID"})
+		return
+	}
+
+	var role model.Role
+	if err := c.ShouldBindJSON(&role); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	role.ID = uint(id)
+	roleService := services.NewRoleService(global.DB)
+	if err := roleService.UpdateRole(&role); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "更新成功"})
+}
+
+// 删除角色
+func DeleteRole(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "无效的角色ID"})
+		return
+	}
+
+	roleService := services.NewRoleService(global.DB)
+	if err := roleService.DeleteRole(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+}
+
+// 获取角色详情
+func GetRole(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "无效的角色ID"})
+		return
+	}
+
+	roleService := services.NewRoleService(global.DB)
+	role, err := roleService.GetRoleByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	// 获取角色菜单ID
+	menuService := services.NewMenuService(global.DB)
+	roleMenus, err := menuService.GetMenusByRoleID(role.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	// 提取菜单ID
+	menuIDs := make([]uint, 0)
+	for _, menu := range roleMenus {
+		menuIDs = append(menuIDs, menu.ID)
+	}
+	role.MenuIDs = menuIDs
+
+	c.JSON(http.StatusOK, gin.H{"data": role})
+}
+
+// 获取角色列表
+func GetRoles(c *gin.Context) {
+	roleService := services.NewRoleService(global.DB)
+	roles, err := roleService.GetRoles()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": roles})
+}
+
+// 为角色分配菜单
+func AssignMenuToRole(c *gin.Context) {
+	var req struct {
+		RoleID  uint   `json:"role_id" binding:"required"`
+		MenuIDs []uint `json:"menu_ids"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	menuService := services.NewMenuService(global.DB)
+	if err := menuService.AssignMenuToRole(req.RoleID, req.MenuIDs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "分配成功"})
+}
+
+// 为角色设置权限
+func SetRolePermission(c *gin.Context) {
+	var req struct {
+		RoleCode string `json:"role_code" binding:"required"`
+		Object   string `json:"object" binding:"required"`
+		Action   string `json:"action" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	roleService := services.NewRoleService(global.DB)
+	if err := roleService.SetRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "设置成功"})
+}
+
+// 删除角色权限
+func DeleteRolePermission(c *gin.Context) {
+	var req struct {
+		RoleCode string `json:"role_code" binding:"required"`
+		Object   string `json:"object" binding:"required"`
+		Action   string `json:"action" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	roleService := services.NewRoleService(global.DB)
+	if err := roleService.DeleteRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+}

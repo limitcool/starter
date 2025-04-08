@@ -10,6 +10,9 @@ const (
 	ErrorNotExistCert
 	ErrorNotFound // 资源不存在
 	ErrorDatabase // 数据库操作失败
+	ErrorInternal // 服务器内部错误
+	Error         // 通用错误
+	ErrorParam    // 参数错误
 )
 
 const (
@@ -29,5 +32,12 @@ const (
 	UserAlreadyExists                      // 用户已存在
 	UserNameOrPasswordError                // 用户名或密码错误
 	UserAuthFailed                         // 用户鉴权失败
-	UserNoPermission                       //用户无权访问
+	UserNoPermission                       // 用户无权访问
+	UserPasswordErr                        // 密码错误(兼容旧版)
+	UserNotExist                           // 用户不存在(兼容旧版)
+)
+
+// 权限相关错误
+const (
+	AccessDenied = 40000 + iota // 访问被拒绝
 )

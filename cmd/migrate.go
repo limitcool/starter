@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/charmbracelet/log"
+	"github.com/limitcool/starter/internal/storage/casbin"
 	"github.com/limitcool/starter/internal/storage/sqldb"
 	"github.com/spf13/cobra"
 )
@@ -49,9 +50,23 @@ func runMigration(cmd *cobra.Command, args []string) {
 	}
 	defer sqlComponent.Cleanup()
 
+	// 初始化Casbin组件
+	casbinComponent := casbin.NewComponent(cfg)
+	if err := casbinComponent.Initialize(); err != nil {
+		log.Error("初始化Casbin组件失败", "error", err)
+		os.Exit(1)
+	}
+	defer casbinComponent.Cleanup()
+
 	// 执行迁移
 	if err := sqlComponent.Migrate(); err != nil {
 		log.Error("数据库迁移失败", "error", err)
+		os.Exit(1)
+	}
+
+	// 执行Casbin迁移
+	if err := casbinComponent.Migrate(); err != nil {
+		log.Error("Casbin迁移失败", "error", err)
 		os.Exit(1)
 	}
 

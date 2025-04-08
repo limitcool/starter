@@ -16,10 +16,10 @@ type Response struct {
 
 // Success 成功响应
 func Success(c *gin.Context, data interface{}) {
-	c.JSON(http.StatusOK, Response{
-		Code:    code.Success,
-		Message: "操作成功",
-		Data:    data,
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "success",
+		"data":    data,
 	})
 }
 
@@ -62,7 +62,10 @@ func ServerError(c *gin.Context) {
 
 // NotFound 资源不存在响应
 func NotFound(c *gin.Context, message string) {
-	Fail(c, code.ErrorNotFound, message)
+	c.JSON(http.StatusNotFound, gin.H{
+		"code":    404,
+		"message": message,
+	})
 }
 
 // DbError 数据库错误响应
@@ -72,18 +75,49 @@ func DbError(c *gin.Context) {
 
 // Unauthorized 未授权响应
 func Unauthorized(c *gin.Context, message string) {
-	c.JSON(http.StatusUnauthorized, Response{
-		Code:    code.UserNoLogin,
-		Message: message,
-		Data:    nil,
+	c.JSON(http.StatusUnauthorized, gin.H{
+		"code":    401,
+		"message": message,
 	})
 }
 
 // Forbidden 禁止访问响应
 func Forbidden(c *gin.Context, message string) {
-	c.JSON(http.StatusForbidden, Response{
-		Code:    code.UserNoPermission,
-		Message: message,
-		Data:    nil,
+	c.JSON(http.StatusForbidden, gin.H{
+		"code":    403,
+		"message": message,
+	})
+}
+
+// BadRequest 请求参数错误
+func BadRequest(c *gin.Context, message string) {
+	c.JSON(http.StatusBadRequest, gin.H{
+		"code":    400,
+		"message": message,
+	})
+}
+
+// InternalServerError 服务器内部错误
+func InternalServerError(c *gin.Context, message string) {
+	c.JSON(http.StatusInternalServerError, gin.H{
+		"code":    500,
+		"message": message,
+	})
+}
+
+// ServiceUnavailable 服务不可用
+func ServiceUnavailable(c *gin.Context, message string) {
+	c.JSON(http.StatusServiceUnavailable, gin.H{
+		"code":    503,
+		"message": message,
+	})
+}
+
+// ResponseWithCode 自定义状态码响应
+func ResponseWithCode(c *gin.Context, statusCode int, code int, message string, data interface{}) {
+	c.JSON(statusCode, gin.H{
+		"code":    code,
+		"message": message,
+		"data":    data,
 	})
 }

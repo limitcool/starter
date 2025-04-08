@@ -2,9 +2,11 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/pkg/response"
 )
 
+// Ping 测试ping
 func Ping(c *gin.Context) {
-	response.Success(c, "pong")
+	c.JSON(200, gin.H{
+		"message": "pong",
+	})
 }
