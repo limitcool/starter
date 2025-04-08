@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"io"
+	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
@@ -22,6 +24,15 @@ func InitConfig(cmd *cobra.Command, args []string) *configs.Config {
 	if globalConfig != nil {
 		return globalConfig
 	}
+
+	// 先设置基本日志格式，确保在配置读取前就使用统一格式
+	log.SetDefault(log.NewWithOptions(os.Stdout, log.Options{
+		Level:           log.InfoLevel,
+		Prefix:          "🌏 starter",
+		TimeFormat:      time.RFC3339,
+		ReportTimestamp: true,
+		Formatter:       log.TextFormatter,
+	}))
 
 	// 检查是否通过flag指定了配置文件
 	configFile, _ := cmd.Flags().GetString("config")
@@ -87,9 +98,6 @@ func InitLogger(cfg *configs.Config) {
 		gin.DefaultWriter = io.Discard
 		gin.DefaultErrorWriter = io.Discard
 	}
-
-	// 即使在开发环境中，也可以选择禁用Gin的调试日志
-	gin.DisableConsoleColor()
 
 	// 使用配置更新日志设置
 	logger.Setup(cfg.Log)

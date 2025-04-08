@@ -12,47 +12,76 @@ import (
 
 // Setup 初始化日志配置
 func Setup(config configs.LogConfig) {
-	var outputs []io.Writer
-
 	// 配置日志级别
 	level := parseLogLevel(config.Level)
 
-	// 配置输出
+	// 检查是否需要输出到控制台
+	hasConsole := false
 	for _, output := range config.Output {
-		switch output {
-		case "console":
-			outputs = append(outputs, os.Stdout)
-		case "file":
-			outputs = append(outputs, &lumberjack.Logger{
-				Filename:   config.FileConfig.Path,
-				MaxSize:    config.FileConfig.MaxSize, // MB
-				MaxAge:     config.FileConfig.MaxAge,  // days
-				MaxBackups: config.FileConfig.MaxBackups,
-				Compress:   config.FileConfig.Compress,
-			})
+		if output == "console" {
+			hasConsole = true
+			break
 		}
 	}
 
-	// 如果没有配置输出，默认输出到控制台
-	if len(outputs) == 0 {
-		outputs = append(outputs, os.Stdout)
+	// 如果配置为空，默认输出到控制台
+	if len(config.Output) == 0 {
+		hasConsole = true
 	}
 
-	// 创建多输出writer
-	multiWriter := io.MultiWriter(outputs...)
+	// 检查是否需要输出到文件
+	var fileOutput io.Writer
+	for _, output := range config.Output {
+		if output == "file" {
+			fileOutput = &lumberjack.Logger{
+				Filename:   config.FileConfig.Path,
+				MaxSize:    config.FileConfig.MaxSize,
+				MaxAge:     config.FileConfig.MaxAge,
+				MaxBackups: config.FileConfig.MaxBackups,
+				Compress:   config.FileConfig.Compress,
+			}
+			break
+		}
+	}
 
-	// 确定日志格式
-	formatter := parseLogFormat(config.Format)
-
-	// 配置全局logger
-	log.SetDefault(log.NewWithOptions(multiWriter, log.Options{
+	// 创建基本设置
+	options := log.Options{
 		Level:           level,
 		Prefix:          "🌏 starter",
 		TimeFormat:      time.RFC3339,
 		ReportTimestamp: true,
 		ReportCaller:    level == log.DebugLevel,
-		Formatter:       formatter,
-	}))
+	}
+
+	// 根据不同情况创建logger
+	var writer io.Writer
+
+	if hasConsole && fileOutput != nil {
+		// 同时输出到控制台和文件
+		writer = io.MultiWriter(os.Stdout, fileOutput)
+	} else if hasConsole {
+		// 只输出到控制台
+		writer = os.Stdout
+	} else if fileOutput != nil {
+		// 只输出到文件
+		writer = fileOutput
+	} else {
+		// 默认输出到控制台
+		writer = os.Stdout
+	}
+
+	// 设置日志格式
+	if config.Format == configs.LogFormatJSON {
+		// JSON格式
+		options.Formatter = log.JSONFormatter
+	} else {
+		// 文本格式，支持彩色
+		options.Formatter = log.TextFormatter
+	}
+
+	// 创建并设置logger
+	logger := log.NewWithOptions(writer, options)
+	log.SetDefault(logger)
 }
 
 // parseLogLevel 解析日志级别

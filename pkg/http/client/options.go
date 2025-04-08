@@ -1,11 +1,11 @@
-package httpclient
+package client
 
 import "time"
 
 // Option is a function that sets some option on the client.
 type Option func(c *options)
 
-// Options control behavior of the client.
+// options control behavior of the client.
 type options struct {
 	header map[string][]string
 	// timeout of per request

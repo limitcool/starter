@@ -1,6 +1,6 @@
 // http 客户端
 
-package httpclient
+package client
 
 import (
 	"bytes"

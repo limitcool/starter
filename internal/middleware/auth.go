@@ -7,9 +7,9 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/common/jwtx"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/pkg/code"
+	"github.com/limitcool/starter/pkg/jwt"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -33,7 +33,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		log.Debug("Authentication token received", "token", token)
-		claims, err := jwtx.ParseToken(token, global.Config.JwtAuth.AccessSecret)
+		claims, err := jwt.ParseToken(token, global.Config.JwtAuth.AccessSecret)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, code.ApiResponse{
 				ErrorCode: code.UserAuthFailed,
