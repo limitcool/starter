@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"sync"
 
 	"github.com/glebarez/sqlite"
 	"github.com/limitcool/starter/configs"
@@ -15,7 +16,16 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
+// DB 全局数据库连接
+var (
+	DB     *gorm.DB
+	dbOnce sync.Once
+)
+
+// GetDB 获取数据库连接
+func GetDB() *gorm.DB {
+	return DB
+}
 
 func getDSN(c *configs.Config) string {
 	switch c.Driver {
@@ -101,8 +111,13 @@ func getGormLogLevel(c *configs.Config) logger.LogLevel {
 	return logger.Silent
 }
 
-func NewDB(c *configs.Config) *gorm.DB {
-	DB = newDbConn(c)
+// NewDB 创建数据库连接并设置为全局
+func NewDB(c configs.Config) *gorm.DB {
+	var db *gorm.DB
+	dbOnce.Do(func() {
+		db = newDbConn(&c)
+		DB = db
+	})
 	return DB
 }
 

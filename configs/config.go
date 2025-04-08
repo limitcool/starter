@@ -75,6 +75,7 @@ type Mongo struct {
 
 // Redis配置结构
 type Redis struct {
+	Enabled      bool // 是否启用Redis
 	Addr         string
 	Password     string
 	DB           int
