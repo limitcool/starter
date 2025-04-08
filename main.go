@@ -15,9 +15,9 @@ import (
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/core"
-	"github.com/limitcool/starter/internal/database"
-	"github.com/limitcool/starter/internal/database/mongodb"
+	"github.com/limitcool/starter/internal/storage/mongodb"
 	"github.com/limitcool/starter/internal/storage/redisdb"
+	"github.com/limitcool/starter/internal/storage/sqldb"
 	"github.com/limitcool/starter/pkg/env"
 	"github.com/limitcool/starter/pkg/logger"
 	"github.com/limitcool/starter/routers"
@@ -101,10 +101,21 @@ func main() {
 	// 初始化应用核心
 	app := core.Setup(cfg)
 
-	// 初始化数据库
-	initDatabase(cfg)
+	// 添加SQL数据库组件（如果配置了启用）
+	if cfg.Database.Enabled {
+		log.Info("Adding SQL database component", "driver", cfg.Driver)
+		dbComponent := sqldb.NewComponent(cfg)
+		app.ComponentManager.AddComponent(dbComponent)
+	}
 
-	// 添加Redis组件
+	// 添加MongoDB组件（如果配置了启用）
+	if cfg.Mongo.Enabled {
+		log.Info("Adding MongoDB component")
+		mongoComponent := mongodb.NewComponent(cfg)
+		app.ComponentManager.AddComponent(mongoComponent)
+	}
+
+	// 添加Redis组件（如果配置了启用）
 	redisComponent := redisdb.NewComponent(cfg)
 	app.ComponentManager.AddComponent(redisComponent)
 
@@ -140,23 +151,5 @@ func main() {
 	if err := s.Shutdown(ctx); err != nil {
 		// 处理错误，例如记录日志、返回错误等
 		log.Info("Error during server shutdown", "error", err)
-	}
-}
-
-// initDatabase 初始化数据库
-func initDatabase(cfg *configs.Config) {
-	switch cfg.Driver {
-	case configs.DriverMongo:
-		log.Info("Using database driver", "driver", "mongo")
-		_, err := mongodb.NewMongoDBConn(context.Background(), &cfg.Mongo)
-		if err != nil {
-			log.Fatal("MongoDB connection failed", "error", err)
-		}
-	case configs.DriverMysql, configs.DriverPostgres, configs.DriverSqlite, configs.DriverMssql, configs.DriverOracle:
-		log.Info("Using database driver", "driver", cfg.Driver)
-		db := database.NewDB(*cfg)
-		db.AutoMigrate()
-	default:
-		log.Fatal("No database driver", "driver", "none")
 	}
 }

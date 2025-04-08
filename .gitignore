@@ -14,3 +14,4 @@ configs/config-*.yaml
 *.log.*
 build/*
 dev.yaml
+*.exe

@@ -41,8 +41,9 @@ type App struct {
 	Name string
 }
 
-// Config mysql config
+// Config MySQL等数据库配置
 type Database struct {
+	Enabled         bool // 是否启用SQL数据库
 	UserName        string
 	Password        string
 	DBName          string
@@ -67,6 +68,7 @@ type JwtAuth struct {
 
 // Config MongoDB config
 type Mongo struct {
+	Enabled  bool // 是否启用MongoDB
 	URI      string
 	User     string
 	Password string
