@@ -63,8 +63,10 @@ type Database struct {
 
 // Config jwt config
 type JwtAuth struct {
-	AccessSecret string
-	AccessExpire int64
+	AccessSecret  string
+	AccessExpire  int64
+	RefreshSecret string
+	RefreshExpire int64
 }
 
 // Config MongoDB config

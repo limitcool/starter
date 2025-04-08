@@ -40,6 +40,7 @@ func NewRouter() *gin.Engine {
 	{
 		apiV1.GET("/ping", controller.Ping)
 		apiV1.POST("/admin/login", controller.AdminLogin) // 管理员登录接口
+		apiV1.POST("/refresh", controller.RefreshToken)   // 刷新访问令牌接口
 	}
 
 	// 需要认证的路由

@@ -16,7 +16,14 @@ type LoginRequest struct {
 
 // LoginResponse 登录响应参数
 type LoginResponse struct {
-	Token string `json:"token"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int64  `json:"expires_in"`
+}
+
+// RefreshTokenRequest 刷新令牌请求参数
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
 // AdminLogin 管理员登录
@@ -28,7 +35,7 @@ func AdminLogin(c *gin.Context) {
 	}
 
 	userService := services.NewUserService(global.DB)
-	token, err := userService.Login(req.Username, req.Password)
+	tokenResponse, err := userService.Login(req.Username, req.Password)
 	if err != nil {
 		if code.IsErrCode(err) {
 			response.HandleError(c, err)
@@ -38,7 +45,27 @@ func AdminLogin(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, &LoginResponse{
-		Token: token,
-	})
+	response.Success(c, tokenResponse)
+}
+
+// RefreshToken 刷新访问令牌
+func RefreshToken(c *gin.Context) {
+	var req RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "无效的请求参数")
+		return
+	}
+
+	userService := services.NewUserService(global.DB)
+	tokenResponse, err := userService.RefreshToken(req.RefreshToken)
+	if err != nil {
+		if code.IsErrCode(err) {
+			response.HandleError(c, err)
+		} else {
+			response.InternalServerError(c, "刷新令牌失败")
+		}
+		return
+	}
+
+	response.Success(c, tokenResponse)
 }
