@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/pkg/code"
@@ -23,11 +24,30 @@ type UserService struct {
 
 // NewUserService 创建用户服务
 func NewUserService(db *gorm.DB) *UserService {
+	// 检查ServiceManager是否已初始化
+	if serviceInstance != nil {
+		// 使用ServiceManager获取依赖服务
+		return &UserService{
+			db:            db,
+			roleService:   serviceInstance.GetRoleService(),
+			casbinService: serviceInstance.GetCasbinService(),
+		}
+	}
+
+	// 兼容旧代码，如果ServiceManager未初始化，则直接创建依赖服务
 	return &UserService{
 		db:            db,
 		roleService:   NewRoleService(db),
 		casbinService: NewCasbinService(db),
 	}
+}
+
+// 获取配置，优先使用ServiceManager
+func (s *UserService) getConfig() *configs.Config {
+	if serviceInstance != nil {
+		return serviceInstance.GetConfig()
+	}
+	return global.Config
 }
 
 // GetUserByID 根据ID获取用户
@@ -114,6 +134,9 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 		"last_ip":    ip,
 	})
 
+	// 获取配置
+	cfg := s.getConfig()
+
 	// 生成访问令牌
 	accessClaims := jwt.MapClaims{
 		"user_id":    user.ID,
@@ -121,7 +144,7 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 		"role_codes": user.RoleCodes,
 		"user_type":  "sys_user", // 系统用户
 		"type":       "access_token",
-		"exp":        time.Now().Add(time.Duration(global.Config.JwtAuth.AccessExpire) * time.Second).Unix(),
+		"exp":        time.Now().Add(time.Duration(cfg.JwtAuth.AccessExpire) * time.Second).Unix(),
 	}
 
 	// 生成刷新令牌
@@ -130,15 +153,15 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 		"username":  user.Username,
 		"user_type": "sys_user", // 系统用户
 		"type":      "refresh_token",
-		"exp":       time.Now().Add(time.Duration(global.Config.JwtAuth.RefreshExpire) * time.Second).Unix(),
+		"exp":       time.Now().Add(time.Duration(cfg.JwtAuth.RefreshExpire) * time.Second).Unix(),
 	}
 
-	accessToken, err := jwtpkg.GenerateToken(accessClaims, global.Config.JwtAuth.AccessSecret, time.Duration(global.Config.JwtAuth.AccessExpire)*time.Second)
+	accessToken, err := jwtpkg.GenerateToken(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
 
-	refreshToken, err := jwtpkg.GenerateToken(refreshClaims, global.Config.JwtAuth.RefreshSecret, time.Duration(global.Config.JwtAuth.RefreshExpire)*time.Second)
+	refreshToken, err := jwtpkg.GenerateToken(refreshClaims, cfg.JwtAuth.RefreshSecret, time.Duration(cfg.JwtAuth.RefreshExpire)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
 	}
@@ -146,14 +169,17 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 	return &LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresIn:    global.Config.JwtAuth.AccessExpire,
+		ExpiresIn:    cfg.JwtAuth.AccessExpire,
 	}, nil
 }
 
 // RefreshToken 刷新访问令牌
 func (s *UserService) RefreshToken(refreshToken string) (*LoginResponse, error) {
+	// 获取配置
+	cfg := s.getConfig()
+
 	// 验证刷新令牌
-	tokenClaims, err := jwtpkg.ParseToken(refreshToken, global.Config.JwtAuth.RefreshSecret)
+	tokenClaims, err := jwtpkg.ParseToken(refreshToken, cfg.JwtAuth.RefreshSecret)
 	if err != nil {
 		return nil, code.NewErrCodeMsg(code.UserTokenError, "无效的刷新令牌")
 	}
@@ -188,10 +214,10 @@ func (s *UserService) RefreshToken(refreshToken string) (*LoginResponse, error) 
 		"role_codes": user.RoleCodes,
 		"user_type":  "sys_user", // 系统用户
 		"type":       "access_token",
-		"exp":        time.Now().Add(time.Duration(global.Config.JwtAuth.AccessExpire) * time.Second).Unix(),
+		"exp":        time.Now().Add(time.Duration(cfg.JwtAuth.AccessExpire) * time.Second).Unix(),
 	}
 
-	accessToken, err := jwtpkg.GenerateToken(accessClaims, global.Config.JwtAuth.AccessSecret, time.Duration(global.Config.JwtAuth.AccessExpire)*time.Second)
+	accessToken, err := jwtpkg.GenerateToken(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
@@ -199,6 +225,6 @@ func (s *UserService) RefreshToken(refreshToken string) (*LoginResponse, error) 
 	return &LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken, // 保持原有的刷新令牌
-		ExpiresIn:    global.Config.JwtAuth.AccessExpire,
+		ExpiresIn:    cfg.JwtAuth.AccessExpire,
 	}, nil
 }

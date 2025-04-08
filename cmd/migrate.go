@@ -4,8 +4,8 @@ import (
 	"os"
 
 	"github.com/charmbracelet/log"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/migration"
+	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/sqldb"
 	"github.com/spf13/cobra"
 )
@@ -78,8 +78,12 @@ func runMigration(cmd *cobra.Command, args []string) {
 	}
 	defer sqlComponent.Cleanup()
 
-	// 设置全局DB
-	global.DB = sqlComponent.GetDB()
+	// 获取数据库连接
+	db := sqlComponent.GetDB()
+
+	// 初始化服务管理器
+	services.Init(cfg, db)
+	log.Info("Service Manager initialized")
 
 	// 初始化迁移系统
 	if err := migration.InitializeMigrator(); err != nil {
@@ -131,8 +135,12 @@ func runMigrationRollback(cmd *cobra.Command, args []string) {
 	}
 	defer sqlComponent.Cleanup()
 
-	// 设置全局DB
-	global.DB = sqlComponent.GetDB()
+	// 获取数据库连接
+	db := sqlComponent.GetDB()
+
+	// 初始化服务管理器
+	services.Init(cfg, db)
+	log.Info("Service Manager initialized")
 
 	// 初始化迁移系统
 	if err := migration.InitializeMigrator(); err != nil {
@@ -170,8 +178,12 @@ func runMigrationStatus(cmd *cobra.Command, args []string) {
 	}
 	defer sqlComponent.Cleanup()
 
-	// 设置全局DB
-	global.DB = sqlComponent.GetDB()
+	// 获取数据库连接
+	db := sqlComponent.GetDB()
+
+	// 初始化服务管理器
+	services.Init(cfg, db)
+	log.Info("Service Manager initialized")
 
 	// 初始化迁移系统
 	if err := migration.InitializeMigrator(); err != nil {
@@ -225,8 +237,12 @@ func runMigrationReset(cmd *cobra.Command, args []string) {
 	}
 	defer sqlComponent.Cleanup()
 
-	// 设置全局DB
-	global.DB = sqlComponent.GetDB()
+	// 获取数据库连接
+	db := sqlComponent.GetDB()
+
+	// 初始化服务管理器
+	services.Init(cfg, db)
+	log.Info("Service Manager initialized")
 
 	// 初始化迁移系统
 	if err := migration.InitializeMigrator(); err != nil {

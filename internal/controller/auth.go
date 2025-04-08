@@ -2,7 +2,6 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/pkg/code"
 	"github.com/limitcool/starter/pkg/response"
@@ -37,7 +36,8 @@ func AdminLogin(c *gin.Context) {
 	// 获取客户端IP地址
 	clientIP := c.ClientIP()
 
-	userService := services.NewUserService(global.DB)
+	// 使用服务管理器获取用户服务
+	userService := services.Instance().GetUserService()
 	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
 		if code.IsErrCode(err) {
@@ -59,7 +59,8 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 
-	userService := services.NewUserService(global.DB)
+	// 使用服务管理器获取用户服务
+	userService := services.Instance().GetUserService()
 	tokenResponse, err := userService.RefreshToken(req.RefreshToken)
 	if err != nil {
 		if code.IsErrCode(err) {

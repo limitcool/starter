@@ -16,6 +16,16 @@ type RoleService struct {
 
 // NewRoleService 创建角色服务
 func NewRoleService(db *gorm.DB) *RoleService {
+	// 检查ServiceManager是否已初始化
+	if serviceInstance != nil {
+		// 使用ServiceManager获取依赖服务
+		return &RoleService{
+			db:            db,
+			casbinService: serviceInstance.GetCasbinService(),
+		}
+	}
+
+	// 兼容旧代码，如果ServiceManager未初始化，则直接创建依赖服务
 	return &RoleService{
 		db:            db,
 		casbinService: NewCasbinService(db),

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/limitcool/starter/global"
+	"github.com/limitcool/starter/internal/services"
 	"gorm.io/gorm"
 )
 
@@ -300,12 +300,13 @@ var GlobalMigrator *Migrator
 
 // InitializeMigrator 初始化全局迁移实例
 func InitializeMigrator() error {
-	// 检查全局数据库连接
-	if global.DB == nil {
+	// 使用服务管理器获取数据库连接
+	db := services.Instance().GetDB()
+	if db == nil {
 		return errors.New("数据库未初始化")
 	}
 
-	GlobalMigrator = NewMigrator(global.DB)
+	GlobalMigrator = NewMigrator(db)
 	RegisterAllMigrations(GlobalMigrator) // 注册所有迁移
 
 	return GlobalMigrator.Initialize()
