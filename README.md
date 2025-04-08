@@ -11,6 +11,8 @@
 - 提供常用 gin 中间件和工具
   - 跨域中间件:处理 API 跨域请求,实现 CORS 支持
   - jwt 解析中间件:从请求中解析并验证 JWT Token,用于 API 身份认证
+- 使用 Cobra 命令行框架，提供清晰的子命令结构
+- 支持数据库迁移与服务器启动分离，提高启动速度
 
 ## 快速开始
 
@@ -19,9 +21,56 @@ go install github.com/go-eagle/eagle/cmd/eagle@latest
 eagle new <project name> -r https://github.com/limitcool/starter -b main
 ```
 
+## 使用方法
+
+应用使用Cobra命令行框架，提供了更清晰的子命令结构。
+
+### 基本命令
+
+```bash
+# 查看帮助信息
+./<app-name> --help
+
+# 查看版本信息
+./<app-name> version
+
+# 启动服务器
+./<app-name> server
+
+# 执行数据库迁移
+./<app-name> migrate
+```
+
+### 服务器命令
+
+服务器命令用于启动HTTP服务：
+
+```bash
+# 使用默认配置启动服务器
+./<app-name> server
+
+# 指定端口启动服务器
+./<app-name> server --port 9000
+
+# 使用指定配置文件启动服务器
+./<app-name> server --config custom.yaml
+```
+
+### 数据库迁移命令
+
+数据库迁移命令用于初始化或更新数据库结构：
+
+```bash
+# 执行数据库迁移
+./<app-name> migrate
+
+# 使用指定配置文件执行迁移
+./<app-name> migrate --config prod.yaml
+```
+
 ## 环境配置
 
-通过环境变量 `APP_ENV` 来指定运行环境：
+通过环境变量 `APP_ENV` 来指定运行环境，或通过 `--config` 标志直接指定配置文件：
 
 - `APP_ENV=dev` 或 `APP_ENV=development` - 开发环境（默认）
 - `APP_ENV=test` 或 `APP_ENV=testing` - 测试环境
@@ -29,11 +78,11 @@ eagle new <project name> -r https://github.com/limitcool/starter -b main
 
 示例：
 ```bash
-# 开发环境运行
-APP_ENV=dev go run main.go
+# 开发环境运行服务器
+APP_ENV=dev ./<app-name> server
 
-# 生产环境运行
-APP_ENV=prod ./starter
+# 生产环境执行数据库迁移
+APP_ENV=prod ./<app-name> migrate
 ```
 
 ## 配置文件

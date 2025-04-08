@@ -1,6 +1,9 @@
 # 变量定义
 APP_NAME = starter
-VERSION ?= $(shell git describe --tags --always)
+VERSION ?= $(shell git describe --tags --always || echo "v0.1.0")
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_TREE_STATE ?= $(shell if git status --porcelain 2>/dev/null | grep -q .; then echo "dirty"; else echo "clean"; fi)
+BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BUILD_DIR = build
 
 # 默认架构
@@ -8,8 +11,10 @@ ARCH ?= amd64
 
 # 编译参数
 LDFLAGS = -s -w \
-	-X main.Version=$(VERSION) \
-	-X main.BuildTime=$(shell date -u +%Y-%m-%d_%H:%M:%S)
+	-X github.com/limitcool/starter/internal/version.Version=$(VERSION) \
+	-X github.com/limitcool/starter/internal/version.GitCommit=$(GIT_COMMIT) \
+	-X github.com/limitcool/starter/internal/version.GitTreeState=$(GIT_TREE_STATE) \
+	-X github.com/limitcool/starter/internal/version.BuildDate=$(BUILD_TIME)
 
 # 默认目标
 .PHONY: all

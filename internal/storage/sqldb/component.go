@@ -48,12 +48,27 @@ func (c *Component) Initialize() error {
 	// 执行设置全局实例
 	setupInstance(c)
 
-	// 执行数据库迁移
-	if err := db.AutoMigrate(); err != nil {
+	// 不再自动执行迁移
+	// if err := db.AutoMigrate(); err != nil {
+	// 	return fmt.Errorf("database migration failed: %w", err)
+	// }
+
+	log.Info("SQL database component initialized successfully")
+	return nil
+}
+
+// Migrate 执行数据库迁移
+func (c *Component) Migrate() error {
+	if c.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	log.Info("Running database migrations")
+	if err := c.db.AutoMigrate(); err != nil {
 		return fmt.Errorf("database migration failed: %w", err)
 	}
 
-	log.Info("SQL database component initialized successfully")
+	log.Info("Database migrations completed successfully")
 	return nil
 }
 
