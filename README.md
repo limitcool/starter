@@ -38,27 +38,35 @@ APP_ENV=prod ./starter
 
 ## 配置文件
 
-配置文件位于 `configs` 目录：
+配置文件根据运行环境自动加载对应的配置文件：
 
-- `config.yaml` - 默认配置
-- `config-dev.yaml` - 开发环境配置
-- `config-test.yaml` - 测试环境配置
-- `config-prod.yaml` - 生产环境配置
-- `config.example.yaml` - 示例配置（用于版本控制）
+- `dev.yaml` - 开发环境配置
+- `test.yaml` - 测试环境配置
+- `prod.yaml` - 生产环境配置
+- `example.yaml` - 示例配置（用于版本控制）
 
-首次使用时，请复制 `config.example.yaml` 并根据环境重命名：
+配置文件可以放置在以下位置（按查找顺序）：
+1. 当前工作目录（项目根目录）
+2. `configs/` 目录
+
+首次使用时，请复制示例配置并根据环境重命名：
 
 ```bash
-# 开发环境
-cp configs/config.example.yaml configs/config-dev.yaml
+# 开发环境（放在根目录）
+cp example.yaml ./dev.yaml
+
+# 或放在configs目录
+cp example.yaml configs/dev.yaml
 
 # 生产环境
-cp configs/config.example.yaml configs/config-prod.yaml
+cp example.yaml configs/prod.yaml
 ```
 
-配置文件加载顺序：
-1. 加载 `config.yaml` 作为默认配置
-2. 根据 `APP_ENV` 加载对应的环境配置文件，覆盖默认配置
+应用程序会根据环境变量 `APP_ENV` 自动寻找并加载对应的配置文件。例如，当 `APP_ENV=dev` 时，将按以下顺序查找配置文件：
+1. `./dev.yaml`（当前目录）
+2. `./configs/dev.yaml`（configs目录）
+
+如果找不到对应的配置文件，应用程序将无法启动。
 
 ## 日志配置
 
@@ -70,6 +78,7 @@ cp configs/config.example.yaml configs/config-prod.yaml
 Log:
   Level: info                 # 日志级别: debug, info, warn, error
   Output: [console, file]     # 输出方式: console, file
+  Format: text                # 日志格式: text, json
   FileConfig:
     Path: ./logs/app.log      # 日志文件路径
     MaxSize: 100              # 每个日志文件的最大大小（MB）
@@ -85,10 +94,15 @@ Log:
 - `warn`: 警告信息，需要注意的信息
 - `error`: 错误信息，影响程序正常运行的错误
 
+### 日志格式
+
+- `text`: 普通文本格式，适合人类阅读（默认）
+- `json`: JSON结构化格式，适合机器解析和日志系统收集
+
 ### 输出方式
 
-- `Console`: 输出到控制台，支持彩色输出
-- `File`: 输出到文件，支持按大小自动分割、自动清理和压缩
+- `console`: 输出到控制台，支持彩色输出
+- `file`: 输出到文件，支持按大小自动分割、自动清理和压缩
 
 可以同时配置多个输出方式，日志会同时输出到所有配置的目标。如果不配置 output，默认只输出到控制台。
 

@@ -24,44 +24,54 @@ import (
 
 func loadConfig() {
 	env := env.Get()
-	log.Info("Current environment", "env", env)
 
-	// 设置默认配置文件
-	viper.SetConfigName("config")
+	// 直接读取环境对应的配置文件
+	configName := env.String() // 使用环境名称作为配置文件名: dev.yaml, test.yaml, prod.yaml
+
+	viper.SetConfigName(configName)
+	viper.AddConfigPath(".")
 	viper.AddConfigPath("./configs")
 	viper.SetConfigType("yaml")
 
-	// 读取默认配置
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatal("Failed to read default config", "error", err)
-	}
-
 	// 读取环境配置
-	viper.SetConfigName(fmt.Sprintf("config-%s", env))
-	if err := viper.MergeInConfig(); err != nil {
-		log.Warn("Config not found, using default config", "error", err)
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatal("Failed to read config file", "env", env, "error", err)
 	}
 
 	// 解析配置到结构体
 	if err := viper.Unmarshal(&global.Config); err != nil {
 		log.Fatal("Config unmarshal failed", "error", err)
 	}
+
+	// 配置日志系统
+	logger.Setup(global.Config.Log)
+
+	// 记录环境信息
+	log.Info("Environment configured", "env", env)
 }
 
 func main() {
+	// 设置基本日志前缀
+	log.SetPrefix("🌏 starter ")
+
+	// 设置默认日志格式为文本格式（非结构化）
+	// 配置加载后会根据配置文件重新设置
+	log.SetFormatter(log.TextFormatter)
+
 	lib.SetDebugMode(func() {
-		log.Info("Debug mode enabled")
 		log.SetLevel(log.DebugLevel)
 		log.SetReportCaller(true)
+		log.Info("Debug mode enabled")
 	})
-
-	log.SetPrefix("🌏 starter ")
 
 	// 加载配置
 	loadConfig()
 
-	// 初始化日志
+	// 使用配置文件初始化日志系统
 	logger.Setup(global.Config.Log)
+
+	// 日志系统配置完成后的第一条日志
+	log.Info("Application starting", "name", global.Config.App.Name)
 
 	switch global.Config.Driver {
 	case configs.DriverMongo:

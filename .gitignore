@@ -13,3 +13,4 @@ configs/config-*.yaml
 *.log
 *.log.*
 build/*
+dev.yaml

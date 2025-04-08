@@ -28,3 +28,9 @@ Redis:
     PoolSize: 100
     PoolTimeout: 240s
     EnableTrace: true
+Log:
+  Level: debug
+  Format: text
+  FileConfig:
+    Path: logs/app.log
+    MaxSize: 10

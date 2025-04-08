@@ -15,6 +15,16 @@ const (
 	DriverMongo    DBDriver = "mongo"
 )
 
+// LogFormat 日志格式类型
+type LogFormat string
+
+const (
+	// LogFormatText 普通文本格式
+	LogFormatText LogFormat = "text"
+	// LogFormatJSON 结构化JSON格式
+	LogFormatJSON LogFormat = "json"
+)
+
 type Config struct {
 	App      App
 	Driver   DBDriver
@@ -81,6 +91,7 @@ type Redis struct {
 type LogConfig struct {
 	Level      string        // 日志级别: debug, info, warn, error
 	Output     []string      // 输出方式: console, file
+	Format     LogFormat     // 日志格式: text, json
 	FileConfig FileLogConfig // 文件输出配置
 }
 

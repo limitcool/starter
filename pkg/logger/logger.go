@@ -41,6 +41,9 @@ func Setup(config configs.LogConfig) {
 	// 创建多输出writer
 	multiWriter := io.MultiWriter(outputs...)
 
+	// 确定日志格式
+	formatter := parseLogFormat(config.Format)
+
 	// 配置全局logger
 	log.SetDefault(log.NewWithOptions(multiWriter, log.Options{
 		Level:           level,
@@ -48,6 +51,7 @@ func Setup(config configs.LogConfig) {
 		TimeFormat:      time.RFC3339,
 		ReportTimestamp: true,
 		ReportCaller:    level == log.DebugLevel,
+		Formatter:       formatter,
 	}))
 }
 
@@ -64,5 +68,18 @@ func parseLogLevel(level string) log.Level {
 		return log.ErrorLevel
 	default:
 		return log.InfoLevel
+	}
+}
+
+// parseLogFormat 根据配置解析日志格式
+func parseLogFormat(format configs.LogFormat) log.Formatter {
+	switch format {
+	case configs.LogFormatJSON:
+		return log.JSONFormatter
+	case configs.LogFormatText:
+		return log.TextFormatter
+	default:
+		// 默认使用文本格式
+		return log.TextFormatter
 	}
 }
