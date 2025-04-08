@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"net/http"
 	"os"
@@ -10,13 +11,13 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/limitcool/lib"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/database"
 	"github.com/limitcool/starter/internal/database/mongodb"
 	"github.com/limitcool/starter/routers"
 
+	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/pkg/env"
 	"github.com/limitcool/starter/pkg/logger"
 	"github.com/spf13/viper"
@@ -51,27 +52,44 @@ func loadConfig() {
 }
 
 func main() {
-	// 设置基本日志前缀
+	// 设置基本日志
+	loadConfig()
 	log.SetPrefix("🌏 starter ")
 
-	// 设置默认日志格式为文本格式（非结构化）
-	// 配置加载后会根据配置文件重新设置
-	log.SetFormatter(log.TextFormatter)
+	// 获取环境
+	currentEnv := env.Get()
 
-	lib.SetDebugMode(func() {
-		log.SetLevel(log.DebugLevel)
-		log.SetReportCaller(true)
-		log.Info("Debug mode enabled")
-	})
+	// 根据环境设置Gin模式
+	if currentEnv == env.Dev {
+		// 在开发环境中，我们可以保留Gin的调试输出
+		gin.SetMode(gin.DebugMode)
 
-	// 加载配置
-	loadConfig()
+		// 但仍然将它重定向到我们的日志系统
+		logger.SetupGinLogger()
+	} else {
+		// 在非开发环境中，完全禁用Gin的调试输出
+		gin.SetMode(gin.ReleaseMode)
+		gin.DefaultWriter = io.Discard
+		gin.DefaultErrorWriter = io.Discard
+	}
 
-	// 使用配置文件初始化日志系统
+	// 即使在开发环境中，也可以选择禁用Gin的调试日志
+	gin.DisableConsoleColor()
+
+	// 使用配置更新日志设置
 	logger.Setup(global.Config.Log)
 
 	// 日志系统配置完成后的第一条日志
 	log.Info("Application starting", "name", global.Config.App.Name)
+
+	// 根据环境设置Gin模式
+	if env.IsProd() {
+		log.Info("Running in production mode")
+	} else if env.IsTest() {
+		log.Info("Running in test mode")
+	} else {
+		log.Info("Running in debug mode")
+	}
 
 	switch global.Config.Driver {
 	case configs.DriverMongo:
@@ -82,10 +100,11 @@ func main() {
 		}
 	case configs.DriverMysql, configs.DriverPostgres, configs.DriverSqlite, configs.DriverMssql, configs.DriverOracle:
 		log.Info("Using database driver", "driver", global.Config.Driver)
-		db := database.NewDB(*global.Config)
+		db := database.NewDB(global.Config)
 		db.AutoMigrate()
 	default:
-		log.Info("No database driver", "driver", "none")
+		log.Fatal("No database driver", "driver", "none")
+
 	}
 	// _, _, err = redis.NewRedisClient(global.Config)
 	// if err != nil {

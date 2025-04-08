@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"os"
 
 	"github.com/glebarez/sqlite"
 	"github.com/limitcool/starter/configs"
@@ -50,26 +49,23 @@ func getDSN(c *configs.Config) string {
 // gormConfig 根据配置决定是否开启日志
 func gormConfig(c *configs.Config) *gorm.Config {
 	config := &gorm.Config{DisableForeignKeyConstraintWhenMigrating: true} // 禁止外键约束, 生产环境不建议使用外键约束
-	// 打印所有SQL
-	if c.Database.ShowLog {
-		config.Logger = logger.Default.LogMode(logger.Info)
-	} else {
-		config.Logger = logger.Default.LogMode(logger.Silent)
-	}
-	// 只打印慢查询
-	if c.Database.SlowThreshold > 0 {
-		config.Logger = logger.New(
-			//将标准输出作为Writer
-			log.New(os.Stdout),
-			logger.Config{
-				//设定慢查询时间阈值
-				SlowThreshold: c.Database.SlowThreshold, // nolint: golint
-				Colorful:      true,
-				//设置日志级别，只有指定级别以上会输出慢查询日志
-				LogLevel: logger.Warn,
-			},
-		)
-	}
+
+	// 创建一个结构化日志适配器
+	gormLogger := logger.New(
+		// 使用我们的结构化日志
+		&gormLogWriter{
+			logger: log.Default(),
+		},
+		logger.Config{
+			SlowThreshold: c.Database.SlowThreshold,
+			Colorful:      false, // 禁用颜色以避免与结构化日志冲突
+			LogLevel:      getGormLogLevel(c),
+		},
+	)
+
+	// 设置GORM日志
+	config.Logger = gormLogger
+
 	config.SkipDefaultTransaction = true
 	config.NamingStrategy = schema.NamingStrategy{
 		// 使用表前缀
@@ -80,7 +76,32 @@ func gormConfig(c *configs.Config) *gorm.Config {
 	return config
 }
 
-func NewDB(c configs.Config) *gorm.DB {
+// gormLogWriter 适配GORM日志到结构化日志
+type gormLogWriter struct {
+	logger *log.Logger
+}
+
+// Printf 实现Print接口供GORM日志使用
+func (w *gormLogWriter) Printf(format string, args ...interface{}) {
+	// 将GORM日志输出到结构化日志
+	msg := fmt.Sprintf(format, args...)
+	w.logger.Info("GORM", "message", msg)
+}
+
+// getGormLogLevel 根据配置获取GORM日志级别
+func getGormLogLevel(c *configs.Config) logger.LogLevel {
+	if c.Database.ShowLog {
+		return logger.Info
+	}
+
+	if c.Database.SlowThreshold > 0 {
+		return logger.Warn
+	}
+
+	return logger.Silent
+}
+
+func NewDB(c *configs.Config) *gorm.DB {
 	DB = newDbConn(c)
 	return DB
 }
@@ -95,8 +116,8 @@ func NewDB(c configs.Config) *gorm.DB {
 // 	return newDbConn(c)
 // }
 
-func newDbConn(c configs.Config) *gorm.DB {
-	dsn := getDSN(&c)
+func newDbConn(c *configs.Config) *gorm.DB {
+	dsn := getDSN(c)
 	var (
 		err   error
 		sqlDB *sql.DB
@@ -119,12 +140,18 @@ func newDbConn(c configs.Config) *gorm.DB {
 			"error", err)
 	}
 	if c.Driver != configs.DriverSqlite {
+
 		sqlDB.SetMaxOpenConns(c.Database.MaxOpenConn)
 		sqlDB.SetMaxIdleConns(c.Database.MaxIdleConn)
 		sqlDB.SetConnMaxLifetime(c.Database.ConnMaxLifeTime)
+	} else {
+		if c.Database.DBName == "" {
+			log.Warn("Database name is empty, using default", "driver", c.Driver)
+			c.Database.DBName = "default"
+		}
 	}
 
-	db, err := gorm.Open(getGormDriver(&c), gormConfig(&c))
+	db, err := gorm.Open(getGormDriver(c), gormConfig(c))
 	if err != nil {
 		log.Fatal("Database connection failed",
 			"database", c.Database.DBName,

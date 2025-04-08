@@ -8,11 +8,18 @@ import (
 
 // Load loads the middlewares, routes, handlers.
 func NewRouter() *gin.Engine {
-	gin.SetMode(gin.DebugMode)
-	g := gin.New()
-	g.Use(gin.Recovery(), middleware.LoggerWithCharmbracelet(), middleware.Cors())
+	// 创建不带默认中间件的路由
+	r := gin.New()
+
+	// 使用我们的结构化日志中间件
+	r.Use(middleware.LoggerWithCharmbracelet())
+
+	// 使用恢复中间件
+	r.Use(gin.Recovery())
+	// 使用CORS中间件
+	r.Use(middleware.Cors())
 	// v1 router
-	apiV1 := g.Group("/api/v1")
+	apiV1 := r.Group("/api/v1")
 	// apiV1.Use()
 	// {
 	// 	apiV1.GET("/ping", handler.Ping)
@@ -21,5 +28,5 @@ func NewRouter() *gin.Engine {
 	{
 		auth.GET("/ping", controller.Ping)
 	}
-	return g
+	return r
 }
