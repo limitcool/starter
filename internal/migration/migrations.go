@@ -10,15 +10,27 @@ import (
 
 // RegisterCoreUserMigrations 注册用户相关迁移
 func RegisterCoreUserMigrations(migrator *Migrator) {
-	// 用户表迁移
+	// 系统用户表迁移
 	migrator.Register(&MigrationEntry{
 		Version: "202504080001",
+		Name:    "create_sys_users_table",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&model.SysUser{})
+		},
+		Down: func(tx *gorm.DB) error {
+			return tx.Migrator().DropTable("sys_user")
+		},
+	})
+
+	// 普通用户表迁移
+	migrator.Register(&MigrationEntry{
+		Version: "202504080005",
 		Name:    "create_users_table",
 		Up: func(tx *gorm.DB) error {
 			return tx.AutoMigrate(&model.User{})
 		},
 		Down: func(tx *gorm.DB) error {
-			return tx.Migrator().DropTable("sys_user")
+			return tx.Migrator().DropTable("user")
 		},
 	})
 }
@@ -92,6 +104,21 @@ func RegisterMenuMigrations(migrator *Migrator) {
 	})
 }
 
+// RegisterOperationLogMigrations 注册操作日志相关迁移
+func RegisterOperationLogMigrations(migrator *Migrator) {
+	// 操作日志表迁移
+	migrator.Register(&MigrationEntry{
+		Version: "202504080006",
+		Name:    "create_operation_logs_table",
+		Up: func(tx *gorm.DB) error {
+			return tx.AutoMigrate(&model.OperationLog{})
+		},
+		Down: func(tx *gorm.DB) error {
+			return tx.Migrator().DropTable("sys_operation_log")
+		},
+	})
+}
+
 // RegisterAllMigrations 注册所有迁移
 func RegisterAllMigrations(migrator *Migrator) {
 	// 按顺序注册所有迁移
@@ -99,6 +126,7 @@ func RegisterAllMigrations(migrator *Migrator) {
 	RegisterRoleMigrations(migrator)
 	RegisterPermissionMigrations(migrator)
 	RegisterMenuMigrations(migrator)
+	RegisterOperationLogMigrations(migrator)
 
 	// 添加自定义业务迁移...
 }

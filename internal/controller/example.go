@@ -10,7 +10,7 @@ import (
 
 // ExampleHandler 是演示错误处理的示例控制器
 func ExampleHandler(c *gin.Context) {
-	var user model.User
+	var user model.SysUser
 
 	// 1. 使用response.HandleError处理错误
 	if err := global.DB.First(&user, 9999).Error; err != nil {
@@ -24,7 +24,7 @@ func ExampleHandler(c *gin.Context) {
 
 // ExampleErrorHandler 演示使用gin的错误处理机制
 func ExampleErrorHandler(c *gin.Context) {
-	var user model.User
+	var user model.SysUser
 
 	// 2. 使用gin的Error方法
 	if err := global.DB.First(&user, 9999).Error; err != nil {
@@ -59,7 +59,7 @@ func ExampleCustomError(c *gin.Context) {
 // ExampleDBOperationError 演示数据库操作错误处理
 func ExampleDBOperationError(c *gin.Context) {
 	// 4. 处理数据库操作错误
-	user := model.User{
+	user := model.SysUser{
 		Username: "admin", // 假设这是唯一键，已存在
 	}
 

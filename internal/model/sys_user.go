@@ -10,12 +10,12 @@ import (
 )
 
 // 使用辅助方法获取集合
-func getUserCollection() *mongo.Collection {
-	return mongodb.Collection("user")
+func getSysUserCollection() *mongo.Collection {
+	return mongodb.Collection("sys_user")
 }
 
-// User 普通用户
-type User struct {
+// SysUser 系统用户
+type SysUser struct {
 	BaseModel
 
 	Username  string    `json:"username" gorm:"size:50;not null;unique;comment:用户名"`
@@ -29,20 +29,19 @@ type User struct {
 	LastLogin time.Time `json:"last_login" gorm:"comment:最后登录时间"`
 	LastIP    string    `json:"last_ip" gorm:"size:50;comment:最后登录IP"`
 
-	// 普通用户特有字段
-	Gender     string    `json:"gender" gorm:"size:10;comment:性别"`
-	Birthday   time.Time `json:"birthday" gorm:"comment:生日"`
-	Address    string    `json:"address" gorm:"size:255;comment:地址"`
-	RegisterIP string    `json:"register_ip" gorm:"size:50;comment:注册IP"`
+	// 关联
+	Roles     []*Role  `json:"roles" gorm:"many2many:sys_user_role;"` // 关联的角色
+	RoleIDs   []uint   `json:"role_ids" gorm:"-"`                     // 角色ID列表，不映射到数据库
+	RoleCodes []string `json:"role_codes" gorm:"-"`                   // 角色编码列表
 }
 
-func (User) TableName() string {
-	return "user"
+func (SysUser) TableName() string {
+	return "sys_user"
 }
 
-func (User) Registry() {
+func (SysUser) Registry() {
 	var ctx = context.Background()
-	coll := getUserCollection()
+	coll := getSysUserCollection()
 	if coll == nil {
 		return
 	}

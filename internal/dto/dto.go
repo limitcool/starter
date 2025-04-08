@@ -1,27 +1,21 @@
 package dto
 
-const DefaultPageSize = 20
-
-type Pagination struct {
-	Page int64 `form:"page" json:"page"`
-	Size int64 `form:"size" json:"size"`
-}
-
-// GetSkip 计算需要跳过的文档数
-func (p *Pagination) GetSkip() int64 {
-	return (p.Page - 1) * p.Size
-}
-
-// GetLimit 返回每页的大小
-func (p *Pagination) GetLimit() int64 {
-	if p.Size <= 0 || p.Size > DefaultPageSize {
-		return DefaultPageSize
-	}
-	return p.Size
-}
-
 // total Resp
-type ListResponse struct {
-	Total int64       `json:"total"`
-	Items interface{} `json:"items"`
+type ListResponse[T any] struct {
+	Total int64 `json:"total"`
+	Items T     `json:"items"`
+}
+
+// BaseDTO 基础数据传输对象
+type BaseDTO struct {
+	ID uint `json:"id" form:"id"` // ID
+}
+
+// BaseQuery 基础查询对象
+type BaseQuery struct {
+	Keyword   string `json:"keyword" form:"keyword"`       // 关键字
+	Status    *int   `json:"status" form:"status"`         // 状态
+	StartTime string `json:"start_time" form:"start_time"` // 开始时间
+	EndTime   string `json:"end_time" form:"end_time"`     // 结束时间
+	CreateBy  string `json:"create_by" form:"create_by"`   // 创建人
 }

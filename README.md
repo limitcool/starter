@@ -9,6 +9,7 @@
   - 支持 PostgreSQL (使用 pgx 驱动)
   - 支持 MySQL
   - 支持 SQLite
+  - 提供丰富的查询选项工具函数
 - 集成 Viper 进行配置管理
 - 提供常用 gin 中间件和工具
   - 跨域中间件:处理 API 跨域请求,实现 CORS 支持
@@ -105,7 +106,7 @@ migrator.Register(&MigrationEntry{
     Version: "202504080001",        // 版本号格式：年月日序号
     Name:    "create_users_table",  // 迁移名称
     Up: func(tx *gorm.DB) error {   // 向上迁移函数
-        return tx.AutoMigrate(&model.User{})
+        return tx.AutoMigrate(&model.SysUser{})
     },
     Down: func(tx *gorm.DB) error { // 向下迁移函数
         return tx.Migrator().DropTable("sys_user")
@@ -319,3 +320,128 @@ Log:
    ```
    GET /api/v1/user/perms
    ```
+
+## 数据库查询选项系统
+
+本项目实现了一个完整的数据库查询选项系统，用于简化GORM查询构建过程，提高代码复用性和可读性。
+
+### 查询选项特点
+
+- 采用函数式选项模式设计
+- 支持链式组合多个查询条件
+- 提供统一的接口方式处理各种查询场景
+- 易于扩展和自定义新的查询条件
+
+### 基本使用方法
+
+```go
+// 导入查询选项包
+import "your-project/internal/pkg/db"
+
+// 创建查询实例
+query := db.Apply(
+    DB, // *gorm.DB实例
+    db.WithPage(1, 10),
+    db.WithOrder("created_at", "desc"),
+    db.WithLike("name", keyword),
+)
+
+// 执行查询
+var results []YourModel
+query.Find(&results)
+```
+
+### 内置查询选项
+
+系统提供了以下内置查询选项：
+
+#### 分页与排序
+- `WithPage(page, pageSize)` - 分页查询，自动限制最大页面大小
+- `WithOrder(field, direction)` - 排序查询，direction支持"asc"或"desc"
+
+#### 关联查询
+- `WithPreload(relation, args...)` - 预加载关联关系
+- `WithJoin(query, args...)` - 连接查询
+- `WithSelect(query, args...)` - 指定查询字段
+- `WithGroup(query)` - 分组查询
+- `WithHaving(query, args...)` - HAVING条件查询
+
+#### 条件过滤
+- `WithWhere(query, args...)` - WHERE条件
+- `WithOrWhere(query, args...)` - OR WHERE条件
+- `WithLike(field, value)` - LIKE模糊查询
+- `WithExactMatch(field, value)` - 精确匹配查询
+- `WithTimeRange(field, start, end)` - 时间范围查询
+- `WithKeyword(keyword, fields...)` - 关键字搜索（多字段OR条件）
+
+#### 组合查询
+- `WithBaseQuery(tableName, status, keyword, keywordFields, createBy, startTime, endTime)` - 应用基础查询条件，组合多个常用过滤条件
+
+### 自定义查询选项
+
+可以轻松扩展自定义的查询选项：
+
+```go
+// 自定义查询选项示例
+func WithCustomCondition(param string) db.Option {
+    return func(db *gorm.DB) *gorm.DB {
+        if param == "" {
+            return db
+        }
+        return db.Where("custom_field = ?", param)
+    }
+}
+
+// 使用自定义查询选项
+query := db.Apply(
+    DB,
+    db.WithPage(1, 10),
+    WithCustomCondition("value"),
+)
+```
+
+### 与DTO结合使用
+
+可以结合DTO对象灵活构建查询条件：
+
+```go
+// 基于BaseQuery DTO构建查询条件
+func BuildQueryOptions(q *dto.BaseQuery, tableName string) []db.Option {
+    var opts []db.Option
+
+    // 添加基础查询条件
+    opts = append(opts, db.WithBaseQuery(
+        tableName,
+        q.Status,
+        q.Keyword,
+        []string{"name", "description"}, // 关键字搜索字段
+        q.CreateBy,
+        q.StartTime,
+        q.EndTime,
+    ))
+
+    return opts
+}
+
+// 在服务中使用
+func (s *Service) List(query *dto.YourQuery) ([]YourModel, int64, error) {
+    opts := BuildQueryOptions(&query.BaseQuery, "your_table")
+
+    // 添加分页和排序
+    opts = append(opts,
+        db.WithPage(query.Page, query.PageSize),
+        db.WithOrder(query.SortField, query.SortOrder),
+    )
+
+    // 应用所有查询选项
+    db := db.Apply(s.DB, opts...)
+
+    var total int64
+    db.Model(&YourModel{}).Count(&total)
+
+    var items []YourModel
+    db.Find(&items)
+
+    return items, total, nil
+}
+```

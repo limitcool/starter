@@ -1,0 +1,193 @@
+package services
+
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/internal/dto"
+	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/pkg/db"
+	"github.com/limitcool/starter/internal/vo"
+	"gorm.io/gorm"
+)
+
+// OperationLogService 操作日志服务
+type OperationLogService struct {
+	db *gorm.DB
+}
+
+// NewOperationLogService 创建操作日志服务
+func NewOperationLogService(db *gorm.DB) *OperationLogService {
+	return &OperationLogService{
+		db: db,
+	}
+}
+
+// CreateSysUserLog 创建系统用户操作日志
+func (s *OperationLogService) CreateSysUserLog(c *gin.Context, userID uint, username string, module, action, description string, startTime time.Time) error {
+	// 计算执行时间
+	executeTime := time.Since(startTime).Milliseconds()
+
+	// 获取请求相关信息
+	method := c.Request.Method
+	requestURL := c.Request.URL.String()
+	ip := c.ClientIP()
+	userAgent := c.Request.UserAgent()
+
+	// 获取请求参数
+	var params string
+	if c.Request.Method == "POST" || c.Request.Method == "PUT" {
+		// 获取请求体
+		bodyData, exists := c.Get("requestBody")
+		if exists {
+			paramsBytes, _ := json.Marshal(bodyData)
+			params = string(paramsBytes)
+		}
+	} else {
+		// 获取查询参数
+		queryParams := c.Request.URL.Query()
+		paramsBytes, _ := json.Marshal(queryParams)
+		params = string(paramsBytes)
+	}
+
+	// 创建操作日志
+	operationLog := model.OperationLog{
+		Module:      module,
+		Action:      action,
+		Description: description,
+		IP:          ip,
+		UserAgent:   userAgent,
+		RequestURL:  requestURL,
+		Method:      method,
+		Params:      params,
+		Status:      c.Writer.Status(),
+		ExecuteTime: executeTime,
+		OperateAt:   startTime,
+		UserType:    "sys_user",
+		UserID:      userID,
+		Username:    username,
+	}
+
+	return s.db.Create(&operationLog).Error
+}
+
+// CreateUserLog 创建普通用户操作日志
+func (s *OperationLogService) CreateUserLog(c *gin.Context, userID uint, username string, module, action, description string, startTime time.Time) error {
+	// 计算执行时间
+	executeTime := time.Since(startTime).Milliseconds()
+
+	// 获取请求相关信息
+	method := c.Request.Method
+	requestURL := c.Request.URL.String()
+	ip := c.ClientIP()
+	userAgent := c.Request.UserAgent()
+
+	// 获取请求参数
+	var params string
+	if c.Request.Method == "POST" || c.Request.Method == "PUT" {
+		// 获取请求体
+		bodyData, exists := c.Get("requestBody")
+		if exists {
+			paramsBytes, _ := json.Marshal(bodyData)
+			params = string(paramsBytes)
+		}
+	} else {
+		// 获取查询参数
+		queryParams := c.Request.URL.Query()
+		paramsBytes, _ := json.Marshal(queryParams)
+		params = string(paramsBytes)
+	}
+
+	// 创建操作日志
+	operationLog := model.OperationLog{
+		Module:      module,
+		Action:      action,
+		Description: description,
+		IP:          ip,
+		UserAgent:   userAgent,
+		RequestURL:  requestURL,
+		Method:      method,
+		Params:      params,
+		Status:      c.Writer.Status(),
+		ExecuteTime: executeTime,
+		OperateAt:   startTime,
+		UserType:    "user",
+		UserID:      userID,
+		Username:    username,
+	}
+
+	return s.db.Create(&operationLog).Error
+}
+
+// GetOperationLogs 分页获取操作日志
+func (s *OperationLogService) GetOperationLogs(query *dto.OperationLogQuery) (*vo.PageResult[[]model.OperationLog], error) {
+	// 标准化分页请求
+	query.PageRequest.Normalize()
+
+	// 构建查询选项
+	var options []db.Option
+
+	// 添加分页选项
+	options = append(options, db.WithPage(query.Page, query.PageSize))
+
+	// 添加排序选项
+	options = append(options, db.WithOrder(query.SortBy, query.GetSortDirection()))
+
+	// 添加条件过滤选项
+	if query.UserType != "" {
+		options = append(options, db.WithExactMatch("user_type", query.UserType))
+	}
+
+	if query.Username != "" {
+		options = append(options, db.WithLike("username", query.Username))
+	}
+
+	if query.Module != "" {
+		options = append(options, db.WithExactMatch("module", query.Module))
+	}
+
+	if query.Action != "" {
+		options = append(options, db.WithExactMatch("action", query.Action))
+	}
+
+	if query.IP != "" {
+		options = append(options, db.WithLike("ip", query.IP))
+	}
+
+	// 添加时间范围选项
+	if query.StartTime != nil || query.EndTime != nil {
+		options = append(options, db.WithTimeRange("operate_at", query.StartTime, query.EndTime))
+	}
+
+	// 构建查询
+	tx := s.db.Model(&model.OperationLog{})
+
+	// 获取总数
+	var total int64
+	if err := tx.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	// 应用所有选项
+	tx = db.Apply(tx, options...)
+
+	// 执行查询
+	var logs []model.OperationLog
+	if err := tx.Find(&logs).Error; err != nil {
+		return nil, err
+	}
+
+	// 构建响应
+	return vo.NewPageResult(logs, total, query.Page, query.PageSize), nil
+}
+
+// DeleteOperationLog 删除操作日志
+func (s *OperationLogService) DeleteOperationLog(id uint) error {
+	return s.db.Delete(&model.OperationLog{}, id).Error
+}
+
+// BatchDeleteOperationLogs 批量删除操作日志
+func (s *OperationLogService) BatchDeleteOperationLogs(ids []uint) error {
+	return s.db.Where("id IN ?", ids).Delete(&model.OperationLog{}).Error
+}

@@ -34,8 +34,11 @@ func AdminLogin(c *gin.Context) {
 		return
 	}
 
+	// 获取客户端IP地址
+	clientIP := c.ClientIP()
+
 	userService := services.NewUserService(global.DB)
-	tokenResponse, err := userService.Login(req.Username, req.Password)
+	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
 		if code.IsErrCode(err) {
 			response.HandleError(c, err)

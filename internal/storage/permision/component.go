@@ -364,7 +364,7 @@ func (c *Component) initBasicMenus() error {
 func (c *Component) initAdminUser() error {
 	// 检查是否已有admin用户
 	var count int64
-	if err := c.db.Model(&model.User{}).Where("username = ?", "admin").Count(&count).Error; err != nil {
+	if err := c.db.Model(&model.SysUser{}).Where("username = ?", "admin").Count(&count).Error; err != nil {
 		return err
 	}
 
@@ -380,7 +380,7 @@ func (c *Component) initAdminUser() error {
 		return fmt.Errorf("密码加密失败: %w", err)
 	}
 
-	adminUser := model.User{
+	adminUser := model.SysUser{
 		Username: "admin",
 		Password: hashedPassword,
 		Nickname: "超级管理员",

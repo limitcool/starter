@@ -31,8 +31,8 @@ func NewUserService(db *gorm.DB) *UserService {
 }
 
 // GetUserByID 根据ID获取用户
-func (s *UserService) GetUserByID(id uint) (*model.User, error) {
-	var user model.User
+func (s *UserService) GetUserByID(id uint) (*model.SysUser, error) {
+	var user model.SysUser
 	err := s.db.First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, code.NewErrCodeMsg(code.UserNotFound, "用户不存在")
@@ -55,8 +55,8 @@ func (s *UserService) GetUserByID(id uint) (*model.User, error) {
 }
 
 // GetUserByUsername 根据用户名获取用户
-func (s *UserService) GetUserByUsername(username string) (*model.User, error) {
-	var user model.User
+func (s *UserService) GetUserByUsername(username string) (*model.SysUser, error) {
+	var user model.SysUser
 	err := s.db.Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, code.NewErrCodeMsg(code.UserNotFound, "用户不存在")
@@ -91,7 +91,7 @@ type LoginResponse struct {
 }
 
 // Login 用户登录
-func (s *UserService) Login(username, password string) (*LoginResponse, error) {
+func (s *UserService) Login(username, password string, ip string) (*LoginResponse, error) {
 	// 获取用户
 	user, err := s.GetUserByUsername(username)
 	if err != nil {
@@ -108,24 +108,29 @@ func (s *UserService) Login(username, password string) (*LoginResponse, error) {
 		return nil, code.NewErrCodeMsg(code.UserPasswordError, "密码错误")
 	}
 
-	// 更新最后登录时间
-	s.db.Model(user).Update("last_login", time.Now())
+	// 更新最后登录时间和IP
+	s.db.Model(user).Updates(map[string]interface{}{
+		"last_login": time.Now(),
+		"last_ip":    ip,
+	})
 
 	// 生成访问令牌
 	accessClaims := jwt.MapClaims{
 		"user_id":    user.ID,
 		"username":   user.Username,
 		"role_codes": user.RoleCodes,
+		"user_type":  "sys_user", // 系统用户
 		"type":       "access_token",
 		"exp":        time.Now().Add(time.Duration(global.Config.JwtAuth.AccessExpire) * time.Second).Unix(),
 	}
 
 	// 生成刷新令牌
 	refreshClaims := jwt.MapClaims{
-		"user_id":  user.ID,
-		"username": user.Username,
-		"type":     "refresh_token",
-		"exp":      time.Now().Add(time.Duration(global.Config.JwtAuth.RefreshExpire) * time.Second).Unix(),
+		"user_id":   user.ID,
+		"username":  user.Username,
+		"user_type": "sys_user", // 系统用户
+		"type":      "refresh_token",
+		"exp":       time.Now().Add(time.Duration(global.Config.JwtAuth.RefreshExpire) * time.Second).Unix(),
 	}
 
 	accessToken, err := jwtpkg.GenerateToken(accessClaims, global.Config.JwtAuth.AccessSecret, time.Duration(global.Config.JwtAuth.AccessExpire)*time.Second)
@@ -181,6 +186,7 @@ func (s *UserService) RefreshToken(refreshToken string) (*LoginResponse, error) 
 		"user_id":    user.ID,
 		"username":   user.Username,
 		"role_codes": user.RoleCodes,
+		"user_type":  "sys_user", // 系统用户
 		"type":       "access_token",
 		"exp":        time.Now().Add(time.Duration(global.Config.JwtAuth.AccessExpire) * time.Second).Unix(),
 	}

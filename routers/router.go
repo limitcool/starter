@@ -41,6 +41,10 @@ func NewRouter() *gin.Engine {
 		apiV1.GET("/ping", controller.Ping)
 		apiV1.POST("/admin/login", controller.AdminLogin) // 管理员登录接口
 		apiV1.POST("/refresh", controller.RefreshToken)   // 刷新访问令牌接口
+
+		// 普通用户公共路由
+		apiV1.POST("/user/register", controller.UserRegister) // 用户注册
+		apiV1.POST("/user/login", controller.UserLogin)       // 用户登录
 	}
 
 	// 需要认证的路由
@@ -51,6 +55,15 @@ func NewRouter() *gin.Engine {
 		auth.GET("/user/menus", controller.GetUserMenus)
 		// 获取当前用户权限标识
 		auth.GET("/user/perms", controller.GetUserMenuPerms)
+
+		// 普通用户需要认证的路由
+		user := auth.Group("/user")
+		{
+			// 普通用户信息
+			user.GET("/info", middleware.RequireNormalUser(), controller.UserInfo)
+			// 修改密码
+			user.POST("/change-password", middleware.RequireNormalUser(), controller.UserChangePassword)
+		}
 	}
 
 	// 只有在启用权限系统时才注册需要权限控制的路由
@@ -100,6 +113,14 @@ func NewRouter() *gin.Engine {
 				permission.POST("", controller.CreatePermission)
 				permission.PUT("/:id", controller.UpdatePermission)
 				permission.DELETE("/:id", controller.DeletePermission)
+			}
+
+			// 操作日志管理
+			oplog := admin.Group("/operation-logs")
+			{
+				oplog.GET("", controller.GetOperationLogs)
+				oplog.DELETE("/:id", controller.DeleteOperationLog)
+				oplog.DELETE("/batch", controller.BatchDeleteOperationLogs)
 			}
 		}
 	}
