@@ -121,7 +121,7 @@ func (c *Component) initAdminRole() error {
 	adminRole := model.Role{
 		Name:        "超级管理员",
 		Code:        "admin",
-		Status:      1,
+		Enabled:     true,
 		Sort:        0,
 		Description: "系统超级管理员",
 	}
@@ -162,9 +162,9 @@ func (c *Component) initBasicMenus() error {
 		Type:      0, // 目录
 		Icon:      "system",
 		OrderNum:  1,
-		IsFrame:   0,
-		IsHidden:  0,
-		Status:    1,
+		IsFrame:   false,
+		IsHidden:  false,
+		Enabled:   true,
 		Perms:     "",
 	}
 
@@ -181,9 +181,9 @@ func (c *Component) initBasicMenus() error {
 		Type:      1, // 菜单
 		Icon:      "user",
 		OrderNum:  1,
-		IsFrame:   0,
-		IsHidden:  0,
-		Status:    1,
+		IsFrame:   false,
+		IsHidden:  false,
+		Enabled:   true,
 		Perms:     "system:user:list",
 	}
 
@@ -200,9 +200,9 @@ func (c *Component) initBasicMenus() error {
 		Type:      1, // 菜单
 		Icon:      "role",
 		OrderNum:  2,
-		IsFrame:   0,
-		IsHidden:  0,
-		Status:    1,
+		IsFrame:   false,
+		IsHidden:  false,
+		Enabled:   true,
 		Perms:     "system:role:list",
 	}
 
@@ -219,9 +219,9 @@ func (c *Component) initBasicMenus() error {
 		Type:      1, // 菜单
 		Icon:      "menu",
 		OrderNum:  3,
-		IsFrame:   0,
-		IsHidden:  0,
-		Status:    1,
+		IsFrame:   false,
+		IsHidden:  false,
+		Enabled:   true,
 		Perms:     "system:menu:list",
 	}
 
@@ -238,9 +238,9 @@ func (c *Component) initBasicMenus() error {
 		Type:      1, // 菜单
 		Icon:      "permission",
 		OrderNum:  4,
-		IsFrame:   0,
-		IsHidden:  0,
-		Status:    1,
+		IsFrame:   false,
+		IsHidden:  false,
+		Enabled:   true,
 		Perms:     "system:permission:list",
 	}
 
@@ -253,12 +253,12 @@ func (c *Component) initBasicMenus() error {
 	for _, menu := range menus {
 		// 查看权限
 		listPerm := model.Permission{
-			Name:        menu.Name + "查看",
-			Code:        menu.Perms,
-			Description: "查看" + menu.Name + "列表",
-			Type:        1, // 菜单权限
-			Status:      1,
-			MenuID:      menu.ID,
+			Name:    menu.Name + "查看",
+			Code:    menu.Perms,
+			Remark:  "查看" + menu.Name + "列表",
+			Type:    1, // 菜单权限
+			Enabled: true,
+			MenuID:  menu.ID,
 		}
 
 		if err := c.db.Create(&listPerm).Error; err != nil {
@@ -267,12 +267,12 @@ func (c *Component) initBasicMenus() error {
 
 		// 新增权限
 		addPerm := model.Permission{
-			Name:        menu.Name + "新增",
-			Code:        menu.Perms[:len(menu.Perms)-4] + "add",
-			Description: "新增" + menu.Name,
-			Type:        2, // 操作权限
-			Status:      1,
-			MenuID:      menu.ID,
+			Name:    menu.Name + "新增",
+			Code:    menu.Perms[:len(menu.Perms)-4] + "add",
+			Remark:  "新增" + menu.Name,
+			Type:    2, // 操作权限
+			Enabled: true,
+			MenuID:  menu.ID,
 		}
 
 		if err := c.db.Create(&addPerm).Error; err != nil {
@@ -281,12 +281,12 @@ func (c *Component) initBasicMenus() error {
 
 		// 编辑权限
 		editPerm := model.Permission{
-			Name:        menu.Name + "编辑",
-			Code:        menu.Perms[:len(menu.Perms)-4] + "edit",
-			Description: "编辑" + menu.Name,
-			Type:        2, // 操作权限
-			Status:      1,
-			MenuID:      menu.ID,
+			Name:    menu.Name + "编辑",
+			Code:    menu.Perms[:len(menu.Perms)-4] + "edit",
+			Remark:  "编辑" + menu.Name,
+			Type:    2, // 操作权限
+			Enabled: true,
+			MenuID:  menu.ID,
 		}
 
 		if err := c.db.Create(&editPerm).Error; err != nil {
@@ -295,12 +295,12 @@ func (c *Component) initBasicMenus() error {
 
 		// 删除权限
 		deletePerm := model.Permission{
-			Name:        menu.Name + "删除",
-			Code:        menu.Perms[:len(menu.Perms)-4] + "delete",
-			Description: "删除" + menu.Name,
-			Type:        2, // 操作权限
-			Status:      1,
-			MenuID:      menu.ID,
+			Name:    menu.Name + "删除",
+			Code:    menu.Perms[:len(menu.Perms)-4] + "delete",
+			Remark:  "删除" + menu.Name,
+			Type:    2, // 操作权限
+			Enabled: true,
+			MenuID:  menu.ID,
 		}
 
 		if err := c.db.Create(&deletePerm).Error; err != nil {

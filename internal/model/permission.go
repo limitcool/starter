@@ -1,22 +1,25 @@
 package model
 
+import "github.com/limitcool/starter/pkg/enum"
+
 // Permission 权限实体
 type Permission struct {
 	BaseModel
 
-	Name        string `json:"name" gorm:"size:50;not null;comment:权限名称"`
-	Code        string `json:"code" gorm:"size:100;not null;unique;comment:权限编码"`
-	Description string `json:"description" gorm:"size:200;comment:权限描述"`
-	Type        int8   `json:"type" gorm:"default:1;comment:权限类型(1:菜单,2:操作,3:API)"`
-	Status      int8   `json:"status" gorm:"default:1;comment:状态(0:禁用,1:正常)"`
+	Name     string              `json:"name" gorm:"size:50;not null;comment:权限名称"`
+	Code     string              `json:"code" gorm:"size:100;not null;unique;comment:权限编码"`
+	Type     enum.PermissionType `json:"type" gorm:"default:0;comment:权限类型(0:菜单,1:操作,2:API)"`
+	MenuID   uint                `json:"menu_id" gorm:"default:0;comment:所属菜单ID"`
+	ParentID uint                `json:"parent_id" gorm:"default:0;comment:父权限ID"`
+	Path     string              `json:"path" gorm:"size:100;comment:权限路径"`
+	Method   string              `json:"method" gorm:"size:10;comment:请求方法"`
+	Enabled  bool                `json:"enabled" gorm:"default:true;comment:是否启用"`
+	Remark   string              `json:"remark" gorm:"size:500;comment:备注"`
 
-	// 关联的菜单
-	MenuID uint  `json:"menu_id" gorm:"comment:关联菜单ID"`
-	Menu   *Menu `json:"menu" gorm:"foreignKey:MenuID"`
-
-	// API相关
-	ApiPath   string `json:"api_path" gorm:"size:200;comment:API路径"`
-	ApiMethod string `json:"api_method" gorm:"size:10;comment:API方法(GET,POST,PUT,DELETE)"`
+	// 关联
+	Menu    *Menu   `json:"menu" gorm:"foreignKey:MenuID"`               // 所属菜单
+	Roles   []*Role `json:"roles" gorm:"many2many:sys_role_permission;"` // 关联的角色
+	RoleIDs []uint  `json:"role_ids" gorm:"-"`                           // 角色ID列表，不映射到数据库
 }
 
 // 表名
