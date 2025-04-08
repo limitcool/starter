@@ -21,10 +21,13 @@ func NewRouter() *gin.Engine {
 	// 使用CORS中间件
 	r.Use(middleware.Cors())
 
-	// 初始化Casbin组件
-	casbinComponent := casbin.NewComponent(global.Config)
-	if err := casbinComponent.Initialize(); err != nil {
-		panic("Casbin组件初始化失败: " + err.Error())
+	// 只有在启用权限系统时才初始化Casbin组件
+	if global.Config.Permission.Enabled {
+		// 初始化Casbin组件
+		casbinComponent := casbin.NewComponent(global.Config)
+		if err := casbinComponent.Initialize(); err != nil {
+			panic("Casbin组件初始化失败: " + err.Error())
+		}
 	}
 
 	// v1 router
@@ -45,44 +48,54 @@ func NewRouter() *gin.Engine {
 		auth.GET("/user/perms", controller.GetUserMenuPerms)
 	}
 
-	// 需要权限控制的路由
-	admin := auth.Group("/admin")
-	admin.Use(middleware.CasbinComponentMiddleware())
-	{
-		// 菜单管理
-		menu := admin.Group("/menu")
+	// 只有在启用权限系统时才注册需要权限控制的路由
+	if global.Config.Permission.Enabled {
+		// 需要权限控制的路由
+		admin := auth.Group("/admin")
+		admin.Use(middleware.CasbinComponentMiddleware())
 		{
-			menu.POST("", controller.CreateMenu)
-			menu.PUT("/:id", controller.UpdateMenu)
-			menu.DELETE("/:id", controller.DeleteMenu)
-			menu.GET("/:id", controller.GetMenu)
-			menu.GET("", controller.GetMenuTree)
-		}
+			// 系统设置
+			system := admin.Group("/system")
+			{
+				system.GET("/settings", controller.GetSystemSettings)
+				system.PUT("/permission", controller.UpdatePermissionSettings)
+			}
 
-		// 角色管理
-		role := admin.Group("/role")
-		{
-			role.POST("", controller.CreateRole)
-			role.PUT("/:id", controller.UpdateRole)
-			role.DELETE("/:id", controller.DeleteRole)
-			role.GET("/:id", controller.GetRole)
-			role.GET("", controller.GetRoles)
-			// 为角色分配菜单
-			role.POST("/menu", controller.AssignMenuToRole)
-			// 为角色设置权限
-			role.POST("/permission", controller.SetRolePermission)
-			// 删除角色权限
-			role.DELETE("/permission", controller.DeleteRolePermission)
-		}
+			// 菜单管理
+			menu := admin.Group("/menu")
+			{
+				menu.POST("", controller.CreateMenu)
+				menu.PUT("/:id", controller.UpdateMenu)
+				menu.DELETE("/:id", controller.DeleteMenu)
+				menu.GET("/:id", controller.GetMenu)
+				menu.GET("", controller.GetMenuTree)
+			}
 
-		// 权限管理
-		permission := admin.Group("/permission")
-		{
-			permission.GET("", controller.GetPermissions)
-			permission.GET("/:id", controller.GetPermission)
-			permission.POST("", controller.CreatePermission)
-			permission.PUT("/:id", controller.UpdatePermission)
-			permission.DELETE("/:id", controller.DeletePermission)
+			// 角色管理
+			role := admin.Group("/role")
+			{
+				role.POST("", controller.CreateRole)
+				role.PUT("/:id", controller.UpdateRole)
+				role.DELETE("/:id", controller.DeleteRole)
+				role.GET("/:id", controller.GetRole)
+				role.GET("", controller.GetRoles)
+				// 为角色分配菜单
+				role.POST("/menu", controller.AssignMenuToRole)
+				// 为角色设置权限
+				role.POST("/permission", controller.SetRolePermission)
+				// 删除角色权限
+				role.DELETE("/permission", controller.DeleteRolePermission)
+			}
+
+			// 权限管理
+			permission := admin.Group("/permission")
+			{
+				permission.GET("", controller.GetPermissions)
+				permission.GET("/:id", controller.GetPermission)
+				permission.POST("", controller.CreatePermission)
+				permission.PUT("/:id", controller.UpdatePermission)
+				permission.DELETE("/:id", controller.DeletePermission)
+			}
 		}
 	}
 

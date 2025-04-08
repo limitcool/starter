@@ -7,6 +7,7 @@ import (
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/charmbracelet/log"
+	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/storage/sqldb"
 	"gorm.io/gorm"
 )
@@ -39,6 +40,11 @@ func NewCasbinService(db *gorm.DB) *CasbinService {
 func InitCasbin(db *gorm.DB) (*casbin.Enforcer, error) {
 	var err error
 
+	// 如果权限系统未启用，直接返回nil
+	if global.Config != nil && !global.Config.Permission.Enabled {
+		return nil, nil
+	}
+
 	// 如果已经初始化，直接返回
 	if enforcer != nil {
 		return enforcer, nil
@@ -62,8 +68,14 @@ func InitCasbin(db *gorm.DB) (*casbin.Enforcer, error) {
 			return
 		}
 
+		// 获取模型文件路径
+		modelPath := "configs/rbac_model.conf"
+		if global.Config != nil && global.Config.Permission.ModelPath != "" {
+			modelPath = global.Config.Permission.ModelPath
+		}
+
 		// 创建enforcer
-		e, casbinErr := casbin.NewEnforcer("configs/rbac_model.conf", adapter)
+		e, casbinErr := casbin.NewEnforcer(modelPath, adapter)
 		if casbinErr != nil {
 			err = casbinErr
 			return

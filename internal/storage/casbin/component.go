@@ -34,6 +34,11 @@ func NewComponent(cfg *configs.Config) *Component {
 
 // Initialize 初始化Casbin组件
 func (c *Component) Initialize() error {
+	// 如果权限系统未启用，直接返回
+	if c.config != nil && !c.config.Permission.Enabled {
+		return nil
+	}
+
 	// 获取全局数据库连接
 	c.db = global.DB
 	if c.db == nil {
@@ -69,8 +74,14 @@ func (c *Component) initEnforcer() (*casbin.Enforcer, error) {
 			return
 		}
 
+		// 获取模型文件路径，如果配置中没有指定则使用默认值
+		modelPath := "configs/rbac_model.conf"
+		if c.config != nil && c.config.Permission.ModelPath != "" {
+			modelPath = c.config.Permission.ModelPath
+		}
+
 		// 创建enforcer
-		e, err = casbin.NewEnforcer("configs/rbac_model.conf", adapter)
+		e, err = casbin.NewEnforcer(modelPath, adapter)
 		if err != nil {
 			return
 		}
@@ -95,6 +106,10 @@ func (c *Component) GetEnforcer() *casbin.Enforcer {
 
 // 获取全局Enforcer实例
 func GetEnforcer() *casbin.Enforcer {
+	// 如果权限系统未启用，直接返回nil
+	if global.Config != nil && !global.Config.Permission.Enabled {
+		return nil
+	}
 	return enforcer
 }
 

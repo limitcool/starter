@@ -26,13 +26,14 @@ const (
 )
 
 type Config struct {
-	App      App
-	Driver   DBDriver
-	Database Database
-	JwtAuth  JwtAuth
-	Mongo    Mongo
-	Redis    map[string]Redis
-	Log      LogConfig
+	App        App
+	Driver     DBDriver
+	Database   Database
+	JwtAuth    JwtAuth
+	Mongo      Mongo
+	Redis      map[string]Redis
+	Log        LogConfig
+	Permission Permission // 权限系统配置
 }
 
 // Config app config
@@ -105,4 +106,12 @@ type FileLogConfig struct {
 	MaxAge     int    // 日志文件保留天数
 	MaxBackups int    // 保留的旧日志文件最大数量
 	Compress   bool   // 是否压缩旧日志文件
+}
+
+// Permission 权限系统配置
+type Permission struct {
+	Enabled      bool   // 是否启用权限系统
+	DefaultAllow bool   // 默认是否允许访问（权限系统关闭时使用）
+	ModelPath    string // Casbin模型文件路径
+	PolicyTable  string // 策略表名
 }

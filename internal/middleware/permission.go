@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/storage/casbin"
 	"github.com/limitcool/starter/pkg/code"
 	"github.com/limitcool/starter/pkg/response"
@@ -14,6 +15,13 @@ import (
 // CasbinComponentMiddleware 基于Casbin组件的权限控制中间件
 func CasbinComponentMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 检查权限系统是否启用
+		if !global.Config.Permission.Enabled {
+			// 权限系统未启用，直接放行
+			c.Next()
+			return
+		}
+
 		// 从上下文中获取用户ID
 		userIDInterface, exists := c.Get("userID")
 		if !exists {
@@ -67,6 +75,13 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 // PermissionCodeMiddleware 基于权限编码的权限控制中间件
 func PermissionCodeMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 检查权限系统是否启用
+		if !global.Config.Permission.Enabled {
+			// 权限系统未启用，直接放行
+			c.Next()
+			return
+		}
+
 		// 获取需要的权限标识
 		requiredPerm := c.GetHeader("X-Required-Permission")
 		if requiredPerm == "" {
