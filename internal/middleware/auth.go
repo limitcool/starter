@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"net/http"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -53,14 +52,4 @@ func AuthMiddleware() gin.HandlerFunc {
 		// 继续处理该请求
 		c.Next()
 	}
-}
-
-// Unauthorized 未授权响应
-func Unauthorized(c *gin.Context, message string) {
-	c.JSON(http.StatusUnauthorized, Response{
-		Code:    code.UserNoLogin,
-		Message: message,
-		Data:    nil,
-	})
-	// Unauthorized 方法不会自动调用 c.Abort()，需要在调用处手动添加
 }
