@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -34,7 +33,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 		// 获取Casbin实例
 		enforcer := casbin.GetEnforcer()
 		if enforcer == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "Casbin服务未初始化"})
+			response.InternalServerError(c, "Casbin服务未初始化")
 			c.Abort()
 			return
 		}
@@ -45,7 +44,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 		pass, err := enforcer.Enforce(userID, obj, act)
 		if err != nil {
 			log.Error("权限检查错误", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "权限检查失败"})
+			response.InternalServerError(c, "权限检查失败")
 			c.Abort()
 			return
 		}
@@ -55,7 +54,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 			roles, _ := enforcer.GetRolesForUser(userID)
 			log.Debug("权限检查失败", "userID", userID, "roles", strings.Join(roles, ","))
 
-			c.JSON(http.StatusForbidden, gin.H{"message": code.GetMsg(code.AccessDenied)})
+			response.Forbidden(c, code.GetMsg(code.AccessDenied))
 			c.Abort()
 			return
 		}
@@ -89,7 +88,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		// 获取Casbin实例
 		enforcer := casbin.GetEnforcer()
 		if enforcer == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "Casbin服务未初始化"})
+			response.InternalServerError(c, "Casbin服务未初始化")
 			c.Abort()
 			return
 		}
@@ -98,7 +97,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		roles, err := enforcer.GetRolesForUser(userID)
 		if err != nil {
 			log.Error("获取用户角色失败", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "权限检查失败"})
+			response.InternalServerError(c, "权限检查失败")
 			c.Abort()
 			return
 		}
@@ -126,7 +125,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		}
 
 		if !hasPermission {
-			c.JSON(http.StatusForbidden, gin.H{"message": code.GetMsg(code.AccessDenied)})
+			response.Forbidden(c, code.GetMsg(code.AccessDenied))
 			c.Abort()
 			return
 		}

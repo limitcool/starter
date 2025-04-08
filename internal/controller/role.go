@@ -1,85 +1,86 @@
 package controller
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/limitcool/starter/pkg/code"
+	"github.com/limitcool/starter/pkg/response"
 )
 
 // 创建角色
 func CreateRole(c *gin.Context) {
 	var role model.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
 		return
 	}
 
 	roleService := services.NewRoleService(global.DB)
 	if err := roleService.CreateRole(&role); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "创建成功"})
+	response.Success(c, nil)
 }
 
 // 更新角色
 func UpdateRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "无效的角色ID"})
+		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
 		return
 	}
 
 	var role model.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
 		return
 	}
 
 	role.ID = uint(id)
 	roleService := services.NewRoleService(global.DB)
 	if err := roleService.UpdateRole(&role); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "更新成功"})
+	response.Success(c, nil)
 }
 
 // 删除角色
 func DeleteRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "无效的角色ID"})
+		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
 		return
 	}
 
 	roleService := services.NewRoleService(global.DB)
 	if err := roleService.DeleteRole(uint(id)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	response.Success(c, nil)
 }
 
 // 获取角色详情
 func GetRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "无效的角色ID"})
+		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
 		return
 	}
 
 	roleService := services.NewRoleService(global.DB)
 	role, err := roleService.GetRoleByID(uint(id))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -87,7 +88,7 @@ func GetRole(c *gin.Context) {
 	menuService := services.NewMenuService(global.DB)
 	roleMenus, err := menuService.GetMenusByRoleID(role.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
@@ -98,7 +99,7 @@ func GetRole(c *gin.Context) {
 	}
 	role.MenuIDs = menuIDs
 
-	c.JSON(http.StatusOK, gin.H{"data": role})
+	response.Success(c, role)
 }
 
 // 获取角色列表
@@ -106,11 +107,11 @@ func GetRoles(c *gin.Context) {
 	roleService := services.NewRoleService(global.DB)
 	roles, err := roleService.GetRoles()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": roles})
+	response.Success(c, roles)
 }
 
 // 为角色分配菜单
@@ -121,17 +122,17 @@ func AssignMenuToRole(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
 		return
 	}
 
 	menuService := services.NewMenuService(global.DB)
 	if err := menuService.AssignMenuToRole(req.RoleID, req.MenuIDs); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "分配成功"})
+	response.Success(c, nil)
 }
 
 // 为角色设置权限
@@ -143,17 +144,17 @@ func SetRolePermission(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
 		return
 	}
 
 	roleService := services.NewRoleService(global.DB)
 	if err := roleService.SetRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "设置成功"})
+	response.Success(c, nil)
 }
 
 // 删除角色权限
@@ -165,15 +166,15 @@ func DeleteRolePermission(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
 		return
 	}
 
 	roleService := services.NewRoleService(global.DB)
 	if err := roleService.DeleteRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		response.HandleError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
+	response.Success(c, nil)
 }

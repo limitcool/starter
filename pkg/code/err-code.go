@@ -35,9 +35,19 @@ const (
 	UserNoPermission                       // 用户无权访问
 	UserPasswordErr                        // 密码错误(兼容旧版)
 	UserNotExist                           // 用户不存在(兼容旧版)
+	UserTokenError                         // 用户Token错误
+	UserTokenExpired                       // 用户Token过期
 )
 
 // 权限相关错误
 const (
 	AccessDenied = 40000 + iota // 访问被拒绝
+)
+
+// 缓存相关错误
+const (
+	ErrorCache        = 50000 + iota // 缓存操作失败
+	ErrorCacheTimeout                // 缓存操作超时
+	ErrorCacheKey                    // 缓存键不存在
+	ErrorCacheValue                  // 缓存值错误
 )

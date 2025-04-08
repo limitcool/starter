@@ -28,8 +28,15 @@ var MsgFlags = map[int]string{
 	UserNoPermission:        "没有权限",
 	UserPasswordErr:         "密码错误",
 	UserNotExist:            "用户不存在",
+	UserTokenError:          "登录凭证无效",
+	UserTokenExpired:        "登录已过期，请重新登录",
 
 	AccessDenied: "访问被拒绝",
+
+	ErrorCache:        "缓存操作失败",
+	ErrorCacheTimeout: "缓存操作超时",
+	ErrorCacheKey:     "缓存键不存在",
+	ErrorCacheValue:   "缓存值错误",
 }
 
 func GetMsg(code int) string {
