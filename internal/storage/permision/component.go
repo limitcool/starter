@@ -8,6 +8,7 @@ import (
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/storage/casbin"
 	"github.com/limitcool/starter/internal/storage/sqldb"
+	"github.com/limitcool/starter/pkg/crypto"
 	"gorm.io/gorm"
 )
 
@@ -97,6 +98,11 @@ func (c *Component) initBaseData() error {
 
 	// 初始化基础菜单
 	if err := c.initBasicMenus(); err != nil {
+		return err
+	}
+
+	// 初始化管理员用户
+	if err := c.initAdminUser(); err != nil {
 		return err
 	}
 
@@ -351,5 +357,63 @@ func (c *Component) initBasicMenus() error {
 	}
 
 	log.Info("基础菜单创建成功")
+	return nil
+}
+
+// 初始化管理员用户
+func (c *Component) initAdminUser() error {
+	// 检查是否已有admin用户
+	var count int64
+	if err := c.db.Model(&model.User{}).Where("username = ?", "admin").Count(&count).Error; err != nil {
+		return err
+	}
+
+	// 已存在则不重复创建
+	if count > 0 {
+		log.Info("管理员用户已存在，跳过创建")
+		return nil
+	}
+
+	// 创建超级管理员用户
+	hashedPassword, err := crypto.HashPassword("123456")
+	if err != nil {
+		return fmt.Errorf("密码加密失败: %w", err)
+	}
+
+	adminUser := model.User{
+		Username: "admin",
+		Password: hashedPassword,
+		Nickname: "超级管理员",
+		Enabled:  true,
+		Remark:   "系统初始化创建",
+	}
+
+	if err := c.db.Create(&adminUser).Error; err != nil {
+		return err
+	}
+
+	// 获取管理员角色
+	var adminRole model.Role
+	if err := c.db.Where("code = ?", "admin").First(&adminRole).Error; err != nil {
+		return err
+	}
+
+	// 分配管理员角色
+	userRole := model.UserRole{
+		UserID: adminUser.ID,
+		RoleID: adminRole.ID,
+	}
+
+	if err := c.db.Create(&userRole).Error; err != nil {
+		return err
+	}
+
+	// 为用户添加Casbin角色
+	casbinComp := casbin.NewComponent(c.config)
+	if err := casbinComp.Initialize(); err == nil {
+		casbinComp.AddRoleForUser(fmt.Sprintf("%d", adminUser.ID), "admin")
+	}
+
+	log.Info("管理员用户创建成功")
 	return nil
 }

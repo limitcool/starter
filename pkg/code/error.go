@@ -34,10 +34,17 @@ func NewErrMsg(errMsg string) *CodeError {
 	return &CodeError{errCode: ErrorUnknown, errMsg: errMsg}
 }
 
+// IsCodeErr 判断错误码是否存在
 func IsCodeErr(errcode int) bool {
 	if _, ok := MsgFlags[errcode]; ok {
 		return true
 	} else {
 		return false
 	}
+}
+
+// IsErrCode 判断错误是否为CodeError类型
+func IsErrCode(err error) bool {
+	_, ok := err.(*CodeError)
+	return ok
 }

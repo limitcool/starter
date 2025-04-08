@@ -1,6 +1,9 @@
 package routers
 
 import (
+	"strings"
+
+	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/controller"
@@ -36,6 +39,7 @@ func NewRouter() *gin.Engine {
 	// 公共路由
 	{
 		apiV1.GET("/ping", controller.Ping)
+		apiV1.POST("/admin/login", controller.AdminLogin) // 管理员登录接口
 	}
 
 	// 需要认证的路由
@@ -99,5 +103,26 @@ func NewRouter() *gin.Engine {
 		}
 	}
 
+	// 打印所有注册的路由
+	printRegisteredRoutes(r)
+
 	return r
+}
+
+// printRegisteredRoutes 打印所有注册的路由
+func printRegisteredRoutes(r *gin.Engine) {
+	routes := r.Routes()
+	log.Info("Registered routes:")
+	for _, route := range routes {
+		// 从完整路径中提取包名和处理函数名称
+		handlerName := route.Handler
+		parts := strings.Split(handlerName, "/")
+		if len(parts) > 0 {
+			lastPart := parts[len(parts)-1]
+			if dotIndex := strings.Index(lastPart, "."); dotIndex != -1 {
+				handlerName = lastPart
+			}
+		}
+		log.Info("Route", "method", route.Method, "path", route.Path, "handler", handlerName)
+	}
 }
