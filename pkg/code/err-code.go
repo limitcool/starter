@@ -8,6 +8,8 @@ const (
 	InvalidParams = 10000 + iota
 	ErrorUnknown
 	ErrorNotExistCert
+	ErrorNotFound // 资源不存在
+	ErrorDatabase // 数据库操作失败
 )
 
 const (

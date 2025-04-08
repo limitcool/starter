@@ -1,24 +1,31 @@
 APP:
-  Name:
+  Name: MyApp
   Port: 8080
 JwtAuth:
   AccessSecret: uOvKLmVfztaXGpNYd4Z0I1SiT7MweJhl
   AccessExpire: 2592000
-Driver: mysql
+Driver: sqlite3
 Database:
+  Enabled: true
   UserName: root
   Password:
-  DBName:
-  Host:
+  DBName: app
+  Host: localhost
   Port: 3306
   TablePrefix:
   Charset: utf8mb4
   ParseTime: true
   Loc: Asia%2FShanghai
-
+Mongo:
+  Enabled: false
+  URI: mongodb://localhost:27017
+  User:
+  Password:
+  DB: myapp
 Redis:
   "default":
-    Addr:
+    Enabled: false
+    Addr: localhost:6379
     Password:
     DB: 0
     MinIdleConn: 200
@@ -28,8 +35,14 @@ Redis:
     PoolSize: 100
     PoolTimeout: 240s
     EnableTrace: true
+Casbin:
+  Enabled: true
+  ModelPath: configs/rbac_model.conf
+  PolicyTable: casbin_rule
+  AutoLoadInterval: 30
 Log:
   Level: debug
+  Output: ["console"]
   Format: text
   FileConfig:
     Path: logs/app.log

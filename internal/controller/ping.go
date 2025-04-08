@@ -2,9 +2,9 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/pkg/code"
+	"github.com/limitcool/starter/pkg/response"
 )
 
 func Ping(c *gin.Context) {
-	code.AutoResponse(c, "pong", nil)
+	response.Success(c, "pong")
 }
