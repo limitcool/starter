@@ -83,7 +83,7 @@ func NewRouter() *gin.Engine {
 
 	// 需要认证的路由
 	auth := apiV1.Group("")
-	auth.Use(middleware.AuthMiddleware())
+	auth.Use(middleware.JWTAuth())
 	{
 		auth.GET("/user/menus", MenuControllerInstance.GetUserMenus)
 		auth.GET("/user/perms", MenuControllerInstance.GetUserMenuPerms)

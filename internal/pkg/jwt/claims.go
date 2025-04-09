@@ -7,23 +7,25 @@ import (
 // CustomClaims 自定义JWT Claims结构体
 type CustomClaims struct {
 	jwt.RegisteredClaims
-	UserID   uint     `json:"user_id"`
-	Username string   `json:"username"`
-	UserType string   `json:"user_type"` // sys_user 或 user
-	RoleIDs  []uint   `json:"role_ids,omitempty"`
-	Roles    []string `json:"roles,omitempty"`
+	UserID    uint     `json:"user_id"`
+	Username  string   `json:"username"`
+	UserType  string   `json:"user_type"`            // sys_user 或 user
+	TokenType string   `json:"token_type,omitempty"` // access_token 或 refresh_token
+	RoleIDs   []uint   `json:"role_ids,omitempty"`
+	Roles     []string `json:"roles,omitempty"`
 }
 
 // ToMapClaims 将CustomClaims转换为jwt.MapClaims
 func (c *CustomClaims) ToMapClaims() jwt.MapClaims {
 	return jwt.MapClaims{
-		"user_id":   c.UserID,
-		"username":  c.Username,
-		"user_type": c.UserType,
-		"roles":     c.Roles,
-		"role_ids":  c.RoleIDs,
-		"exp":       c.ExpiresAt.Unix(),
-		"iat":       c.IssuedAt.Unix(),
+		"user_id":    c.UserID,
+		"username":   c.Username,
+		"user_type":  c.UserType,
+		"token_type": c.TokenType,
+		"roles":      c.Roles,
+		"role_ids":   c.RoleIDs,
+		"exp":        c.ExpiresAt.Unix(),
+		"iat":        c.IssuedAt.Unix(),
 	}
 }
 
@@ -46,6 +48,13 @@ func FromMapClaims(claims jwt.MapClaims) *CustomClaims {
 		customClaims.UserType = userType
 	} else {
 		customClaims.UserType = "sys_user" // 默认为系统用户
+	}
+
+	// 令牌类型
+	if tokenType, ok := claims["token_type"].(string); ok {
+		customClaims.TokenType = tokenType
+	} else if tokenType, ok := claims["type"].(string); ok { // 兼容旧版
+		customClaims.TokenType = tokenType
 	}
 
 	// 角色代码

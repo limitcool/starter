@@ -13,51 +13,6 @@ import (
 	"github.com/limitcool/starter/internal/services"
 )
 
-// 为兼容性保留原有函数
-func AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 获取 Authorization header
-		authorization := c.GetHeader("Authorization")
-
-		// 检查前缀并提取 token
-		token := ""
-		if strings.HasPrefix(authorization, "Bearer ") {
-			token = strings.Split(authorization, " ")[1]
-		}
-
-		// 如果没有token,返回错误并中止
-		if token == "" {
-			log.Error("No authentication token provided")
-			response.Error(c, errorx.ErrUserAuthFailed)
-			c.Abort()
-			return
-		}
-
-		log.Debug("Authentication token received", "token", token)
-		claims, err := jwt.ParseToken(token, services.Instance().GetConfig().JwtAuth.AccessSecret)
-		if err != nil {
-			log.Error("Authentication token parse failed", "error", err)
-			response.Error(c, errorx.ErrUserAuthFailed)
-			c.Abort()
-			return
-		}
-
-		log.Debug("Token claims parsed", "claims", claims)
-		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), global.Token, claims))
-
-		// 将用户ID存入请求上下文
-		if userId, exists := (*claims)["user_id"]; exists {
-			c.Set("userID", userId)
-		}
-
-		// 将token存入请求上下文
-		c.Set("token", token)
-
-		// 继续处理该请求
-		c.Next()
-	}
-}
-
 // JWTAuth JWT认证中间件
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {

@@ -5,35 +5,34 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
+	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
 	"gorm.io/gorm"
 )
 
-// UserService 用户服务
-type UserService struct {
-
+// SysUserService 用户服务
+type SysUserService struct {
 	roleService   *RoleService
 	casbinService *CasbinService
 }
 
-// NewUserService 创建用户服务
-func NewUserService(db *gorm.DB) *UserService {
+// NewSysUserService 创建用户服务
+func NewSysUserService() *SysUserService {
 
 	// 使用ServiceManager获取依赖服务
-	return &UserService{
+	return &SysUserService{
 		roleService:   serviceInstance.GetRoleService(),
 		casbinService: serviceInstance.GetCasbinService(),
 	}
 
 }
 
-// 获取配置，优先使用ServiceManager
-func (s *UserService) getConfig() *configs.Config {
+// GetConfig 获取配置
+func (s *SysUserService) getConfig() *configs.Config {
 	if serviceInstance != nil {
 		return serviceInstance.GetConfig()
 	}
@@ -41,7 +40,7 @@ func (s *UserService) getConfig() *configs.Config {
 }
 
 // GetUserByID 根据ID获取用户
-func (s *UserService) GetUserByID(id uint) (*model.SysUser, error) {
+func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
 	var user model.SysUser
 	err := db.First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -65,7 +64,7 @@ func (s *UserService) GetUserByID(id uint) (*model.SysUser, error) {
 }
 
 // GetUserByUsername 根据用户名获取用户
-func (s *UserService) GetUserByUsername(username string) (*model.SysUser, error) {
+func (s *SysUserService) GetUserByUsername(username string) (*model.SysUser, error) {
 	var user model.SysUser
 	err := db.Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -89,7 +88,7 @@ func (s *UserService) GetUserByUsername(username string) (*model.SysUser, error)
 }
 
 // VerifyPassword 验证用户密码
-func (s *UserService) VerifyPassword(password, hashedPassword string) bool {
+func (s *SysUserService) VerifyPassword(password, hashedPassword string) bool {
 	return crypto.CheckPassword(hashedPassword, password)
 }
 
@@ -101,7 +100,7 @@ type LoginResponse struct {
 }
 
 // Login 用户登录
-func (s *UserService) Login(username, password string, ip string) (*LoginResponse, error) {
+func (s *SysUserService) Login(username, password string, ip string) (*LoginResponse, error) {
 	// 获取用户
 	user, err := s.GetUserByUsername(username)
 	if err != nil {
@@ -128,30 +127,28 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 	cfg := s.getConfig()
 
 	// 生成访问令牌
-	accessClaims := jwt.MapClaims{
-		"user_id":    user.ID,
-		"username":   user.Username,
-		"role_codes": user.RoleCodes,
-		"user_type":  "sys_user", // 系统用户
-		"type":       "access_token",
-		"exp":        time.Now().Add(time.Duration(cfg.JwtAuth.AccessExpire) * time.Second).Unix(),
+	accessClaims := &jwtpkg.CustomClaims{
+		UserID:    user.ID,
+		Username:  user.Username,
+		UserType:  enum.UserTypeSysUser.String(), // 系统用户
+		TokenType: "access_token",                // 访问令牌
+		Roles:     user.RoleCodes,                // 角色编码
 	}
 
 	// 生成刷新令牌
-	refreshClaims := jwt.MapClaims{
-		"user_id":   user.ID,
-		"username":  user.Username,
-		"user_type": "sys_user", // 系统用户
-		"type":      "refresh_token",
-		"exp":       time.Now().Add(time.Duration(cfg.JwtAuth.RefreshExpire) * time.Second).Unix(),
+	refreshClaims := &jwtpkg.CustomClaims{
+		UserID:    user.ID,
+		Username:  user.Username,
+		UserType:  enum.UserTypeSysUser.String(), // 系统用户
+		TokenType: "refresh_token",               // 刷新令牌
 	}
 
-	accessToken, err := jwtpkg.GenerateToken(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
+	accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
 
-	refreshToken, err := jwtpkg.GenerateToken(refreshClaims, cfg.JwtAuth.RefreshSecret, time.Duration(cfg.JwtAuth.RefreshExpire)*time.Second)
+	refreshToken, err := jwtpkg.GenerateTokenWithCustomClaims(refreshClaims, cfg.JwtAuth.RefreshSecret, time.Duration(cfg.JwtAuth.RefreshExpire)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
 	}
@@ -164,30 +161,23 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 }
 
 // RefreshToken 刷新访问令牌
-func (s *UserService) RefreshToken(refreshToken string) (*LoginResponse, error) {
+func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, error) {
 	// 获取配置
 	cfg := s.getConfig()
 
 	// 验证刷新令牌
-	tokenClaims, err := jwtpkg.ParseToken(refreshToken, cfg.JwtAuth.RefreshSecret)
+	claims, err := jwtpkg.ParseTokenWithCustomClaims(refreshToken, cfg.JwtAuth.RefreshSecret)
 	if err != nil {
 		return nil, errorx.ErrUserTokenError
 	}
 
 	// 检查令牌类型
-	claims := *tokenClaims
-	tokenType, ok := claims["type"].(string)
-	if !ok || tokenType != "refresh_token" {
+	if claims.TokenType != enum.TokenTypeRefresh.String() {
 		return nil, errorx.ErrUserTokenError.WithMsg("无效的令牌类型")
 	}
 
 	// 获取用户信息
-	userID, ok := claims["user_id"].(float64)
-	if !ok {
-		return nil, errorx.ErrUserTokenError.WithMsg("无效的用户信息")
-	}
-
-	user, err := s.GetUserByID(uint(userID))
+	user, err := s.GetUserByID(claims.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -198,16 +188,15 @@ func (s *UserService) RefreshToken(refreshToken string) (*LoginResponse, error) 
 	}
 
 	// 生成新的访问令牌
-	accessClaims := jwt.MapClaims{
-		"user_id":    user.ID,
-		"username":   user.Username,
-		"role_codes": user.RoleCodes,
-		"user_type":  "sys_user", // 系统用户
-		"type":       "access_token",
-		"exp":        time.Now().Add(time.Duration(cfg.JwtAuth.AccessExpire) * time.Second).Unix(),
+	accessClaims := &jwtpkg.CustomClaims{
+		UserID:    user.ID,
+		Username:  user.Username,
+		UserType:  enum.UserTypeSysUser.String(), // 系统用户
+		TokenType: enum.TokenTypeAccess.String(), // 访问令牌
+		Roles:     user.RoleCodes,                // 角色编码
 	}
 
-	accessToken, err := jwtpkg.GenerateToken(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
+	accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}

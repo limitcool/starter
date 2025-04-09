@@ -15,11 +15,11 @@ type ServiceManager struct {
 	config *configs.Config
 
 	// 各种服务的单例实例
-	userService         *UserService
+	userService         *SysUserService
 	roleService         *RoleService
 	casbinService       *CasbinService
 	operationLogService *OperationLogService
-	normalUserService   *NormalUserService
+	normalUserService   *UserService
 
 	// 其他服务可以按需添加
 }
@@ -66,9 +66,9 @@ func (sm *ServiceManager) GetConfig() *configs.Config {
 }
 
 // GetUserService 获取UserService实例
-func (sm *ServiceManager) GetUserService() *UserService {
+func (sm *ServiceManager) GetUserService() *SysUserService {
 	if sm.userService == nil {
-		sm.userService = NewUserService(sm.GetDB())
+		sm.userService = NewSysUserService()
 	}
 	return sm.userService
 }
@@ -98,9 +98,9 @@ func (sm *ServiceManager) GetOperationLogService() *OperationLogService {
 }
 
 // GetNormalUserService 获取NormalUserService实例
-func (sm *ServiceManager) GetNormalUserService() *NormalUserService {
+func (sm *ServiceManager) GetNormalUserService() *UserService {
 	if sm.normalUserService == nil {
-		sm.normalUserService = NewNormalUserService()
+		sm.normalUserService = NewUserService()
 	}
 	return sm.normalUserService
 }
