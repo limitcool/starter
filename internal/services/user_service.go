@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/pkg/apiresponse"
 	"github.com/limitcool/starter/pkg/code"
 	"github.com/limitcool/starter/pkg/crypto"
 	jwtpkg "github.com/limitcool/starter/pkg/jwt"
@@ -212,4 +214,265 @@ func (s *NormalUserService) ChangePassword(id uint, oldPassword, newPassword str
 
 	// 更新密码
 	return s.db.Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
+}
+
+func GetUserInfo(ctx *gin.Context) {
+	userId, exists := ctx.Get("userID")
+	if !exists {
+		apiresponse.Fail(ctx, code.UserNoLogin, "")
+		return
+	}
+
+	var user model.User
+	if err := model.GetDB().First(&user, userId).Error; err != nil {
+		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		return
+	}
+
+	// 加载头像文件信息
+	if user.Avatar != "" {
+		var avatarFile model.File
+		if err := model.GetDB().First(&avatarFile, user.Avatar).Error; err == nil {
+			user.AvatarURL = avatarFile.URL
+		}
+	}
+
+	apiresponse.Success[model.User](ctx, user)
+}
+
+// 用户注册
+func UserRegister(ctx *gin.Context) {
+	// 1. 解析请求参数
+	var req struct {
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
+		Nickname string `json:"nickname"`
+		Mobile   string `json:"mobile"`
+		Email    string `json:"email"`
+	}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		apiresponse.Fail(ctx, code.InvalidParams, err.Error())
+		return
+	}
+
+	// 2. 验证用户名是否已存在
+	var count int64
+	if err := model.GetDB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
+		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		return
+	}
+
+	if count > 0 {
+		apiresponse.Fail(ctx, code.UserAlreadyExists, "")
+		return
+	}
+
+	// 3. 创建新用户
+	user := model.User{
+		Username:   req.Username,
+		Password:   req.Password, // 注意：实际应用中应该对密码进行加密
+		Nickname:   req.Nickname,
+		Mobile:     req.Mobile,
+		Email:      req.Email,
+		Enabled:    true,
+		RegisterIP: ctx.ClientIP(),
+	}
+
+	if err := model.GetDB().Create(&user).Error; err != nil {
+		apiresponse.Fail(ctx, code.DatabaseInsertError, "")
+		return
+	}
+
+	// 4. 返回成功
+	type RegisterResult struct {
+		ID       uint   `json:"id"`
+		Username string `json:"username"`
+	}
+
+	result := RegisterResult{
+		ID:       user.ID,
+		Username: user.Username,
+	}
+
+	apiresponse.Success[RegisterResult](ctx, result)
+}
+
+// 用户登录
+func UserLogin(ctx *gin.Context) {
+	// 1. 解析请求参数
+	var req struct {
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		apiresponse.Fail(ctx, code.InvalidParams, "")
+		return
+	}
+
+	// 2. 查询用户
+	var user model.User
+	if err := model.GetDB().Where("username = ?", req.Username).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			apiresponse.Fail(ctx, code.UserNameOrPasswordError, "")
+		} else {
+			apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		}
+		return
+	}
+
+	// 3. 验证密码
+	// 注意：实际应用中应该验证加密后的密码
+	if user.Password != req.Password {
+		apiresponse.Fail(ctx, code.UserNameOrPasswordError, "")
+		return
+	}
+
+	// 检查用户状态
+	if !user.Enabled {
+		apiresponse.Fail(ctx, code.UserDisabled, "")
+		return
+	}
+
+	// 4. 更新登录信息
+	user.LastLogin = time.Now()
+	user.LastIP = ctx.ClientIP()
+	if err := model.GetDB().Save(&user).Error; err != nil {
+		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		return
+	}
+
+	// 5. 生成token
+	// 注意：实际应用中应该使用JWT生成token
+	token := "mock_token_" + req.Username
+
+	// 加载头像文件信息
+	if user.Avatar != "" {
+		var avatarFile model.File
+		if err := model.GetDB().First(&avatarFile, user.Avatar).Error; err == nil {
+			user.AvatarURL = avatarFile.URL
+		}
+	}
+
+	// 6. 返回成功
+	type LoginResult struct {
+		Token    string     `json:"token"`
+		UserInfo model.User `json:"user_info"`
+	}
+
+	result := LoginResult{
+		Token:    token,
+		UserInfo: user,
+	}
+
+	apiresponse.Success[LoginResult](ctx, result)
+}
+
+// 修改密码
+func ChangePassword(ctx *gin.Context) {
+	// 1. 解析请求参数
+	var req struct {
+		OldPassword string `json:"old_password" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required"`
+	}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		apiresponse.Fail(ctx, code.InvalidParams, "")
+		return
+	}
+
+	// 2. 获取当前用户
+	userId, exists := ctx.Get("userID")
+	if !exists {
+		apiresponse.Fail(ctx, code.UserNoLogin, "")
+		return
+	}
+
+	// 3. 查询用户
+	var user model.User
+	if err := model.GetDB().First(&user, userId).Error; err != nil {
+		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		return
+	}
+
+	// 4. 验证旧密码
+	// 注意：实际应用中应该验证加密后的密码
+	if user.Password != req.OldPassword {
+		apiresponse.Fail(ctx, code.UserPasswordError, "")
+		return
+	}
+
+	// 5. 更新密码
+	// 注意：实际应用中应该对新密码进行加密
+	user.Password = req.NewPassword
+	if err := model.GetDB().Save(&user).Error; err != nil {
+		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		return
+	}
+
+	// 6. 返回成功
+	apiresponse.Success[any](ctx, nil)
+}
+
+// 获取用户列表
+func GetUserList(ctx *gin.Context) {
+	// 1. 解析分页参数
+	page := ctx.DefaultQuery("page", "1")
+	pageSize := ctx.DefaultQuery("page_size", "10")
+	keyword := ctx.DefaultQuery("keyword", "")
+
+	// 2. 查询用户
+	var users []model.User
+	db := model.GetDB().Model(&model.User{})
+
+	// 如果有关键字，添加搜索条件
+	if keyword != "" {
+		db = db.Where("username LIKE ? OR nickname LIKE ? OR mobile LIKE ? OR email LIKE ?",
+			"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
+	}
+
+	// 查询总数
+	var total int64
+	if err := db.Count(&total).Error; err != nil {
+		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		return
+	}
+
+	// 分页查询
+	var pageNum, pageSizeNum int
+	_, err1 := fmt.Sscanf(page, "%d", &pageNum)
+	_, err2 := fmt.Sscanf(pageSize, "%d", &pageSizeNum)
+	if err1 != nil || err2 != nil || pageNum <= 0 || pageSizeNum <= 0 {
+		apiresponse.Fail(ctx, code.InvalidParams, "分页参数无效")
+		return
+	}
+
+	if err := db.Offset((pageNum - 1) * pageSizeNum).Limit(pageSizeNum).Find(&users).Error; err != nil {
+		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		return
+	}
+
+	// 获取用户头像URL
+	for i := range users {
+		if users[i].Avatar != "" {
+			var avatarFile model.File
+			if err := model.GetDB().First(&avatarFile, users[i].Avatar).Error; err == nil {
+				users[i].AvatarURL = avatarFile.URL
+			}
+		}
+	}
+
+	// 3. 返回结果
+	type ResponseData struct {
+		Total int64        `json:"total"`
+		List  []model.User `json:"list"`
+	}
+
+	result := ResponseData{
+		Total: total,
+		List:  users,
+	}
+
+	apiresponse.Success[ResponseData](ctx, result)
 }

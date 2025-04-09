@@ -2,8 +2,10 @@ package errors
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/limitcool/starter/pkg/code"
+	"go.mongodb.org/mongo-driver/mongo"
 	"gorm.io/gorm"
 )
 
@@ -180,6 +182,39 @@ func NewValidationError(field, message string) error {
 	}
 }
 
+// StorageError 表示文件存储操作错误
+type StorageError struct {
+	Operation string
+	Path      string
+	Err       error
+}
+
+func (e *StorageError) Error() string {
+	if e.Path != "" {
+		return "storage error during " + e.Operation + " for path " + e.Path + ": " + e.Err.Error()
+	}
+	return "storage error during " + e.Operation + ": " + e.Err.Error()
+}
+
+func (e *StorageError) Unwrap() error { return e.Err }
+
+// NewStorageError 创建一个StorageError
+func NewStorageError(operation, path string, err error) error {
+	return &StorageError{
+		Operation: operation,
+		Path:      path,
+		Err:       err,
+	}
+}
+
+// 定义OSS存储错误码常量
+const (
+	ErrStorageNotFound  = "storage: file not found"
+	ErrStorageExists    = "storage: file already exists"
+	ErrStorageForbidden = "storage: operation forbidden"
+	ErrStorageUnknown   = "storage: unknown error"
+)
+
 // WithCode 创建带错误码的错误
 func WithCode(errCode int, message string) error {
 	return code.NewErrCodeMsg(errCode, message)
@@ -301,7 +336,23 @@ func IsDBError(err error) bool {
 	// 检查是否为GORM的数据库错误
 	if errors.Is(err, gorm.ErrInvalidDB) ||
 		errors.Is(err, gorm.ErrInvalidTransaction) ||
-		errors.Is(err, gorm.ErrForeignKeyViolated) {
+		errors.Is(err, gorm.ErrForeignKeyViolated) ||
+		errors.Is(err, gorm.ErrNotImplemented) ||
+		errors.Is(err, gorm.ErrMissingWhereClause) ||
+		errors.Is(err, gorm.ErrUnsupportedRelation) ||
+		errors.Is(err, gorm.ErrPrimaryKeyRequired) ||
+		errors.Is(err, gorm.ErrModelValueRequired) ||
+		errors.Is(err, gorm.ErrInvalidData) ||
+		errors.Is(err, gorm.ErrUnsupportedDriver) ||
+		errors.Is(err, gorm.ErrRegistered) ||
+		errors.Is(err, gorm.ErrInvalidField) ||
+		errors.Is(err, gorm.ErrEmptySlice) ||
+		errors.Is(err, gorm.ErrDryRunModeUnsupported) {
+		return true
+	}
+
+	// 检查MongoDB错误
+	if isMongoDBError(err) {
 		return true
 	}
 
@@ -318,6 +369,30 @@ func IsDBError(err error) bool {
 	return false
 }
 
+// 检查是否为MongoDB错误
+func isMongoDBError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var mongoErr mongo.CommandError
+	if errors.As(err, &mongoErr) {
+		return true
+	}
+
+	var writeErr mongo.WriteException
+	if errors.As(err, &writeErr) {
+		return true
+	}
+
+	var bulkWriteErr mongo.BulkWriteException
+	if errors.As(err, &bulkWriteErr) {
+		return true
+	}
+
+	return mongo.IsTimeout(err) || mongo.IsNetworkError(err)
+}
+
 // IsCacheError 判断是否为缓存操作错误
 func IsCacheError(err error) bool {
 	if err == nil {
@@ -327,6 +402,11 @@ func IsCacheError(err error) bool {
 	// 检查自定义CacheError
 	var cacheErr *CacheError
 	if errors.As(err, &cacheErr) {
+		return true
+	}
+
+	// 检查是否为Redis错误
+	if isRedisError(err) {
 		return true
 	}
 
@@ -341,6 +421,20 @@ func IsCacheError(err error) bool {
 	}
 
 	return false
+}
+
+// 检查是否为Redis错误
+func isRedisError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := err.Error()
+	return strings.Contains(errMsg, "redis:") ||
+		strings.Contains(errMsg, "connection refused") ||
+		strings.Contains(errMsg, "connection timeout") ||
+		strings.Contains(errMsg, "connection reset") ||
+		strings.Contains(errMsg, "nil") && strings.Contains(errMsg, "redis")
 }
 
 // IsValidationError 判断是否为验证错误
@@ -364,6 +458,41 @@ func IsValidationError(err error) bool {
 	return false
 }
 
+// IsStorageError 判断是否为文件存储错误
+func IsStorageError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// 检查自定义StorageError
+	var storageErr *StorageError
+	if errors.As(err, &storageErr) {
+		return true
+	}
+
+	// 检查是否为OSS错误
+	if isOSSError(err) {
+		return true
+	}
+
+	return false
+}
+
+// isOSSError 检查是否为OSS错误
+func isOSSError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := err.Error()
+	return strings.Contains(errMsg, "storage:") ||
+		strings.Contains(errMsg, "oss:") ||
+		strings.Contains(errMsg, "s3:") ||
+		strings.Contains(errMsg, "bucket") ||
+		strings.Contains(errMsg, "object") ||
+		strings.Contains(errMsg, "file")
+}
+
 // ParseError 解析错误并返回对应的错误码和消息
 func ParseError(err error) (int, string) {
 	if err == nil {
@@ -382,6 +511,12 @@ func ParseError(err error) (int, string) {
 		if errors.As(err, &notFoundErr) && notFoundErr.Resource != "" {
 			return code.ErrorNotFound, notFoundErr.Resource + "不存在"
 		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return code.ErrorNotFound, "记录不存在"
+		}
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return code.ErrorNotFound, "文档不存在"
+		}
 		return code.ErrorNotFound, code.GetMsg(code.ErrorNotFound)
 	}
 
@@ -391,6 +526,20 @@ func ParseError(err error) (int, string) {
 		if errors.As(err, &dupErr) && dupErr.Resource != "" {
 			return code.UserAlreadyExists, dupErr.Resource + "已存在"
 		}
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return code.UserAlreadyExists, "记录已存在"
+		}
+
+		// 检查MongoDB的重复键错误
+		var writeErr mongo.WriteException
+		if errors.As(err, &writeErr) {
+			for _, we := range writeErr.WriteErrors {
+				if we.Code == 11000 { // MongoDB重复键错误码
+					return code.UserAlreadyExists, "记录已存在"
+				}
+			}
+		}
+
 		return code.UserAlreadyExists, code.GetMsg(code.UserAlreadyExists)
 	}
 
@@ -418,6 +567,44 @@ func ParseError(err error) (int, string) {
 			return code.ErrorDatabase, "关联数据约束错误，请先删除相关数据"
 		}
 
+		// 详细处理GORM常见错误
+		if errors.Is(err, gorm.ErrInvalidTransaction) {
+			return code.ErrorDatabase, "数据库事务无效"
+		}
+		if errors.Is(err, gorm.ErrNotImplemented) {
+			return code.ErrorDatabase, "数据库操作未实现"
+		}
+		if errors.Is(err, gorm.ErrMissingWhereClause) {
+			return code.ErrorDatabase, "数据库操作缺少WHERE条件"
+		}
+		if errors.Is(err, gorm.ErrUnsupportedRelation) {
+			return code.ErrorDatabase, "数据库不支持的关联关系"
+		}
+		if errors.Is(err, gorm.ErrPrimaryKeyRequired) {
+			return code.ErrorDatabase, "数据库操作需要主键"
+		}
+		if errors.Is(err, gorm.ErrModelValueRequired) {
+			return code.ErrorDatabase, "数据库模型值为空"
+		}
+
+		// 检查MongoDB错误
+		if isMongoDBError(err) {
+			var cmdErr mongo.CommandError
+			if errors.As(err, &cmdErr) {
+				return code.ErrorDatabase, "MongoDB命令错误: " + cmdErr.Message
+			}
+
+			if mongo.IsTimeout(err) {
+				return code.ErrorDatabase, "MongoDB操作超时"
+			}
+
+			if mongo.IsNetworkError(err) {
+				return code.ErrorDatabase, "MongoDB网络错误"
+			}
+
+			return code.ErrorDatabase, "MongoDB操作失败"
+		}
+
 		var dbErr *DatabaseError
 		if errors.As(err, &dbErr) && dbErr.Operation != "" {
 			return code.ErrorDatabase, "数据库" + dbErr.Operation + "操作失败"
@@ -434,6 +621,22 @@ func ParseError(err error) (int, string) {
 			}
 			return code.ErrorCache, "缓存" + cacheErr.Operation + "操作失败"
 		}
+
+		// Redis错误处理
+		if isRedisError(err) {
+			errMsg := err.Error()
+			if strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "connection reset") {
+				return code.ErrorCache, "Redis连接失败"
+			}
+			if strings.Contains(errMsg, "connection timeout") {
+				return code.ErrorCacheTimeout, "Redis连接超时"
+			}
+			if strings.Contains(errMsg, "nil") {
+				return code.ErrorCacheKey, "Redis键不存在"
+			}
+			return code.ErrorCache, "Redis操作失败"
+		}
+
 		return code.ErrorCache, code.GetMsg(code.ErrorCache)
 	}
 
@@ -447,6 +650,33 @@ func ParseError(err error) (int, string) {
 			return code.InvalidParams, validErr.Message
 		}
 		return code.InvalidParams, code.GetMsg(code.InvalidParams)
+	}
+
+	// 判断文件存储错误
+	if IsStorageError(err) {
+		var storageErr *StorageError
+		if errors.As(err, &storageErr) {
+			if storageErr.Operation != "" {
+				if storageErr.Path != "" {
+					return code.ErrorUnknown, "文件" + storageErr.Operation + "操作失败，路径：" + storageErr.Path
+				}
+				return code.ErrorUnknown, "文件" + storageErr.Operation + "操作失败"
+			}
+		}
+
+		// 特定OSS错误处理
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "not found") || strings.Contains(errMsg, ErrStorageNotFound) {
+			return code.ErrorNotFound, "文件不存在"
+		}
+		if strings.Contains(errMsg, "already exists") || strings.Contains(errMsg, ErrStorageExists) {
+			return code.Error, "文件已存在"
+		}
+		if strings.Contains(errMsg, "forbidden") || strings.Contains(errMsg, "permission denied") || strings.Contains(errMsg, ErrStorageForbidden) {
+			return code.AccessDenied, "没有文件操作权限"
+		}
+
+		return code.Error, "文件操作失败"
 	}
 
 	// 其他错误

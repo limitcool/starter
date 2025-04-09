@@ -2,6 +2,8 @@ package configs
 
 import (
 	"time"
+
+	"github.com/limitcool/starter/pkg/storage"
 )
 
 type DBDriver string
@@ -34,6 +36,7 @@ type Config struct {
 	Redis      map[string]Redis
 	Log        LogConfig
 	Permission Permission // 权限系统配置
+	Storage    Storage    // 文件存储配置
 }
 
 // Config app config
@@ -116,4 +119,48 @@ type Permission struct {
 	DefaultAllow bool   // 默认是否允许访问（权限系统关闭时使用）
 	ModelPath    string // Casbin模型文件路径
 	PolicyTable  string // 策略表名
+}
+
+// Storage 文件存储配置
+type Storage struct {
+	Enabled    bool                // 是否启用文件存储
+	Type       storage.StorageType // 存储类型: local, s3, oss
+	Local      LocalStorage        // 本地存储配置
+	S3         S3Storage           // S3存储配置
+	OSS        OSSStorage          // 阿里云OSS存储配置
+	PathConfig PathConfig          // 路径配置
+}
+
+// LocalStorage 本地存储配置
+type LocalStorage struct {
+	Path string // 本地存储路径
+	URL  string // 访问URL前缀
+}
+
+// S3Storage AWS S3存储配置
+type S3Storage struct {
+	AccessKey string // 访问密钥ID
+	SecretKey string // 访问密钥Secret
+	Region    string // 区域
+	Bucket    string // 桶名称
+	Endpoint  string // 端点URL
+}
+
+// OSSStorage 阿里云OSS存储配置
+type OSSStorage struct {
+	AccessKey string // 访问密钥ID
+	SecretKey string // 访问密钥Secret
+	Region    string // 区域
+	Bucket    string // 桶名称
+	Endpoint  string // 端点URL
+}
+
+// PathConfig 存储路径配置
+type PathConfig struct {
+	Avatar    string // 头像存储路径
+	Document  string // 文档存储路径
+	Image     string // 图片存储路径
+	Video     string // 视频存储路径
+	Audio     string // 音频存储路径
+	Temporary string // 临时文件存储路径
 }

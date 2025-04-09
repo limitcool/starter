@@ -21,7 +21,9 @@ type SysUser struct {
 	Username  string    `json:"username" gorm:"size:50;not null;unique;comment:用户名"`
 	Password  string    `json:"-" gorm:"size:100;not null;comment:密码"`
 	Nickname  string    `json:"nickname" gorm:"size:50;comment:昵称"`
-	Avatar    string    `json:"avatar" gorm:"size:255;comment:头像"`
+	Avatar    string    `json:"-" gorm:"size:255;comment:头像文件ID"`
+	AvatarURL string    `json:"avatar" gorm:"-"`                          // 头像URL，不存储到数据库
+	AvatarFile *File     `json:"avatar_file" gorm:"foreignKey:Avatar"`    // 关联的头像文件
 	Email     string    `json:"email" gorm:"size:100;comment:邮箱"`
 	Mobile    string    `json:"mobile" gorm:"size:20;comment:手机号"`
 	Enabled   bool      `json:"enabled" gorm:"default:true;comment:是否启用"`
