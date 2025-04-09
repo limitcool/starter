@@ -36,7 +36,7 @@ func NewPageResult[T any](list T, total int64, page, pageSize int) *PageResult[T
 
 // Success 返回成功响应
 func Success[T any](c *gin.Context, data T, msg ...string) {
-	message := errorx.ErrSuccess.GetErrMsg()
+	message := errorx.ErrSuccess.GetErrorMsg()
 	if len(msg) > 0 {
 		message = msg[0]
 	}
@@ -50,7 +50,7 @@ func Success[T any](c *gin.Context, data T, msg ...string) {
 
 // SuccessNoData 返回无数据的成功响应
 func SuccessNoData(c *gin.Context, msg ...string) {
-	message := errorx.ErrSuccess.GetErrMsg()
+	message := errorx.ErrSuccess.GetErrorMsg()
 	if len(msg) > 0 {
 		message = msg[0]
 	}
@@ -71,7 +71,7 @@ func Error(c *gin.Context, err error, msg ...string) {
 	var data struct{}
 	if appErr, ok := err.(*errorx.AppError); ok {
 		c.JSON(getHttpStatus(appErr), Response[struct{}]{
-			Code:    appErr.GetErrCode(),
+			Code:    appErr.GetErrorCode(),
 			Message: message,
 			Data:    data,
 		})
@@ -86,8 +86,8 @@ func Error(c *gin.Context, err error, msg ...string) {
 
 // getHttpStatus 获取HTTP状态码，如果AppError没有设置HttpStatus则返回500
 func getHttpStatus(err *errorx.AppError) int {
-	if err.HttpStatus == 0 {
+	if err.GetHttpStatus() == 0 {
 		return http.StatusInternalServerError
 	}
-	return err.HttpStatus
+	return err.GetHttpStatus()
 }

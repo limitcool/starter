@@ -1,5 +1,7 @@
 package errorx
 
+import "net/http"
+
 // 成功码
 const (
 	SuccessCode = 0
@@ -111,62 +113,62 @@ var (
 )
 
 var (
-	ErrSuccess = NewErrCodeMsg(SuccessCode, successMsg)
+	ErrSuccess = NewAppError(SuccessCode, successMsg, http.StatusOK)
 )
 
 // 通用错误实例
 var (
-	ErrInvalidParams = NewErrCodeMsg(InvalidParamsCode, invalidParamsMsg)
-	ErrUnknown       = NewErrCodeMsg(ErrorUnknownCode, errorUnknownMsg)
-	ErrNotExistCert  = NewErrCodeMsg(ErrorNotExistCertCode, errorNotExistCertMsg)
-	ErrNotFound      = NewErrCodeMsg(ErrorNotFoundCode, errorNotFoundMsg)
-	ErrDatabase      = NewErrCodeMsg(ErrorDatabaseCode, errorDatabaseMsg)
-	ErrInternal      = NewErrCodeMsg(ErrorInternalCode, errorInternalMsg)
-	ErrGeneral       = NewErrCodeMsg(ErrorCode, errorMsg)
-	ErrParam         = NewErrCodeMsg(ErrorParamCode, errorParamMsg)
+	ErrInvalidParams = NewAppError(InvalidParamsCode, invalidParamsMsg, http.StatusBadRequest)
+	ErrUnknown       = NewAppError(ErrorUnknownCode, errorUnknownMsg, http.StatusInternalServerError)
+	ErrNotExistCert  = NewAppError(ErrorNotExistCertCode, errorNotExistCertMsg, http.StatusBadRequest)
+	ErrNotFound      = NewAppError(ErrorNotFoundCode, errorNotFoundMsg, http.StatusNotFound)
+	ErrDatabase      = NewAppError(ErrorDatabaseCode, errorDatabaseMsg, http.StatusInternalServerError)
+	ErrInternal      = NewAppError(ErrorInternalCode, errorInternalMsg, http.StatusInternalServerError)
+	ErrGeneral       = NewAppError(ErrorCode, errorMsg, http.StatusInternalServerError)
+	ErrParam         = NewAppError(ErrorParamCode, errorParamMsg, http.StatusBadRequest)
 )
 
 // 数据库错误实例
 var (
-	ErrDatabaseInsert = NewErrCodeMsg(DatabaseInsertErrorCode, databaseInsertErrorMsg)
-	ErrDatabaseDelete = NewErrCodeMsg(DatabaseDeleteErrorCode, databaseDeleteErrorMsg)
-	ErrDatabaseQuery  = NewErrCodeMsg(DatabaseQueryErrorCode, databaseQueryErrorMsg)
+	ErrDatabaseInsert = NewAppError(DatabaseInsertErrorCode, databaseInsertErrorMsg, http.StatusInternalServerError)
+	ErrDatabaseDelete = NewAppError(DatabaseDeleteErrorCode, databaseDeleteErrorMsg, http.StatusInternalServerError)
+	ErrDatabaseQuery  = NewAppError(DatabaseQueryErrorCode, databaseQueryErrorMsg, http.StatusInternalServerError)
 )
 
 // 用户相关错误实例
 var (
-	ErrUserNoLogin             = NewErrCodeMsg(UserNoLoginCode, userNoLoginMsg)
-	ErrUserNotFound            = NewErrCodeMsg(UserNotFoundCode, userNotFoundMsg)
-	ErrUserPasswordError       = NewErrCodeMsg(UserPasswordErrorCode, userPasswordErrorMsg)
-	ErrUserNotVerify           = NewErrCodeMsg(UserNotVerifyCode, userNotVerifyMsg)
-	ErrUserLocked              = NewErrCodeMsg(UserLockedCode, userLockedMsg)
-	ErrUserDisabled            = NewErrCodeMsg(UserDisabledCode, userDisabledMsg)
-	ErrUserExpired             = NewErrCodeMsg(UserExpiredCode, userExpiredMsg)
-	ErrUserAlreadyExists       = NewErrCodeMsg(UserAlreadyExistsCode, userAlreadyExistsMsg)
-	ErrUserNameOrPasswordError = NewErrCodeMsg(UserNameOrPasswordErrorCode, userNameOrPasswordErrorMsg)
-	ErrUserAuthFailed          = NewErrCodeMsg(UserAuthFailedCode, userAuthFailedMsg)
-	ErrUserNoPermission        = NewErrCodeMsg(UserNoPermissionCode, userNoPermissionMsg)
-	ErrUserPasswordErr         = NewErrCodeMsg(UserPasswordErrCode, userPasswordErrMsg)
-	ErrUserNotExist            = NewErrCodeMsg(UserNotExistCode, userNotExistMsg)
-	ErrUserTokenError          = NewErrCodeMsg(UserTokenErrorCode, userTokenErrorMsg)
-	ErrUserTokenExpired        = NewErrCodeMsg(UserTokenExpiredCode, userTokenExpiredMsg)
+	ErrUserNoLogin             = NewAppError(UserNoLoginCode, userNoLoginMsg, http.StatusUnauthorized)
+	ErrUserNotFound            = NewAppError(UserNotFoundCode, userNotFoundMsg, http.StatusNotFound)
+	ErrUserPasswordError       = NewAppError(UserPasswordErrorCode, userPasswordErrorMsg, http.StatusUnauthorized)
+	ErrUserNotVerify           = NewAppError(UserNotVerifyCode, userNotVerifyMsg, http.StatusUnauthorized)
+	ErrUserLocked              = NewAppError(UserLockedCode, userLockedMsg, http.StatusUnauthorized)
+	ErrUserDisabled            = NewAppError(UserDisabledCode, userDisabledMsg, http.StatusUnauthorized)
+	ErrUserExpired             = NewAppError(UserExpiredCode, userExpiredMsg, http.StatusUnauthorized)
+	ErrUserAlreadyExists       = NewAppError(UserAlreadyExistsCode, userAlreadyExistsMsg, http.StatusUnauthorized)
+	ErrUserNameOrPasswordError = NewAppError(UserNameOrPasswordErrorCode, userNameOrPasswordErrorMsg, http.StatusUnauthorized)
+	ErrUserAuthFailed          = NewAppError(UserAuthFailedCode, userAuthFailedMsg, http.StatusUnauthorized)
+	ErrUserNoPermission        = NewAppError(UserNoPermissionCode, userNoPermissionMsg, http.StatusUnauthorized)
+	ErrUserPasswordErr         = NewAppError(UserPasswordErrCode, userPasswordErrMsg, http.StatusUnauthorized)
+	ErrUserNotExist            = NewAppError(UserNotExistCode, userNotExistMsg, http.StatusUnauthorized)
+	ErrUserTokenError          = NewAppError(UserTokenErrorCode, userTokenErrorMsg, http.StatusUnauthorized)
+	ErrUserTokenExpired        = NewAppError(UserTokenExpiredCode, userTokenExpiredMsg, http.StatusUnauthorized)
 )
 
 // 权限相关错误实例
 var (
-	ErrAccessDenied  = NewErrCodeMsg(AccessDeniedCode, accessDeniedMsg)
-	ErrCasbinService = NewErrCodeMsg(CasbinServiceCode, casbinServiceMsg)
+	ErrAccessDenied  = NewAppError(AccessDeniedCode, accessDeniedMsg, http.StatusForbidden)
+	ErrCasbinService = NewAppError(CasbinServiceCode, casbinServiceMsg, http.StatusInternalServerError)
 )
 
 // 缓存相关错误实例
 var (
-	ErrCache        = NewErrCodeMsg(ErrorCacheCode, errorCacheMsg)
-	ErrCacheTimeout = NewErrCodeMsg(ErrorCacheTimeoutCode, errorCacheTimeoutMsg)
-	ErrCacheKey     = NewErrCodeMsg(ErrorCacheKeyCode, errorCacheKeyMsg)
-	ErrCacheValue   = NewErrCodeMsg(ErrorCacheValueCode, errorCacheValueMsg)
+	ErrCache        = NewAppError(ErrorCacheCode, errorCacheMsg, http.StatusInternalServerError)
+	ErrCacheTimeout = NewAppError(ErrorCacheTimeoutCode, errorCacheTimeoutMsg, http.StatusInternalServerError)
+	ErrCacheKey     = NewAppError(ErrorCacheKeyCode, errorCacheKeyMsg, http.StatusInternalServerError)
+	ErrCacheValue   = NewAppError(ErrorCacheValueCode, errorCacheValueMsg, http.StatusInternalServerError)
 )
 
 // 文件相关错误实例
 var (
-	ErrFileStroage = NewErrCodeMsg(FileStroageCode, fileStroageMsg)
+	ErrFileStroage = NewAppError(FileStroageCode, fileStroageMsg, http.StatusInternalServerError)
 )

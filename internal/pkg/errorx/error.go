@@ -6,46 +6,46 @@ var _ error = &AppError{}
 
 // AppError 自定义应用错误类型
 type AppError struct {
-	errCode    int
-	errMsg     string
-	HttpStatus int
+	errorCode  int
+	errorMsg   string
+	httpStatus int
 }
 
-// GetErrCode 返回错误码
-func (e *AppError) GetErrCode() int {
-	return e.errCode
+// GetErrorCode 返回错误码
+func (e *AppError) GetErrorCode() int {
+	return e.errorCode
 }
 
-// GetErrMsg 返回错误消息
-func (e *AppError) GetErrMsg() string {
-	return e.errMsg
+// GetErrorMsg 返回错误消息
+func (e *AppError) GetErrorMsg() string {
+	return e.errorMsg
+}
+
+// GetHttpStatus 返回HTTP状态码
+func (e *AppError) GetHttpStatus() int {
+	return e.httpStatus
 }
 
 // Error 实现error接口
 func (e *AppError) Error() string {
-	return fmt.Sprintf("ErrCode:%d，ErrMsg:%s", e.errCode, e.errMsg)
+	return fmt.Sprintf("ErrCode:%d，ErrMsg:%s", e.errorCode, e.errorMsg)
 }
 
 // WithMsg 为错误添加额外的错误信息
 func (e *AppError) WithMsg(msg string) error {
-	e.errMsg = fmt.Sprintf("%s, %s", e.errMsg, msg)
+	e.errorMsg = fmt.Sprintf("%s, %s", e.errorMsg, msg)
 	return e
 }
 
 // WithError 为错误添加额外的错误
 func (e *AppError) WithError(err error) error {
-	e.errMsg = fmt.Sprintf("%s, %s", e.errMsg, err.Error())
+	e.errorMsg = fmt.Sprintf("%s, %s", e.errorMsg, err.Error())
 	return e
 }
 
-// NewErrCodeMsg 创建带有自定义错误码和消息的错误
-func NewErrCodeMsg(errCode int, errMsg string) *AppError {
-	return &AppError{errCode: errCode, errMsg: errMsg}
-}
-
-// NewErrMsg 创建带有自定义消息的通用错误
-func NewErrMsg(errMsg string) *AppError {
-	return &AppError{errCode: ErrorUnknownCode, errMsg: errMsg}
+// NewAppError 创建带有自定义错误码和消息的错误
+func NewAppError(errCode int, errMsg string, httpStatus int) *AppError {
+	return &AppError{errorCode: errCode, errorMsg: errMsg, httpStatus: httpStatus}
 }
 
 // IsAppErr 判断错误是否为AppError类型
