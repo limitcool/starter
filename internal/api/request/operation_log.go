@@ -1,8 +1,8 @@
-package dto
+package request
 
 import "time"
 
-// OperationLogQuery 操作日志查询DTO
+// OperationLogQuery 操作日志查询请求
 type OperationLogQuery struct {
 	PageRequest
 	BaseQuery
@@ -17,7 +17,7 @@ type OperationLogQuery struct {
 	EndTime   *time.Time `json:"end_time" form:"end_time"`     // 结束时间
 }
 
-// OperationLogBatchDeleteDTO 批量删除操作日志DTO
-type OperationLogBatchDeleteDTO struct {
+// OperationLogBatchDeleteRequest 批量删除操作日志请求
+type OperationLogBatchDeleteRequest struct {
 	IDs []uint `json:"ids" binding:"required"` // ID列表
 }

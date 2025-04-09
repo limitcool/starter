@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/internal/dto"
+	"github.com/limitcool/starter/internal/api/request"
+	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/internal/pkg/db"
-	"github.com/limitcool/starter/internal/vo"
+	"github.com/limitcool/starter/internal/pkg/options"
 	"gorm.io/gorm"
 )
 
@@ -121,43 +121,43 @@ func (s *OperationLogService) CreateUserLog(c *gin.Context, userID uint, usernam
 }
 
 // GetOperationLogs 分页获取操作日志
-func (s *OperationLogService) GetOperationLogs(query *dto.OperationLogQuery) (*vo.PageResult[[]model.OperationLog], error) {
+func (s *OperationLogService) GetOperationLogs(query *request.OperationLogQuery) (*response.PageResult[[]model.OperationLog], error) {
 	// 标准化分页请求
 	query.PageRequest.Normalize()
 
 	// 构建查询选项
-	var options []db.Option
+	var opts []options.Option
 
 	// 添加分页选项
-	options = append(options, db.WithPage(query.Page, query.PageSize))
+	opts = append(opts, options.WithPage(query.Page, query.PageSize))
 
 	// 添加排序选项
-	options = append(options, db.WithOrder(query.SortBy, query.GetSortDirection()))
+	opts = append(opts, options.WithOrder(query.SortBy, query.GetSortDirection()))
 
 	// 添加条件过滤选项
 	if query.UserType != "" {
-		options = append(options, db.WithExactMatch("user_type", query.UserType))
+		opts = append(opts, options.WithExactMatch("user_type", query.UserType))
 	}
 
 	if query.Username != "" {
-		options = append(options, db.WithLike("username", query.Username))
+		opts = append(opts, options.WithLike("username", query.Username))
 	}
 
 	if query.Module != "" {
-		options = append(options, db.WithExactMatch("module", query.Module))
+		opts = append(opts, options.WithExactMatch("module", query.Module))
 	}
 
 	if query.Action != "" {
-		options = append(options, db.WithExactMatch("action", query.Action))
+		opts = append(opts, options.WithExactMatch("action", query.Action))
 	}
 
 	if query.IP != "" {
-		options = append(options, db.WithLike("ip", query.IP))
+		opts = append(opts, options.WithLike("ip", query.IP))
 	}
 
 	// 添加时间范围选项
 	if query.StartTime != nil || query.EndTime != nil {
-		options = append(options, db.WithTimeRange("operate_at", query.StartTime, query.EndTime))
+		opts = append(opts, options.WithTimeRange("operate_at", query.StartTime, query.EndTime))
 	}
 
 	// 构建查询
@@ -170,7 +170,7 @@ func (s *OperationLogService) GetOperationLogs(query *dto.OperationLogQuery) (*v
 	}
 
 	// 应用所有选项
-	tx = db.Apply(tx, options...)
+	tx = options.Apply(tx, opts...)
 
 	// 执行查询
 	var logs []model.OperationLog
@@ -179,7 +179,7 @@ func (s *OperationLogService) GetOperationLogs(query *dto.OperationLogQuery) (*v
 	}
 
 	// 构建响应
-	return vo.NewPageResult(logs, total, query.Page, query.PageSize), nil
+	return response.NewPageResult(logs, total, query.Page, query.PageSize), nil
 }
 
 // DeleteOperationLog 删除操作日志

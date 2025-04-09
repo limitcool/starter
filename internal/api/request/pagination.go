@@ -1,9 +1,9 @@
-package dto
+package request
 
 // 默认分页大小
 const DefaultPageSize = 20
 
-// PageRequest 分页请求DTO
+// PageRequest 分页请求
 type PageRequest struct {
 	Page     int    `form:"page" json:"page"`           // 页码
 	PageSize int    `form:"size" json:"size"`           // 每页大小

@@ -1,6 +1,6 @@
-package vo
+package response
 
-// PageResult 分页结果VO
+// PageResult 分页结果
 type PageResult[T any] struct {
 	Total    int64 `json:"total"`     // 总记录数
 	Page     int   `json:"page"`      // 当前页码

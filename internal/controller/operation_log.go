@@ -2,7 +2,7 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/internal/dto"
+	"github.com/limitcool/starter/internal/api/request"
 	"github.com/limitcool/starter/internal/pkg/util"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/pkg/apiresponse"
@@ -11,7 +11,7 @@ import (
 // GetOperationLogs 获取操作日志列表
 func GetOperationLogs(c *gin.Context) {
 	// 构建查询参数
-	var query dto.OperationLogQuery
+	var query request.OperationLogQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		apiresponse.ParamError(c, "无效的查询参数")
 		return
@@ -22,7 +22,7 @@ func GetOperationLogs(c *gin.Context) {
 		query.Page = 1
 	}
 	if query.PageSize <= 0 {
-		query.PageSize = dto.DefaultPageSize
+		query.PageSize = request.DefaultPageSize
 	}
 
 	// 调用服务查询数据
@@ -57,7 +57,7 @@ func DeleteOperationLog(c *gin.Context) {
 
 // BatchDeleteOperationLogs 批量删除操作日志
 func BatchDeleteOperationLogs(c *gin.Context) {
-	var req dto.OperationLogBatchDeleteDTO
+	var req request.OperationLogBatchDeleteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apiresponse.ParamError(c, "无效的请求参数")
 		return

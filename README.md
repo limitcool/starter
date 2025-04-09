@@ -336,14 +336,14 @@ Log:
 
 ```go
 // 导入查询选项包
-import "your-project/internal/pkg/db"
+import "your-project/internal/pkg/options"
 
 // 创建查询实例
-query := db.Apply(
+query := options.Apply(
     DB, // *gorm.DB实例
-    db.WithPage(1, 10),
-    db.WithOrder("created_at", "desc"),
-    db.WithLike("name", keyword),
+    options.WithPage(1, 10),
+    options.WithOrder("created_at", "desc"),
+    options.WithLike("name", keyword),
 )
 
 // 执行查询
@@ -383,7 +383,7 @@ query.Find(&results)
 
 ```go
 // 自定义查询选项示例
-func WithCustomCondition(param string) db.Option {
+func WithCustomCondition(param string) options.Option {
     return func(db *gorm.DB) *gorm.DB {
         if param == "" {
             return db
@@ -393,9 +393,9 @@ func WithCustomCondition(param string) db.Option {
 }
 
 // 使用自定义查询选项
-query := db.Apply(
+query := options.Apply(
     DB,
-    db.WithPage(1, 10),
+    options.WithPage(1, 10),
     WithCustomCondition("value"),
 )
 ```
@@ -405,12 +405,12 @@ query := db.Apply(
 可以结合DTO对象灵活构建查询条件：
 
 ```go
-// 基于BaseQuery DTO构建查询条件
-func BuildQueryOptions(q *dto.BaseQuery, tableName string) []db.Option {
-    var opts []db.Option
+// 基于BaseQuery 构建查询条件
+func BuildQueryOptions(q *request.BaseQuery, tableName string) []options.Option {
+    var opts []options.Option
 
     // 添加基础查询条件
-    opts = append(opts, db.WithBaseQuery(
+    opts = append(opts, options.WithBaseQuery(
         tableName,
         q.Status,
         q.Keyword,
@@ -424,17 +424,17 @@ func BuildQueryOptions(q *dto.BaseQuery, tableName string) []db.Option {
 }
 
 // 在服务中使用
-func (s *Service) List(query *dto.YourQuery) ([]YourModel, int64, error) {
+func (s *Service) List(query *request.YourQuery) ([]YourModel, int64, error) {
     opts := BuildQueryOptions(&query.BaseQuery, "your_table")
 
     // 添加分页和排序
     opts = append(opts,
-        db.WithPage(query.Page, query.PageSize),
-        db.WithOrder(query.SortField, query.SortOrder),
+        options.WithPage(query.Page, query.PageSize),
+        options.WithOrder(query.SortField, query.SortOrder),
     )
 
     // 应用所有查询选项
-    db := db.Apply(s.DB, opts...)
+    db := options.Apply(s.DB, opts...)
 
     var total int64
     db.Model(&YourModel{}).Count(&total)

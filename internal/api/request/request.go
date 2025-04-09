@@ -1,13 +1,13 @@
-package dto
+package request
 
-// total Resp
+// ListResponse 列表响应
 type ListResponse[T any] struct {
 	Total int64 `json:"total"`
 	Items T     `json:"items"`
 }
 
-// BaseDTO 基础数据传输对象
-type BaseDTO struct {
+// BaseRequest 基础请求对象
+type BaseRequest struct {
 	ID uint `json:"id" form:"id"` // ID
 }
 
