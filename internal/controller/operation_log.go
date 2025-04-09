@@ -2,7 +2,6 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/dto"
 	"github.com/limitcool/starter/internal/pkg/util"
 	"github.com/limitcool/starter/internal/services"
@@ -45,7 +44,8 @@ func GetOperationLogs(c *gin.Context) {
 	}
 
 	// 调用服务查询数据
-	logService := services.NewOperationLogService(global.DB)
+	db := services.Instance().GetDB()
+	logService := services.NewOperationLogService(db)
 	result, err := logService.GetOperationLogs(&query)
 	if err != nil {
 		apiresponse.ServerError(c)
@@ -71,7 +71,8 @@ func DeleteOperationLog(c *gin.Context) {
 		return
 	}
 
-	logService := services.NewOperationLogService(global.DB)
+	db := services.Instance().GetDB()
+	logService := services.NewOperationLogService(db)
 	if err := logService.DeleteOperationLog(util.ParseUint(id, 0)); err != nil {
 		apiresponse.ServerError(c)
 		return
@@ -96,7 +97,8 @@ func BatchDeleteOperationLogs(c *gin.Context) {
 		return
 	}
 
-	logService := services.NewOperationLogService(global.DB)
+	db := services.Instance().GetDB()
+	logService := services.NewOperationLogService(db)
 	if err := logService.BatchDeleteOperationLogs(req.IDs); err != nil {
 		apiresponse.ServerError(c)
 		return

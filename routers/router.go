@@ -5,9 +5,9 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/controller"
 	"github.com/limitcool/starter/internal/middleware"
+	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/casbin"
 )
 
@@ -25,9 +25,10 @@ func NewRouter() *gin.Engine {
 	r.Use(middleware.Cors())
 
 	// 只有在启用权限系统时才初始化Casbin组件
-	if global.Config.Permission.Enabled {
+	config := services.Instance().GetConfig()
+	if config.Permission.Enabled {
 		// 初始化Casbin组件
-		casbinComponent := casbin.NewComponent(global.Config)
+		casbinComponent := casbin.NewComponent(config)
 		if err := casbinComponent.Initialize(); err != nil {
 			panic("Casbin组件初始化失败: " + err.Error())
 		}
@@ -67,7 +68,7 @@ func NewRouter() *gin.Engine {
 	}
 
 	// 只有在启用权限系统时才注册需要权限控制的路由
-	if global.Config.Permission.Enabled {
+	if config.Permission.Enabled {
 		// 需要权限控制的路由
 		admin := auth.Group("/admin")
 		admin.Use(middleware.CasbinComponentMiddleware())

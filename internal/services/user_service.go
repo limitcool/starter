@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/limitcool/starter/global"
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/pkg/code"
 	"github.com/limitcool/starter/pkg/crypto"
@@ -108,6 +108,14 @@ func (s *NormalUserService) Register(req RegisterRequest) (*model.User, error) {
 	return user, nil
 }
 
+// 获取配置，优先使用ServiceManager
+func (s *NormalUserService) getConfig() *configs.Config {
+	if serviceInstance != nil {
+		return serviceInstance.GetConfig()
+	}
+	panic("配置未初始化")
+}
+
 // Login 用户登录
 func (s *NormalUserService) Login(username, password string, ip string) (*LoginResponse, error) {
 	// 获取用户
@@ -132,13 +140,16 @@ func (s *NormalUserService) Login(username, password string, ip string) (*LoginR
 		"last_ip":    ip,
 	})
 
+	// 获取配置
+	cfg := s.getConfig()
+
 	// 生成访问令牌
 	accessClaims := jwt.MapClaims{
 		"user_id":   user.ID,
 		"username":  user.Username,
 		"user_type": "user", // 普通用户
 		"type":      "access_token",
-		"exp":       time.Now().Add(time.Duration(global.Config.JwtAuth.AccessExpire) * time.Second).Unix(),
+		"exp":       time.Now().Add(time.Duration(cfg.JwtAuth.AccessExpire) * time.Second).Unix(),
 	}
 
 	// 生成刷新令牌
@@ -147,15 +158,15 @@ func (s *NormalUserService) Login(username, password string, ip string) (*LoginR
 		"username":  user.Username,
 		"user_type": "user", // 普通用户
 		"type":      "refresh_token",
-		"exp":       time.Now().Add(time.Duration(global.Config.JwtAuth.RefreshExpire) * time.Second).Unix(),
+		"exp":       time.Now().Add(time.Duration(cfg.JwtAuth.RefreshExpire) * time.Second).Unix(),
 	}
 
-	accessToken, err := jwtpkg.GenerateToken(accessClaims, global.Config.JwtAuth.AccessSecret, time.Duration(global.Config.JwtAuth.AccessExpire)*time.Second)
+	accessToken, err := jwtpkg.GenerateToken(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
 	}
 
-	refreshToken, err := jwtpkg.GenerateToken(refreshClaims, global.Config.JwtAuth.RefreshSecret, time.Duration(global.Config.JwtAuth.RefreshExpire)*time.Second)
+	refreshToken, err := jwtpkg.GenerateToken(refreshClaims, cfg.JwtAuth.RefreshSecret, time.Duration(cfg.JwtAuth.RefreshExpire)*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
 	}
@@ -163,7 +174,7 @@ func (s *NormalUserService) Login(username, password string, ip string) (*LoginR
 	return &LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresIn:    global.Config.JwtAuth.AccessExpire,
+		ExpiresIn:    cfg.JwtAuth.AccessExpire,
 	}, nil
 }
 

@@ -4,18 +4,21 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/global"
+	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/pkg/apiresponse"
 	"github.com/spf13/viper"
 )
 
 // 获取系统设置
 func GetSystemSettings(c *gin.Context) {
+	// 获取配置
+	config := services.Instance().GetConfig()
+
 	// 返回当前权限系统设置
 	settings := map[string]interface{}{
 		"permission": map[string]interface{}{
-			"enabled":       global.Config.Permission.Enabled,
-			"default_allow": global.Config.Permission.DefaultAllow,
+			"enabled":       config.Permission.Enabled,
+			"default_allow": config.Permission.DefaultAllow,
 		},
 	}
 
@@ -34,9 +37,12 @@ func UpdatePermissionSettings(c *gin.Context) {
 		return
 	}
 
+	// 获取配置
+	config := services.Instance().GetConfig()
+
 	// 更新内存中的配置
-	global.Config.Permission.Enabled = req.Enabled
-	global.Config.Permission.DefaultAllow = req.DefaultAllow
+	config.Permission.Enabled = req.Enabled
+	config.Permission.DefaultAllow = req.DefaultAllow
 
 	// 更新配置文件
 	v := viper.New()

@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/global"
+	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/casbin"
 	"github.com/limitcool/starter/pkg/apiresponse"
 	"github.com/limitcool/starter/pkg/code"
@@ -16,7 +16,7 @@ import (
 func CasbinComponentMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
-		if !global.Config.Permission.Enabled {
+		if !services.Instance().GetConfig().Permission.Enabled {
 			// 权限系统未启用，直接放行
 			c.Next()
 			return
@@ -76,7 +76,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 func PermissionCodeMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
-		if !global.Config.Permission.Enabled {
+		if !services.Instance().GetConfig().Permission.Enabled {
 			// 权限系统未启用，直接放行
 			c.Next()
 			return

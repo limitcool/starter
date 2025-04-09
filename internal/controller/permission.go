@@ -4,15 +4,16 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/pkg/apiresponse"
 )
 
 // GetPermissions 获取权限列表
 func GetPermissions(c *gin.Context) {
 	var permissions []model.Permission
-	if err := global.DB.Find(&permissions).Error; err != nil {
+	db := services.Instance().GetDB()
+	if err := db.Find(&permissions).Error; err != nil {
 		apiresponse.ServerError(c)
 		return
 	}
@@ -28,7 +29,8 @@ func GetPermission(c *gin.Context) {
 	}
 
 	var permission model.Permission
-	if err := global.DB.Where("id = ?", id).First(&permission).Error; err != nil {
+	db := services.Instance().GetDB()
+	if err := db.Where("id = ?", id).First(&permission).Error; err != nil {
 		apiresponse.ServerError(c)
 		return
 	}
@@ -44,7 +46,8 @@ func CreatePermission(c *gin.Context) {
 		return
 	}
 
-	if err := global.DB.Create(&permission).Error; err != nil {
+	db := services.Instance().GetDB()
+	if err := db.Create(&permission).Error; err != nil {
 		apiresponse.ServerError(c)
 		return
 	}
@@ -67,7 +70,8 @@ func UpdatePermission(c *gin.Context) {
 	}
 
 	permission.ID = uint(id)
-	if err := global.DB.Model(&model.Permission{}).Where("id = ?", id).Updates(permission).Error; err != nil {
+	db := services.Instance().GetDB()
+	if err := db.Model(&model.Permission{}).Where("id = ?", id).Updates(permission).Error; err != nil {
 		apiresponse.ServerError(c)
 		return
 	}
@@ -84,7 +88,8 @@ func DeletePermission(c *gin.Context) {
 	}
 
 	// 删除权限
-	if err := global.DB.Delete(&model.Permission{}, id).Error; err != nil {
+	db := services.Instance().GetDB()
+	if err := db.Delete(&model.Permission{}, id).Error; err != nil {
 		apiresponse.ServerError(c)
 		return
 	}

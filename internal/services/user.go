@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/pkg/code"
 	"github.com/limitcool/starter/pkg/crypto"
@@ -47,7 +46,7 @@ func (s *UserService) getConfig() *configs.Config {
 	if serviceInstance != nil {
 		return serviceInstance.GetConfig()
 	}
-	return global.Config
+	panic("配置未初始化")
 }
 
 // GetUserByID 根据ID获取用户

@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/storage/sqldb"
 	"gorm.io/gorm"
 )
@@ -47,11 +46,6 @@ func Init(config *configs.Config, db *gorm.DB) {
 	// 注入核心资源
 	mgr.config = config
 	mgr.db = db
-
-	// 兼容旧代码，设置全局变量
-	// 在完全迁移后可以去掉这些赋值
-	global.Config = config
-	global.DB = db
 }
 
 // GetDB 获取数据库连接
@@ -65,11 +59,10 @@ func (sm *ServiceManager) GetDB() *gorm.DB {
 
 // GetConfig 获取应用配置
 func (sm *ServiceManager) GetConfig() *configs.Config {
-	// 优先使用注入的配置，如果未注入则尝试从global包获取
-	if sm.config != nil {
-		return sm.config
+	if sm.config == nil {
+		panic("配置未初始化")
 	}
-	return global.Config
+	return sm.config
 }
 
 // GetUserService 获取UserService实例

@@ -1,8 +1,3 @@
 package global
 
-import (
-	"gorm.io/gorm"
-)
-
-// 全局DB
-var DB *gorm.DB
+// 请使用 services.Instance().GetDB() 获取数据库连接

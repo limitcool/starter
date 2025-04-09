@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/pkg/apiresponse"
@@ -19,7 +18,8 @@ func CreateRole(c *gin.Context) {
 		return
 	}
 
-	roleService := services.NewRoleService(global.DB)
+	db := services.Instance().GetDB()
+	roleService := services.NewRoleService(db)
 	if err := roleService.CreateRole(&role); err != nil {
 		apiresponse.HandleError(c, err)
 		return
@@ -43,7 +43,8 @@ func UpdateRole(c *gin.Context) {
 	}
 
 	role.ID = uint(id)
-	roleService := services.NewRoleService(global.DB)
+	db := services.Instance().GetDB()
+	roleService := services.NewRoleService(db)
 	if err := roleService.UpdateRole(&role); err != nil {
 		apiresponse.HandleError(c, err)
 		return
@@ -60,7 +61,8 @@ func DeleteRole(c *gin.Context) {
 		return
 	}
 
-	roleService := services.NewRoleService(global.DB)
+	db := services.Instance().GetDB()
+	roleService := services.NewRoleService(db)
 	if err := roleService.DeleteRole(uint(id)); err != nil {
 		apiresponse.HandleError(c, err)
 		return
@@ -77,7 +79,8 @@ func GetRole(c *gin.Context) {
 		return
 	}
 
-	roleService := services.NewRoleService(global.DB)
+	db := services.Instance().GetDB()
+	roleService := services.NewRoleService(db)
 	role, err := roleService.GetRoleByID(uint(id))
 	if err != nil {
 		apiresponse.HandleError(c, err)
@@ -85,7 +88,7 @@ func GetRole(c *gin.Context) {
 	}
 
 	// 获取角色菜单ID
-	menuService := services.NewMenuService(global.DB)
+	menuService := services.NewMenuService(db)
 	roleMenus, err := menuService.GetMenusByRoleID(role.ID)
 	if err != nil {
 		apiresponse.HandleError(c, err)
@@ -104,7 +107,8 @@ func GetRole(c *gin.Context) {
 
 // 获取角色列表
 func GetRoles(c *gin.Context) {
-	roleService := services.NewRoleService(global.DB)
+	db := services.Instance().GetDB()
+	roleService := services.NewRoleService(db)
 	roles, err := roleService.GetRoles()
 	if err != nil {
 		apiresponse.HandleError(c, err)
@@ -126,7 +130,8 @@ func AssignMenuToRole(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService(global.DB)
+	db := services.Instance().GetDB()
+	menuService := services.NewMenuService(db)
 	if err := menuService.AssignMenuToRole(req.RoleID, req.MenuIDs); err != nil {
 		apiresponse.HandleError(c, err)
 		return
@@ -148,7 +153,8 @@ func SetRolePermission(c *gin.Context) {
 		return
 	}
 
-	roleService := services.NewRoleService(global.DB)
+	db := services.Instance().GetDB()
+	roleService := services.NewRoleService(db)
 	if err := roleService.SetRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
 		apiresponse.HandleError(c, err)
 		return
@@ -170,7 +176,8 @@ func DeleteRolePermission(c *gin.Context) {
 		return
 	}
 
-	roleService := services.NewRoleService(global.DB)
+	db := services.Instance().GetDB()
+	roleService := services.NewRoleService(db)
 	if err := roleService.DeleteRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
 		apiresponse.HandleError(c, err)
 		return

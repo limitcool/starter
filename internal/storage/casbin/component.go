@@ -8,7 +8,7 @@ import (
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/global"
+	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/sqldb"
 	"gorm.io/gorm"
 )
@@ -39,8 +39,8 @@ func (c *Component) Initialize() error {
 		return nil
 	}
 
-	// 获取全局数据库连接
-	c.db = global.DB
+	// 获取数据库连接
+	c.db = services.Instance().GetDB()
 	if c.db == nil {
 		// 尝试从SQL组件获取数据库连接
 		c.db = sqldb.GetDB()
@@ -107,7 +107,8 @@ func (c *Component) GetEnforcer() *casbin.Enforcer {
 // 获取全局Enforcer实例
 func GetEnforcer() *casbin.Enforcer {
 	// 如果权限系统未启用，直接返回nil
-	if global.Config != nil && !global.Config.Permission.Enabled {
+	svcMgr := services.Instance()
+	if svcMgr.GetConfig() != nil && !svcMgr.GetConfig().Permission.Enabled {
 		return nil
 	}
 	return enforcer

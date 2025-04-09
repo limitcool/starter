@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/services"
 )
 
@@ -37,7 +36,8 @@ func OperationLogMiddleware(module, action, description string) gin.HandlerFunc 
 		}
 
 		// 创建操作日志服务
-		logService := services.NewOperationLogService(global.DB)
+		db := services.Instance().GetDB()
+		logService := services.NewOperationLogService(db)
 
 		// 提取用户信息
 		mapClaims, ok := claims.(jwt.MapClaims)

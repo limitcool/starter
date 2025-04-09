@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/pkg/apiresponse"
@@ -18,7 +17,8 @@ func CreateMenu(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService(global.DB)
+	db := services.Instance().GetDB()
+	menuService := services.NewMenuService(db)
 	if err := menuService.CreateMenu(&menu); err != nil {
 		apiresponse.ServerError(c)
 		return
@@ -42,7 +42,8 @@ func UpdateMenu(c *gin.Context) {
 	}
 
 	menu.ID = uint(id)
-	menuService := services.NewMenuService(global.DB)
+	db := services.Instance().GetDB()
+	menuService := services.NewMenuService(db)
 	if err := menuService.UpdateMenu(&menu); err != nil {
 		apiresponse.ServerError(c)
 		return
@@ -59,7 +60,8 @@ func DeleteMenu(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService(global.DB)
+	db := services.Instance().GetDB()
+	menuService := services.NewMenuService(db)
 	if err := menuService.DeleteMenu(uint(id)); err != nil {
 		apiresponse.ServerError(c)
 		return
@@ -76,7 +78,8 @@ func GetMenu(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService(global.DB)
+	db := services.Instance().GetDB()
+	menuService := services.NewMenuService(db)
 	menu, err := menuService.GetMenuByID(uint(id))
 	if err != nil {
 		apiresponse.ServerError(c)
@@ -88,7 +91,8 @@ func GetMenu(c *gin.Context) {
 
 // 获取菜单树
 func GetMenuTree(c *gin.Context) {
-	menuService := services.NewMenuService(global.DB)
+	db := services.Instance().GetDB()
+	menuService := services.NewMenuService(db)
 	menus, err := menuService.GetMenuTree()
 	if err != nil {
 		apiresponse.ServerError(c)
@@ -107,7 +111,8 @@ func GetUserMenus(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService(global.DB)
+	db := services.Instance().GetDB()
+	menuService := services.NewMenuService(db)
 	menus, err := menuService.GetUserMenus(uint(userID.(float64)))
 	if err != nil {
 		apiresponse.ServerError(c)
@@ -126,7 +131,8 @@ func GetUserMenuPerms(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService(global.DB)
+	db := services.Instance().GetDB()
+	menuService := services.NewMenuService(db)
 	perms, err := menuService.GetMenuPermsByUserID(uint(userID.(float64)))
 	if err != nil {
 		apiresponse.ServerError(c)

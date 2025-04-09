@@ -2,7 +2,6 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/pkg/apiresponse"
 	"github.com/limitcool/starter/pkg/code"
@@ -30,7 +29,8 @@ func UserLogin(c *gin.Context) {
 	// 获取客户端IP地址
 	clientIP := c.ClientIP()
 
-	userService := services.NewNormalUserService(global.DB)
+	db := services.Instance().GetDB()
+	userService := services.NewNormalUserService(db)
 	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
 		if code.IsErrCode(err) {
@@ -67,7 +67,8 @@ func UserRegister(c *gin.Context) {
 		RegisterIP: clientIP,
 	}
 
-	userService := services.NewNormalUserService(global.DB)
+	db := services.Instance().GetDB()
+	userService := services.NewNormalUserService(db)
 	user, err := userService.Register(registerReq)
 	if err != nil {
 		if code.IsErrCode(err) {
@@ -99,7 +100,8 @@ func UserChangePassword(c *gin.Context) {
 		return
 	}
 
-	userService := services.NewNormalUserService(global.DB)
+	db := services.Instance().GetDB()
+	userService := services.NewNormalUserService(db)
 	err := userService.ChangePassword(userID.(uint), req.OldPassword, req.NewPassword)
 	if err != nil {
 		if code.IsErrCode(err) {
@@ -118,7 +120,8 @@ func UserInfo(c *gin.Context) {
 	// 获取用户ID
 	userID, _ := c.Get("user_id")
 
-	userService := services.NewNormalUserService(global.DB)
+	db := services.Instance().GetDB()
+	userService := services.NewNormalUserService(db)
 	user, err := userService.GetUserByID(userID.(uint))
 	if err != nil {
 		if code.IsErrCode(err) {

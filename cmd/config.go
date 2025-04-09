@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/global"
+	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/pkg/env"
 	"github.com/limitcool/starter/pkg/logger"
 	"github.com/spf13/cobra"
@@ -71,8 +71,8 @@ func InitConfig(cmd *cobra.Command, args []string) *configs.Config {
 		log.Fatal("Config unmarshal failed", "error", err)
 	}
 
-	// 设置全局配置
-	global.Config = cfg
+	// 初始化服务管理器
+	services.Init(cfg, nil)
 	globalConfig = cfg
 
 	return cfg
