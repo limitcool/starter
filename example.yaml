@@ -47,3 +47,7 @@ Log:
   FileConfig:
     Path: logs/app.log
     MaxSize: 10
+Admin:
+  Username: admin
+  Password: admin123
+  Nickname: 系统管理员

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/services"
 	"gorm.io/gorm"
 )
@@ -40,13 +41,15 @@ type MigrationEntry struct {
 type Migrator struct {
 	db         *gorm.DB
 	migrations []*MigrationEntry
+	config     *configs.Config
 }
 
 // NewMigrator 创建迁移管理器
-func NewMigrator(db *gorm.DB) *Migrator {
+func NewMigrator(db *gorm.DB, config *configs.Config) *Migrator {
 	return &Migrator{
 		db:         db,
 		migrations: make([]*MigrationEntry, 0),
+		config:     config,
 	}
 }
 
@@ -300,13 +303,14 @@ var GlobalMigrator *Migrator
 
 // InitializeMigrator 初始化全局迁移实例
 func InitializeMigrator() error {
-	// 使用服务管理器获取数据库连接
+	// 使用服务管理器获取数据库连接和配置
 	db := services.Instance().GetDB()
+	config := services.Instance().GetConfig()
 	if db == nil {
 		return errors.New("数据库未初始化")
 	}
 
-	GlobalMigrator = NewMigrator(db)
+	GlobalMigrator = NewMigrator(db, config)
 	RegisterAllMigrations(GlobalMigrator) // 注册所有迁移
 
 	return GlobalMigrator.Initialize()

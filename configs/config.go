@@ -37,6 +37,7 @@ type Config struct {
 	Log        LogConfig
 	Permission Permission // 权限系统配置
 	Storage    Storage    // 文件存储配置
+	Admin      Admin      // 管理员配置
 }
 
 // Config app config
@@ -163,4 +164,11 @@ type PathConfig struct {
 	Video     string // 视频存储路径
 	Audio     string // 音频存储路径
 	Temporary string // 临时文件存储路径
+}
+
+// Admin 管理员配置
+type Admin struct {
+	Username string // 管理员用户名
+	Password string // 管理员密码
+	Nickname string // 管理员昵称
 }
