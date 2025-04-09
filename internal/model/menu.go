@@ -1,6 +1,6 @@
 package model
 
-import "github.com/limitcool/starter/pkg/enum"
+import "github.com/limitcool/starter/internal/pkg/enum"
 
 // 菜单实体
 type Menu struct {

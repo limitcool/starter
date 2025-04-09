@@ -3,9 +3,9 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/request"
-	"github.com/limitcool/starter/internal/pkg/util"
+	"github.com/limitcool/starter/internal/pkg/apiresponse"
 	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/pkg/apiresponse"
+	"github.com/spf13/cast"
 )
 
 // GetOperationLogs 获取操作日志列表
@@ -47,7 +47,7 @@ func DeleteOperationLog(c *gin.Context) {
 
 	db := services.Instance().GetDB()
 	logService := services.NewOperationLogService(db)
-	if err := logService.DeleteOperationLog(util.ParseUint(id, 0)); err != nil {
+	if err := logService.DeleteOperationLog(cast.ToUint(id)); err != nil {
 		apiresponse.ServerError(c)
 		return
 	}

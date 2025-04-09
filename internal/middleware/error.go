@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/pkg/apiresponse"
-	"github.com/limitcool/starter/pkg/errors"
+	"github.com/limitcool/starter/internal/pkg/apiresponse"
+	"github.com/limitcool/starter/internal/pkg/errors"
 )
 
 // ErrorHandler 错误处理中间件

@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/limitcool/starter/pkg/apiresponse"
+	"github.com/limitcool/starter/internal/pkg/apiresponse"
 )
 
 // RequireSysUser 要求系统用户中间件

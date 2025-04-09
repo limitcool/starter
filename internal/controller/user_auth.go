@@ -3,8 +3,8 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/pkg/apiresponse"
-	"github.com/limitcool/starter/pkg/code"
+	"github.com/limitcool/starter/internal/pkg/apiresponse"
+	"github.com/limitcool/starter/internal/pkg/code"
 )
 
 // UserRegisterRequest 用户注册请求参数

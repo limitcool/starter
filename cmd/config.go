@@ -10,8 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/pkg/env"
-	"github.com/limitcool/starter/pkg/logger"
+	"github.com/limitcool/starter/internal/pkg/env"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

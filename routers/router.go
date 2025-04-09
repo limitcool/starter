@@ -9,7 +9,7 @@ import (
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/casbin"
-	"github.com/limitcool/starter/pkg/storage"
+	"github.com/limitcool/starter/internal/pkg/storage"
 )
 
 // NewRouter 初始化并返回一个配置完整的Gin路由引擎

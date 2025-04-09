@@ -10,8 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/pkg/errors"
-	"github.com/limitcool/starter/pkg/storage"
+	"github.com/limitcool/starter/internal/pkg/errors"
+	"github.com/limitcool/starter/internal/pkg/storage"
 	"gorm.io/gorm"
 )
 

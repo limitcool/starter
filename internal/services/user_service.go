@@ -9,10 +9,10 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/pkg/apiresponse"
-	"github.com/limitcool/starter/pkg/code"
-	"github.com/limitcool/starter/pkg/crypto"
-	jwtpkg "github.com/limitcool/starter/pkg/jwt"
+	"github.com/limitcool/starter/internal/pkg/apiresponse"
+	"github.com/limitcool/starter/internal/pkg/code"
+	"github.com/limitcool/starter/internal/pkg/crypto"
+	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
 	"gorm.io/gorm"
 )
 

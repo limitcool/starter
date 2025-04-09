@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/limitcool/starter/pkg/storage"
+	"github.com/limitcool/starter/internal/pkg/storage"
 )
 
 func main() {

@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/casbin"
-	"github.com/limitcool/starter/pkg/apiresponse"
-	"github.com/limitcool/starter/pkg/code"
+	"github.com/limitcool/starter/internal/pkg/apiresponse"
+	"github.com/limitcool/starter/internal/pkg/code"
 )
 
 // CasbinComponentMiddleware 基于Casbin组件的权限控制中间件

@@ -3,7 +3,7 @@ package configs
 import (
 	"time"
 
-	"github.com/limitcool/starter/pkg/storage"
+	"github.com/limitcool/starter/internal/pkg/storage"
 )
 
 type DBDriver string

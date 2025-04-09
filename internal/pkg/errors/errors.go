@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/limitcool/starter/pkg/code"
+	"github.com/limitcool/starter/internal/pkg/code"
 	"go.mongodb.org/mongo-driver/mongo"
 	"gorm.io/gorm"
 )

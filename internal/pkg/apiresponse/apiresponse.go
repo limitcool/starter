@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/pkg/code"
-	"github.com/limitcool/starter/pkg/errors"
+	"github.com/limitcool/starter/internal/pkg/code"
+	"github.com/limitcool/starter/internal/pkg/errors"
 )
 
 // Response API标准响应结构

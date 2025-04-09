@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/controller"
 	"github.com/limitcool/starter/internal/middleware"
-	"github.com/limitcool/starter/pkg/storage"
+	"github.com/limitcool/starter/internal/pkg/storage"
 )
 
 // SetupFileRoutes 文件路由设置

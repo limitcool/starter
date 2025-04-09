@@ -1,6 +1,6 @@
 package model
 
-import "github.com/limitcool/starter/pkg/enum"
+import "github.com/limitcool/starter/internal/pkg/enum"
 
 // Permission 权限实体
 type Permission struct {

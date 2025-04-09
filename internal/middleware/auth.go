@@ -8,9 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/pkg/apiresponse"
-	"github.com/limitcool/starter/pkg/code"
-	"github.com/limitcool/starter/pkg/jwt"
+	"github.com/limitcool/starter/internal/pkg/apiresponse"
+	"github.com/limitcool/starter/internal/pkg/code"
+	"github.com/limitcool/starter/internal/pkg/jwt"
 )
 
 // 为兼容性保留原有函数

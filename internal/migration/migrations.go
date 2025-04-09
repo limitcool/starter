@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/pkg/crypto"
+	"github.com/limitcool/starter/internal/pkg/crypto"
 	"gorm.io/gorm"
 )
 

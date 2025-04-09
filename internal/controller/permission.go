@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/pkg/apiresponse"
+	"github.com/limitcool/starter/internal/pkg/apiresponse"
 )
 
 // GetPermissions 获取权限列表
