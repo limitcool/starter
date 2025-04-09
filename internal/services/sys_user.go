@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
@@ -42,7 +43,7 @@ func (s *SysUserService) getConfig() *configs.Config {
 // GetUserByID 根据ID获取用户
 func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
 	var user model.SysUser
-	err := db.First(&user, id).Error
+	err := Instance().GetDB().First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -51,7 +52,7 @@ func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
 	}
 
 	// 获取用户的角色
-	if err := db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+	if err := Instance().GetDB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
 		return nil, err
 	}
 
@@ -66,7 +67,7 @@ func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
 // GetUserByUsername 根据用户名获取用户
 func (s *SysUserService) GetUserByUsername(username string) (*model.SysUser, error) {
 	var user model.SysUser
-	err := db.Where("username = ?", username).First(&user).Error
+	err := Instance().GetDB().Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -75,7 +76,7 @@ func (s *SysUserService) GetUserByUsername(username string) (*model.SysUser, err
 	}
 
 	// 获取用户的角色
-	if err := db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+	if err := Instance().GetDB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
 		return nil, err
 	}
 
@@ -104,7 +105,8 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	// 获取用户
 	user, err := s.GetUserByUsername(username)
 	if err != nil {
-		return nil, err
+		log.Error("登录失败", "err", err)
+		return nil, errorx.ErrUserNotFound
 	}
 
 	// 检查用户是否启用
@@ -118,7 +120,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	}
 
 	// 更新最后登录时间和IP
-	db.Model(user).Updates(map[string]interface{}{
+	Instance().GetDB().Model(user).Updates(map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	})

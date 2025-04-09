@@ -28,7 +28,7 @@ func NewUserService() *UserService {
 // GetUserByID 根据ID获取用户
 func (s *UserService) GetUserByID(id uint) (*model.User, error) {
 	var user model.User
-	err := db.First(&user, id).Error
+	err := Instance().GetDB().First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -41,7 +41,7 @@ func (s *UserService) GetUserByID(id uint) (*model.User, error) {
 // GetUserByUsername 根据用户名获取用户
 func (s *UserService) GetUserByUsername(username string) (*model.User, error) {
 	var user model.User
-	err := db.Where("username = ?", username).First(&user).Error
+	err := Instance().GetDB().Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -73,7 +73,7 @@ type RegisterRequest struct {
 func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 	// 检查用户名是否已存在
 	var count int64
-	if err := db.Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
+	if err := Instance().GetDB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
 		return nil, err
 	}
 	if count > 0 {
@@ -100,7 +100,7 @@ func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 		RegisterIP: req.RegisterIP,
 	}
 
-	if err := db.Create(user).Error; err != nil {
+	if err := Instance().GetDB().Create(user).Error; err != nil {
 		return nil, err
 	}
 
@@ -134,7 +134,7 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 	}
 
 	// 更新最后登录时间和IP
-	db.Model(user).Updates(map[string]interface{}{
+	Instance().GetDB().Model(user).Updates(map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	})
@@ -185,7 +185,7 @@ func (s *UserService) UpdateUser(id uint, data map[string]interface{}) error {
 	delete(data, "deleted_at")
 
 	// 更新用户信息
-	return db.Model(&model.User{}).Where("id = ?", id).Updates(data).Error
+	return Instance().GetDB().Model(&model.User{}).Where("id = ?", id).Updates(data).Error
 }
 
 // ChangePassword 修改密码
@@ -208,7 +208,7 @@ func (s *UserService) ChangePassword(id uint, oldPassword, newPassword string) e
 	}
 
 	// 更新密码
-	return db.Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
+	return Instance().GetDB().Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
 }
 
 func GetUserInfo(ctx *gin.Context) {
