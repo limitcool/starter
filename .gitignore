@@ -15,3 +15,4 @@ configs/config-*.yaml
 build/*
 dev.yaml
 *.exe
+openapi.json

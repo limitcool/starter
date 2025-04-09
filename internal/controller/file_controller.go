@@ -27,15 +27,6 @@ func NewFileController(storage *storage.Storage) *FileController {
 }
 
 // UploadFile 上传文件
-// @Summary 上传文件
-// @Description 上传文件到服务器
-// @Tags 文件
-// @Accept multipart/form-data
-// @Produce json
-// @Param file formData file true "文件"
-// @Param type formData string false "文件类型(image/avatar/document/video/audio/other)" default(other)
-// @Success 200 {object} apiresponse.Response{data=model.File}
-// @Router /api/files/upload [post]
 func (ctrl *FileController) UploadFile(c *gin.Context) {
 	// 获取当前用户ID
 	var userID string
@@ -69,13 +60,6 @@ func (ctrl *FileController) UploadFile(c *gin.Context) {
 }
 
 // GetFile 获取文件信息
-// @Summary 获取文件信息
-// @Description 获取文件详细信息
-// @Tags 文件
-// @Produce json
-// @Param id path string true "文件ID"
-// @Success 200 {object} apiresponse.Response{data=model.File}
-// @Router /api/files/{id} [get]
 func (ctrl *FileController) GetFile(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -93,13 +77,6 @@ func (ctrl *FileController) GetFile(c *gin.Context) {
 }
 
 // DeleteFile 删除文件
-// @Summary 删除文件
-// @Description 删除指定文件
-// @Tags 文件
-// @Produce json
-// @Param id path string true "文件ID"
-// @Success 200 {object} apiresponse.Response
-// @Router /api/files/{id} [delete]
 func (ctrl *FileController) DeleteFile(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -117,12 +94,6 @@ func (ctrl *FileController) DeleteFile(c *gin.Context) {
 }
 
 // DownloadFile 下载文件
-// @Summary 下载文件
-// @Description 下载指定文件
-// @Tags 文件
-// @Produce octet-stream
-// @Param id path string true "文件ID"
-// @Router /api/files/{id}/download [get]
 func (ctrl *FileController) DownloadFile(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -159,14 +130,6 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 }
 
 // UpdateUserAvatar 更新用户头像
-// @Summary 更新用户头像
-// @Description 更新当前用户的头像
-// @Tags 用户
-// @Accept multipart/form-data
-// @Produce json
-// @Param avatar formData file true "头像文件"
-// @Success 200 {object} apiresponse.Response{data=string}
-// @Router /api/users/avatar [put]
 func (ctrl *FileController) UpdateUserAvatar(c *gin.Context) {
 	// 获取当前用户
 	user, exists := c.Get("user")
@@ -202,14 +165,6 @@ func (ctrl *FileController) UpdateUserAvatar(c *gin.Context) {
 }
 
 // UpdateSysUserAvatar 更新系统用户头像
-// @Summary 更新系统用户头像
-// @Description 更新当前系统用户的头像
-// @Tags 系统用户
-// @Accept multipart/form-data
-// @Produce json
-// @Param avatar formData file true "头像文件"
-// @Success 200 {object} apiresponse.Response{data=string}
-// @Router /api/sysusers/avatar [put]
 func (ctrl *FileController) UpdateSysUserAvatar(c *gin.Context) {
 	// 获取当前用户
 	user, exists := c.Get("user")
