@@ -60,7 +60,12 @@ func NewRouter() *gin.Engine {
 			log.Info("存储服务初始化成功", "type", config.Storage.Type)
 		}
 	}
-
+	UserControllerInstance := controller.NewUserController()
+	PermissionControllerInstance := controller.NewPermissionController()
+	OperationLogControllerInstance := controller.NewOperationLogController()
+	MenuControllerInstance := controller.NewMenuController()
+	RoleControllerInstance := controller.NewRoleController()
+	SystemControllerInstance := controller.NewSystemController()
 	// 设置API路由组
 	api := r.Group("/api")
 	apiV1 := api.Group("/v1")
@@ -69,25 +74,25 @@ func NewRouter() *gin.Engine {
 	{
 		apiV1.GET("/ping", controller.Ping)
 		apiV1.POST("/admin/login", controller.AdminControllerInstance.AdminLogin)
-		apiV1.POST("/refresh", controller.UserControllerInstance.RefreshToken)
+		apiV1.POST("/refresh", UserControllerInstance.RefreshToken)
 
 		// 普通用户公共路由
-		apiV1.POST("/user/register", controller.UserControllerInstance.UserRegister)
-		apiV1.POST("/user/login", controller.UserControllerInstance.UserLogin)
+		apiV1.POST("/user/register", UserControllerInstance.UserRegister)
+		apiV1.POST("/user/login", UserControllerInstance.UserLogin)
 	}
 
 	// 需要认证的路由
 	auth := apiV1.Group("")
 	auth.Use(middleware.AuthMiddleware())
 	{
-		auth.GET("/user/menus", controller.GetUserMenus)
-		auth.GET("/user/perms", controller.GetUserMenuPerms)
+		auth.GET("/user/menus", MenuControllerInstance.GetUserMenus)
+		auth.GET("/user/perms", MenuControllerInstance.GetUserMenuPerms)
 
 		// 普通用户认证路由
 		user := auth.Group("/user")
 		{
-			user.GET("/info", middleware.AuthNormalUser(), controller.UserControllerInstance.UserInfo)
-			user.POST("/change-password", middleware.AuthNormalUser(), controller.UserControllerInstance.UserChangePassword)
+			user.GET("/info", middleware.AuthNormalUser(), UserControllerInstance.UserInfo)
+			user.POST("/change-password", middleware.AuthNormalUser(), UserControllerInstance.UserChangePassword)
 		}
 
 		// 管理员权限路由（如果启用了权限系统）
@@ -98,49 +103,49 @@ func NewRouter() *gin.Engine {
 				// 系统设置
 				system := admin.Group("/system")
 				{
-					system.GET("/settings", controller.GetSystemSettings)
-					system.PUT("/permission", controller.UpdatePermissionSettings)
+					system.GET("/settings", SystemControllerInstance.GetSystemSettings)
+					system.PUT("/permission", PermissionControllerInstance.UpdatePermissionSettings)
 				}
 
 				// 菜单管理
 				menu := admin.Group("/menu")
 				{
-					menu.POST("", controller.CreateMenu)
-					menu.PUT("/:id", controller.UpdateMenu)
-					menu.DELETE("/:id", controller.DeleteMenu)
-					menu.GET("/:id", controller.GetMenu)
-					menu.GET("", controller.GetMenuTree)
+					menu.POST("", MenuControllerInstance.CreateMenu)
+					menu.PUT("/:id", MenuControllerInstance.UpdateMenu)
+					menu.DELETE("/:id", MenuControllerInstance.DeleteMenu)
+					menu.GET("/:id", MenuControllerInstance.GetMenu)
+					menu.GET("", MenuControllerInstance.GetMenuTree)
 				}
 
 				// 角色管理
 				role := admin.Group("/role")
 				{
-					role.POST("", controller.CreateRole)
-					role.PUT("/:id", controller.UpdateRole)
-					role.DELETE("/:id", controller.DeleteRole)
-					role.GET("/:id", controller.GetRole)
-					role.GET("", controller.GetRoles)
-					role.POST("/menu", controller.AssignMenuToRole)
-					role.POST("/permission", controller.SetRolePermission)
-					role.DELETE("/permission", controller.DeleteRolePermission)
+					role.POST("", RoleControllerInstance.CreateRole)
+					role.PUT("/:id", RoleControllerInstance.UpdateRole)
+					role.DELETE("/:id", RoleControllerInstance.DeleteRole)
+					role.GET("/:id", RoleControllerInstance.GetRole)
+					role.GET("", RoleControllerInstance.GetRoles)
+					role.POST("/menu", RoleControllerInstance.AssignMenuToRole)
+					role.POST("/permission", RoleControllerInstance.SetRolePermission)
+					role.DELETE("/permission", RoleControllerInstance.DeleteRolePermission)
 				}
 
 				// 权限管理
 				permission := admin.Group("/permission")
 				{
-					permission.GET("", controller.GetPermissions)
-					permission.GET("/:id", controller.GetPermission)
-					permission.POST("", controller.CreatePermission)
-					permission.PUT("/:id", controller.UpdatePermission)
-					permission.DELETE("/:id", controller.DeletePermission)
+					permission.GET("", PermissionControllerInstance.GetPermissions)
+					permission.GET("/:id", PermissionControllerInstance.GetPermission)
+					permission.POST("", PermissionControllerInstance.CreatePermission)
+					permission.PUT("/:id", PermissionControllerInstance.UpdatePermission)
+					permission.DELETE("/:id", PermissionControllerInstance.DeletePermission)
 				}
 
 				// 操作日志管理
 				oplog := admin.Group("/operation-logs")
 				{
-					oplog.GET("", controller.GetOperationLogs)
-					oplog.DELETE("/:id", controller.DeleteOperationLog)
-					oplog.DELETE("/batch", controller.ClearOperationLogs)
+					oplog.GET("", OperationLogControllerInstance.GetOperationLogs)
+					oplog.DELETE("/:id", OperationLogControllerInstance.DeleteOperationLog)
+					oplog.DELETE("/batch", OperationLogControllerInstance.ClearOperationLogs)
 				}
 			}
 		}

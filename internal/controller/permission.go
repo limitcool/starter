@@ -1,16 +1,68 @@
 package controller
 
 import (
+	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/spf13/viper"
 )
 
+func NewPermissionController() *PermissionController {
+	return &PermissionController{}
+}
+
+type PermissionController struct {
+}
+
+// 更新权限系统设置
+func (pc *PermissionController) UpdatePermissionSettings(c *gin.Context) {
+	var req struct {
+		Enabled      bool `json:"enabled"`
+		DefaultAllow bool `json:"default_allow"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ParamError(c, err.Error())
+		return
+	}
+
+	// 获取配置
+	config := services.Instance().GetConfig()
+
+	// 更新内存中的配置
+	config.Permission.Enabled = req.Enabled
+	config.Permission.DefaultAllow = req.DefaultAllow
+
+	// 更新配置文件
+	v := viper.New()
+	v.SetConfigFile(filepath.Join("configs", "config.yaml"))
+
+	if err := v.ReadInConfig(); err != nil {
+		response.ServerError(c)
+		return
+	}
+
+	v.Set("permission.enabled", req.Enabled)
+	v.Set("permission.default_allow", req.DefaultAllow)
+
+	if err := v.WriteConfig(); err != nil {
+		response.ServerError(c)
+		return
+	}
+
+	response.Success(c, map[string]interface{}{
+		"message":       "权限系统设置已更新",
+		"enabled":       req.Enabled,
+		"default_allow": req.DefaultAllow,
+	})
+}
+
 // GetPermissions 获取权限列表
-func GetPermissions(c *gin.Context) {
+func (pc *PermissionController) GetPermissions(c *gin.Context) {
 	var permissions []model.Permission
 	db := services.Instance().GetDB()
 	if err := db.Find(&permissions).Error; err != nil {
@@ -21,7 +73,7 @@ func GetPermissions(c *gin.Context) {
 }
 
 // GetPermission 获取权限详情
-func GetPermission(c *gin.Context) {
+func (pc *PermissionController) GetPermission(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.ParamError(c, "无效的权限ID")
@@ -39,7 +91,7 @@ func GetPermission(c *gin.Context) {
 }
 
 // CreatePermission 创建权限
-func CreatePermission(c *gin.Context) {
+func (pc *PermissionController) CreatePermission(c *gin.Context) {
 	var permission model.Permission
 	if err := c.ShouldBindJSON(&permission); err != nil {
 		response.ParamError(c, err.Error())
@@ -56,7 +108,7 @@ func CreatePermission(c *gin.Context) {
 }
 
 // UpdatePermission 更新权限
-func UpdatePermission(c *gin.Context) {
+func (pc *PermissionController) UpdatePermission(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.ParamError(c, "无效的权限ID")
@@ -80,7 +132,7 @@ func UpdatePermission(c *gin.Context) {
 }
 
 // DeletePermission 删除权限
-func DeletePermission(c *gin.Context) {
+func (pc *PermissionController) DeletePermission(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.ParamError(c, "无效的权限ID")

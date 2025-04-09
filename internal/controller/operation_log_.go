@@ -9,8 +9,15 @@ import (
 	"github.com/limitcool/starter/internal/services"
 )
 
+func NewOperationLogController() *OperationLogController {
+	return &OperationLogController{}
+}
+
+type OperationLogController struct {
+}
+
 // GetOperationLogs 获取操作日志列表
-func GetOperationLogs(c *gin.Context) {
+func (olc *OperationLogController) GetOperationLogs(c *gin.Context) {
 	// 解析查询参数
 	var query v1.OperationLogQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
@@ -38,7 +45,7 @@ func GetOperationLogs(c *gin.Context) {
 }
 
 // DeleteOperationLog 删除操作日志
-func DeleteOperationLog(c *gin.Context) {
+func (olc *OperationLogController) DeleteOperationLog(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.ParamError(c, "无效的ID参数")
@@ -55,7 +62,7 @@ func DeleteOperationLog(c *gin.Context) {
 }
 
 // ClearOperationLogs 清空操作日志
-func ClearOperationLogs(c *gin.Context) {
+func (olc *OperationLogController) ClearOperationLogs(c *gin.Context) {
 	var req v1.OperationLogBatchDeleteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.ParamError(c, "无效的请求参数")

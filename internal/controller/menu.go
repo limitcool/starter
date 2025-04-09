@@ -10,7 +10,14 @@ import (
 )
 
 // 创建菜单
-func CreateMenu(c *gin.Context) {
+func NewMenuController() *MenuController {
+	return &MenuController{}
+}
+
+type MenuController struct {
+}
+
+func (mc *MenuController) CreateMenu(c *gin.Context) {
 	var menu model.Menu
 	if err := c.ShouldBindJSON(&menu); err != nil {
 		response.ParamError(c, err.Error())
@@ -27,7 +34,7 @@ func CreateMenu(c *gin.Context) {
 }
 
 // 更新菜单
-func UpdateMenu(c *gin.Context) {
+func (mc *MenuController) UpdateMenu(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.ParamError(c, "无效的菜单ID")
@@ -51,7 +58,7 @@ func UpdateMenu(c *gin.Context) {
 }
 
 // 删除菜单
-func DeleteMenu(c *gin.Context) {
+func (mc *MenuController) DeleteMenu(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.ParamError(c, "无效的菜单ID")
@@ -68,7 +75,7 @@ func DeleteMenu(c *gin.Context) {
 }
 
 // 获取菜单详情
-func GetMenu(c *gin.Context) {
+func (mc *MenuController) GetMenu(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.ParamError(c, "无效的菜单ID")
@@ -86,7 +93,7 @@ func GetMenu(c *gin.Context) {
 }
 
 // 获取菜单树
-func GetMenuTree(c *gin.Context) {
+func (mc *MenuController) GetMenuTree(c *gin.Context) {
 	menuService := services.NewMenuService()
 	menus, err := menuService.GetMenuTree()
 	if err != nil {
@@ -98,7 +105,7 @@ func GetMenuTree(c *gin.Context) {
 }
 
 // 获取用户菜单
-func GetUserMenus(c *gin.Context) {
+func (mc *MenuController) GetUserMenus(c *gin.Context) {
 	// 从上下文中获取用户ID
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -117,7 +124,7 @@ func GetUserMenus(c *gin.Context) {
 }
 
 // 获取用户菜单权限标识
-func GetUserMenuPerms(c *gin.Context) {
+func (mc *MenuController) GetUserMenuPerms(c *gin.Context) {
 	// 从上下文中获取用户ID
 	userID, exists := c.Get("userID")
 	if !exists {

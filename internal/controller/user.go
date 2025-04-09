@@ -8,8 +8,10 @@ import (
 	"github.com/limitcool/starter/internal/services"
 )
 
-var UserControllerInstance = UserController{
-	userService: services.Instance().GetUserService(),
+func NewUserController() *UserController {
+	return &UserController{
+		userService: services.Instance().GetUserService(),
+	}
 }
 
 type UserController struct {
@@ -113,7 +115,6 @@ func (uc *UserController) UserChangePassword(c *gin.Context) {
 func (uc *UserController) UserInfo(c *gin.Context) {
 	// 获取用户ID
 	userID, _ := c.Get("user_id")
-
 
 	userService := services.NewNormalUserService()
 	user, err := userService.GetUserByID(userID.(uint))

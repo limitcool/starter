@@ -10,8 +10,15 @@ import (
 	"github.com/limitcool/starter/internal/services"
 )
 
+func NewRoleController() *RoleController {
+	return &RoleController{}
+}
+
+type RoleController struct {
+}
+
 // 创建角色
-func CreateRole(c *gin.Context) {
+func (rc *RoleController) CreateRole(c *gin.Context) {
 	var role model.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
 		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, err.Error()))
@@ -28,7 +35,7 @@ func CreateRole(c *gin.Context) {
 }
 
 // 更新角色
-func UpdateRole(c *gin.Context) {
+func (rc *RoleController) UpdateRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, "无效的角色ID"))
@@ -52,7 +59,7 @@ func UpdateRole(c *gin.Context) {
 }
 
 // 删除角色
-func DeleteRole(c *gin.Context) {
+func (rc *RoleController) DeleteRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, "无效的角色ID"))
@@ -69,7 +76,7 @@ func DeleteRole(c *gin.Context) {
 }
 
 // 获取角色详情
-func GetRole(c *gin.Context) {
+func (rc *RoleController) GetRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, "无效的角色ID"))
@@ -102,7 +109,7 @@ func GetRole(c *gin.Context) {
 }
 
 // 获取角色列表
-func GetRoles(c *gin.Context) {
+func (rc *RoleController) GetRoles(c *gin.Context) {
 	roleService := services.NewRoleService()
 	roles, err := roleService.GetRoles()
 	if err != nil {
@@ -114,7 +121,7 @@ func GetRoles(c *gin.Context) {
 }
 
 // 为角色分配菜单
-func AssignMenuToRole(c *gin.Context) {
+func (rc *RoleController) AssignMenuToRole(c *gin.Context) {
 	var req struct {
 		RoleID  uint   `json:"role_id" binding:"required"`
 		MenuIDs []uint `json:"menu_ids"`
@@ -135,7 +142,7 @@ func AssignMenuToRole(c *gin.Context) {
 }
 
 // 为角色设置权限
-func SetRolePermission(c *gin.Context) {
+func (rc *RoleController) SetRolePermission(c *gin.Context) {
 	var req struct {
 		RoleCode string `json:"role_code" binding:"required"`
 		Object   string `json:"object" binding:"required"`
@@ -157,7 +164,7 @@ func SetRolePermission(c *gin.Context) {
 }
 
 // 删除角色权限
-func DeleteRolePermission(c *gin.Context) {
+func (rc *RoleController) DeleteRolePermission(c *gin.Context) {
 	var req struct {
 		RoleCode string `json:"role_code" binding:"required"`
 		Object   string `json:"object" binding:"required"`
