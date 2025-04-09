@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/pkg/apiresponse"
 	"github.com/limitcool/starter/pkg/errors"
-	"github.com/limitcool/starter/pkg/response"
 )
 
 // ErrorHandler 错误处理中间件
@@ -17,7 +17,7 @@ func ErrorHandler() gin.HandlerFunc {
 
 			// 获取错误码和消息
 			errCode, errMsg := errors.ParseError(err)
-			response.Fail(c, errCode, errMsg)
+			apiresponse.Fail(c, errCode, errMsg)
 
 			c.Abort()
 		}

@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/limitcool/starter/pkg/response"
+	"github.com/limitcool/starter/pkg/apiresponse"
 )
 
 // RequireSysUser 要求系统用户中间件
@@ -13,7 +13,7 @@ func RequireSysUser() gin.HandlerFunc {
 		// 获取令牌Claims
 		claims, exists := c.Get("claims")
 		if !exists {
-			response.Unauthorized(c, "未授权访问")
+			apiresponse.Unauthorized(c, "未授权访问")
 			c.Abort()
 			return
 		}
@@ -21,7 +21,7 @@ func RequireSysUser() gin.HandlerFunc {
 		// 转换为MapClaims
 		mapClaims, ok := claims.(jwt.MapClaims)
 		if !ok {
-			response.Unauthorized(c, "无效的令牌")
+			apiresponse.Unauthorized(c, "无效的令牌")
 			c.Abort()
 			return
 		}
@@ -29,7 +29,7 @@ func RequireSysUser() gin.HandlerFunc {
 		// 获取用户类型
 		userType, ok := mapClaims["user_type"].(string)
 		if !ok || userType != "sys_user" {
-			response.Forbidden(c, "访问被拒绝，需要系统用户权限")
+			apiresponse.Forbidden(c, "访问被拒绝，需要系统用户权限")
 			c.Abort()
 			return
 		}
@@ -46,7 +46,7 @@ func RequireNormalUser() gin.HandlerFunc {
 		// 获取令牌Claims
 		claims, exists := c.Get("claims")
 		if !exists {
-			response.Unauthorized(c, "未授权访问")
+			apiresponse.Unauthorized(c, "未授权访问")
 			c.Abort()
 			return
 		}
@@ -54,7 +54,7 @@ func RequireNormalUser() gin.HandlerFunc {
 		// 转换为MapClaims
 		mapClaims, ok := claims.(jwt.MapClaims)
 		if !ok {
-			response.Unauthorized(c, "无效的令牌")
+			apiresponse.Unauthorized(c, "无效的令牌")
 			c.Abort()
 			return
 		}
@@ -62,7 +62,7 @@ func RequireNormalUser() gin.HandlerFunc {
 		// 获取用户类型
 		userType, ok := mapClaims["user_type"].(string)
 		if !ok || userType != "user" {
-			response.Forbidden(c, "访问被拒绝，需要普通用户权限")
+			apiresponse.Forbidden(c, "访问被拒绝，需要普通用户权限")
 			c.Abort()
 			return
 		}

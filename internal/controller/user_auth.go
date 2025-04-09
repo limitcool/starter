@@ -4,8 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/limitcool/starter/pkg/apiresponse"
 	"github.com/limitcool/starter/pkg/code"
-	"github.com/limitcool/starter/pkg/response"
 )
 
 // UserRegisterRequest 用户注册请求参数
@@ -23,7 +23,7 @@ type UserRegisterRequest struct {
 func UserLogin(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "无效的请求参数")
+		apiresponse.ParamError(c, "无效的请求参数")
 		return
 	}
 
@@ -34,21 +34,21 @@ func UserLogin(c *gin.Context) {
 	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
 		if code.IsErrCode(err) {
-			response.HandleError(c, err)
+			apiresponse.HandleError(c, err)
 		} else {
-			response.InternalServerError(c, "登录失败")
+			apiresponse.ServerError(c)
 		}
 		return
 	}
 
-	response.Success(c, tokenResponse)
+	apiresponse.Success(c, tokenResponse)
 }
 
 // UserRegister 普通用户注册
 func UserRegister(c *gin.Context) {
 	var req UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "无效的请求参数")
+		apiresponse.ParamError(c, "无效的请求参数")
 		return
 	}
 
@@ -71,9 +71,9 @@ func UserRegister(c *gin.Context) {
 	user, err := userService.Register(registerReq)
 	if err != nil {
 		if code.IsErrCode(err) {
-			response.HandleError(c, err)
+			apiresponse.HandleError(c, err)
 		} else {
-			response.InternalServerError(c, "注册失败")
+			apiresponse.ServerError(c)
 		}
 		return
 	}
@@ -81,7 +81,7 @@ func UserRegister(c *gin.Context) {
 	// 隐藏密码等敏感信息
 	user.Password = ""
 
-	response.Success(c, user)
+	apiresponse.Success(c, user)
 }
 
 // UserChangePassword 修改密码
@@ -95,7 +95,7 @@ func UserChangePassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "无效的请求参数")
+		apiresponse.ParamError(c, "无效的请求参数")
 		return
 	}
 
@@ -103,14 +103,14 @@ func UserChangePassword(c *gin.Context) {
 	err := userService.ChangePassword(userID.(uint), req.OldPassword, req.NewPassword)
 	if err != nil {
 		if code.IsErrCode(err) {
-			response.HandleError(c, err)
+			apiresponse.HandleError(c, err)
 		} else {
-			response.InternalServerError(c, "修改密码失败")
+			apiresponse.ServerError(c)
 		}
 		return
 	}
 
-	response.Success(c, nil)
+	apiresponse.Success[any](c, nil)
 }
 
 // UserInfo 获取用户信息
@@ -122,9 +122,9 @@ func UserInfo(c *gin.Context) {
 	user, err := userService.GetUserByID(userID.(uint))
 	if err != nil {
 		if code.IsErrCode(err) {
-			response.HandleError(c, err)
+			apiresponse.HandleError(c, err)
 		} else {
-			response.InternalServerError(c, "获取用户信息失败")
+			apiresponse.ServerError(c)
 		}
 		return
 	}
@@ -132,5 +132,5 @@ func UserInfo(c *gin.Context) {
 	// 隐藏密码等敏感信息
 	user.Password = ""
 
-	response.Success(c, user)
+	apiresponse.Success(c, user)
 }

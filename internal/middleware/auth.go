@@ -7,9 +7,9 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/global"
+	"github.com/limitcool/starter/pkg/apiresponse"
 	"github.com/limitcool/starter/pkg/code"
 	"github.com/limitcool/starter/pkg/jwt"
-	"github.com/limitcool/starter/pkg/response"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -25,7 +25,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// 如果没有token,返回错误并中止
 		if token == "" {
-			response.Unauthorized(c, code.GetMsg(code.UserAuthFailed))
+			apiresponse.Unauthorized(c, code.GetMsg(code.UserAuthFailed))
 			c.Abort()
 			return
 		}
@@ -33,7 +33,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		log.Debug("Authentication token received", "token", token)
 		claims, err := jwt.ParseToken(token, global.Config.JwtAuth.AccessSecret)
 		if err != nil {
-			response.Unauthorized(c, code.GetMsg(code.UserAuthFailed)+":"+err.Error())
+			apiresponse.Unauthorized(c, code.GetMsg(code.UserAuthFailed)+":"+err.Error())
 			c.Abort()
 			return
 		}

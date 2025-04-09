@@ -7,80 +7,80 @@ import (
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/limitcool/starter/pkg/apiresponse"
 	"github.com/limitcool/starter/pkg/code"
-	"github.com/limitcool/starter/pkg/response"
 )
 
 // 创建角色
 func CreateRole(c *gin.Context) {
 	var role model.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
+		apiresponse.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
 		return
 	}
 
 	roleService := services.NewRoleService(global.DB)
 	if err := roleService.CreateRole(&role); err != nil {
-		response.HandleError(c, err)
+		apiresponse.HandleError(c, err)
 		return
 	}
 
-	response.Success(c, nil)
+	apiresponse.Success[any](c, nil)
 }
 
 // 更新角色
 func UpdateRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
+		apiresponse.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
 		return
 	}
 
 	var role model.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
+		apiresponse.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
 		return
 	}
 
 	role.ID = uint(id)
 	roleService := services.NewRoleService(global.DB)
 	if err := roleService.UpdateRole(&role); err != nil {
-		response.HandleError(c, err)
+		apiresponse.HandleError(c, err)
 		return
 	}
 
-	response.Success(c, nil)
+	apiresponse.Success[any](c, nil)
 }
 
 // 删除角色
 func DeleteRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
+		apiresponse.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
 		return
 	}
 
 	roleService := services.NewRoleService(global.DB)
 	if err := roleService.DeleteRole(uint(id)); err != nil {
-		response.HandleError(c, err)
+		apiresponse.HandleError(c, err)
 		return
 	}
 
-	response.Success(c, nil)
+	apiresponse.Success[any](c, nil)
 }
 
 // 获取角色详情
 func GetRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
+		apiresponse.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
 		return
 	}
 
 	roleService := services.NewRoleService(global.DB)
 	role, err := roleService.GetRoleByID(uint(id))
 	if err != nil {
-		response.HandleError(c, err)
+		apiresponse.HandleError(c, err)
 		return
 	}
 
@@ -88,7 +88,7 @@ func GetRole(c *gin.Context) {
 	menuService := services.NewMenuService(global.DB)
 	roleMenus, err := menuService.GetMenusByRoleID(role.ID)
 	if err != nil {
-		response.HandleError(c, err)
+		apiresponse.HandleError(c, err)
 		return
 	}
 
@@ -99,7 +99,7 @@ func GetRole(c *gin.Context) {
 	}
 	role.MenuIDs = menuIDs
 
-	response.Success(c, role)
+	apiresponse.Success(c, role)
 }
 
 // 获取角色列表
@@ -107,11 +107,11 @@ func GetRoles(c *gin.Context) {
 	roleService := services.NewRoleService(global.DB)
 	roles, err := roleService.GetRoles()
 	if err != nil {
-		response.HandleError(c, err)
+		apiresponse.HandleError(c, err)
 		return
 	}
 
-	response.Success(c, roles)
+	apiresponse.Success(c, roles)
 }
 
 // 为角色分配菜单
@@ -122,17 +122,17 @@ func AssignMenuToRole(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
+		apiresponse.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
 		return
 	}
 
 	menuService := services.NewMenuService(global.DB)
 	if err := menuService.AssignMenuToRole(req.RoleID, req.MenuIDs); err != nil {
-		response.HandleError(c, err)
+		apiresponse.HandleError(c, err)
 		return
 	}
 
-	response.Success(c, nil)
+	apiresponse.Success[any](c, nil)
 }
 
 // 为角色设置权限
@@ -144,17 +144,17 @@ func SetRolePermission(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
+		apiresponse.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
 		return
 	}
 
 	roleService := services.NewRoleService(global.DB)
 	if err := roleService.SetRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
-		response.HandleError(c, err)
+		apiresponse.HandleError(c, err)
 		return
 	}
 
-	response.Success(c, nil)
+	apiresponse.Success[any](c, nil)
 }
 
 // 删除角色权限
@@ -166,15 +166,15 @@ func DeleteRolePermission(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
+		apiresponse.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
 		return
 	}
 
 	roleService := services.NewRoleService(global.DB)
 	if err := roleService.DeleteRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
-		response.HandleError(c, err)
+		apiresponse.HandleError(c, err)
 		return
 	}
 
-	response.Success(c, nil)
+	apiresponse.Success[any](c, nil)
 }
