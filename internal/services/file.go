@@ -12,6 +12,7 @@ import (
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/storage"
+	"github.com/limitcool/starter/internal/storage/sqldb"
 )
 
 // FileService 文件服务
@@ -95,7 +96,7 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 		}
 	}
 
-	if err := db.Create(fileModel).Error; err != nil {
+	if err := sqldb.GetDB().Create(fileModel).Error; err != nil {
 		return nil, errorx.ErrDatabase.WithError(err)
 	}
 
@@ -105,7 +106,7 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 // GetFile 获取文件信息
 func (s *FileService) GetFile(id string) (*model.File, error) {
 	var file model.File
-	if err := db.First(&file, id).Error; err != nil {
+	if err := sqldb.GetDB().First(&file, id).Error; err != nil {
 		return nil, errorx.ErrNotFound.WithError(err)
 	}
 	return &file, nil
@@ -114,7 +115,7 @@ func (s *FileService) GetFile(id string) (*model.File, error) {
 // DeleteFile 删除文件
 func (s *FileService) DeleteFile(id string) error {
 	var file model.File
-	if err := db.First(&file, id).Error; err != nil {
+	if err := sqldb.GetDB().First(&file, id).Error; err != nil {
 		return errorx.ErrNotFound.WithError(err)
 	}
 
@@ -124,7 +125,7 @@ func (s *FileService) DeleteFile(id string) error {
 	}
 
 	// 从数据库中删除记录
-	if err := db.Delete(&file).Error; err != nil {
+	if err := sqldb.GetDB().Delete(&file).Error; err != nil {
 		return errorx.ErrDatabase.WithError(err)
 	}
 
@@ -134,7 +135,7 @@ func (s *FileService) DeleteFile(id string) error {
 // 获取文件内容
 func (s *FileService) GetFileContent(id string) (io.ReadCloser, string, error) {
 	var file model.File
-	if err := db.First(&file, id).Error; err != nil {
+	if err := sqldb.GetDB().First(&file, id).Error; err != nil {
 		return nil, "", errorx.ErrNotFound.WithError(err)
 	}
 
@@ -157,13 +158,13 @@ func (s *FileService) UpdateUserAvatar(userID string, fileHeader *multipart.File
 
 	// 查找用户
 	user := model.User{}
-	if err := db.First(&user, userID).Error; err != nil {
+	if err := sqldb.GetDB().First(&user, userID).Error; err != nil {
 		return "", errorx.ErrNotFound.WithError(err)
 	}
 
 	// 更新用户头像
 	user.Avatar = fmt.Sprintf("%d", file.ID)
-	if err := db.Save(&user).Error; err != nil {
+	if err := sqldb.GetDB().Save(&user).Error; err != nil {
 		return "", errorx.ErrDatabase.WithError(err)
 	}
 
@@ -180,13 +181,13 @@ func (s *FileService) UpdateSysUserAvatar(userID string, fileHeader *multipart.F
 
 	// 查找系统用户
 	sysUser := model.SysUser{}
-	if err := db.First(&sysUser, userID).Error; err != nil {
+	if err := sqldb.GetDB().First(&sysUser, userID).Error; err != nil {
 		return "", errorx.ErrNotFound.WithError(err)
 	}
 
 	// 更新用户头像
 	sysUser.Avatar = fmt.Sprintf("%d", file.ID)
-	if err := db.Save(&sysUser).Error; err != nil {
+	if err := sqldb.GetDB().Save(&sysUser).Error; err != nil {
 		return "", errorx.ErrDatabase.WithError(err)
 	}
 

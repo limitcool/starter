@@ -7,6 +7,7 @@ import (
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/internal/core"
+	"github.com/limitcool/starter/internal/storage/sqldb"
 )
 
 var (
@@ -49,7 +50,7 @@ func InitCasbin() (*casbin.Enforcer, error) {
 	once.Do(func() {
 
 		// 使用gorm适配器
-		adapter, adapterErr := gormadapter.NewAdapterByDB(db)
+		adapter, adapterErr := gormadapter.NewAdapterByDB(sqldb.GetDB())
 		if adapterErr != nil {
 			err = adapterErr
 			return

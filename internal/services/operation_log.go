@@ -9,6 +9,7 @@ import (
 	v1 "github.com/limitcool/starter/internal/api/v1"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/options"
+	"github.com/limitcool/starter/internal/storage/sqldb"
 )
 
 // OperationLogService 操作日志服务
@@ -65,7 +66,7 @@ func (s *OperationLogService) CreateSysUserLog(c *gin.Context, userID uint, user
 		Username:    username,
 	}
 
-	return db.Create(&operationLog).Error
+	return sqldb.GetDB().Create(&operationLog).Error
 }
 
 // CreateUserLog 创建普通用户操作日志
@@ -113,7 +114,7 @@ func (s *OperationLogService) CreateUserLog(c *gin.Context, userID uint, usernam
 		Username:    username,
 	}
 
-	return db.Create(&operationLog).Error
+	return sqldb.GetDB().Create(&operationLog).Error
 }
 
 // GetOperationLogs 分页获取操作日志
@@ -157,7 +158,7 @@ func (s *OperationLogService) GetOperationLogs(query *v1.OperationLogQuery) (*re
 	}
 
 	// 构建查询
-	tx := db.Model(&model.OperationLog{})
+	tx := sqldb.GetDB().Model(&model.OperationLog{})
 
 	// 获取总数
 	var total int64
@@ -180,10 +181,10 @@ func (s *OperationLogService) GetOperationLogs(query *v1.OperationLogQuery) (*re
 
 // DeleteOperationLog 删除操作日志
 func (s *OperationLogService) DeleteOperationLog(id uint) error {
-	return db.Delete(&model.OperationLog{}, id).Error
+	return sqldb.GetDB().Delete(&model.OperationLog{}, id).Error
 }
 
 // BatchDeleteOperationLogs 批量删除操作日志
 func (s *OperationLogService) BatchDeleteOperationLogs(ids []uint) error {
-	return db.Where("id IN ?", ids).Delete(&model.OperationLog{}).Error
+	return sqldb.GetDB().Where("id IN ?", ids).Delete(&model.OperationLog{}).Error
 }

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/storage/sqldb"
 	"gorm.io/gorm"
 )
 
@@ -20,19 +21,19 @@ func NewMenuService() *MenuService {
 
 // CreateMenu 创建菜单
 func (s *MenuService) CreateMenu(menu *model.Menu) error {
-	return db.Create(menu).Error
+	return sqldb.GetDB().Create(menu).Error
 }
 
 // UpdateMenu 更新菜单
 func (s *MenuService) UpdateMenu(menu *model.Menu) error {
-	return db.Model(&model.Menu{}).Where("id = ?", menu.ID).Updates(menu).Error
+	return sqldb.GetDB().Model(&model.Menu{}).Where("id = ?", menu.ID).Updates(menu).Error
 }
 
 // DeleteMenu 删除菜单
 func (s *MenuService) DeleteMenu(id uint) error {
 	// 检查是否有子菜单
 	var count int64
-	if err := db.Model(&model.Menu{}).Where("parent_id = ?", id).Count(&count).Error; err != nil {
+	if err := sqldb.GetDB().Model(&model.Menu{}).Where("parent_id = ?", id).Count(&count).Error; err != nil {
 		return err
 	}
 	if count > 0 {
@@ -40,25 +41,25 @@ func (s *MenuService) DeleteMenu(id uint) error {
 	}
 
 	// 删除菜单关联的角色
-	if err := db.Where("menu_id = ?", id).Delete(&model.RoleMenu{}).Error; err != nil {
+	if err := sqldb.GetDB().Where("menu_id = ?", id).Delete(&model.RoleMenu{}).Error; err != nil {
 		return err
 	}
 
 	// 删除菜单
-	return db.Delete(&model.Menu{}, id).Error
+	return sqldb.GetDB().Delete(&model.Menu{}, id).Error
 }
 
 // GetMenuByID 根据ID获取菜单
 func (s *MenuService) GetMenuByID(id uint) (*model.Menu, error) {
 	var menu model.Menu
-	err := db.Where("id = ?", id).First(&menu).Error
+	err := sqldb.GetDB().Where("id = ?", id).First(&menu).Error
 	return &menu, err
 }
 
 // GetAllMenus 获取所有菜单
 func (s *MenuService) GetAllMenus() ([]*model.Menu, error) {
 	var menus []*model.Menu
-	err := db.Order("order_num").Find(&menus).Error
+	err := sqldb.GetDB().Order("order_num").Find(&menus).Error
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +70,7 @@ func (s *MenuService) GetAllMenus() ([]*model.Menu, error) {
 func (s *MenuService) GetMenusByRoleID(roleID uint) ([]*model.Menu, error) {
 	// 查询角色关联的菜单ID
 	var roleMenus []model.RoleMenu
-	err := db.Where("role_id = ?", roleID).Find(&roleMenus).Error
+	err := sqldb.GetDB().Where("role_id = ?", roleID).Find(&roleMenus).Error
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ func (s *MenuService) GetMenusByRoleID(roleID uint) ([]*model.Menu, error) {
 
 	// 查询菜单
 	var menus []*model.Menu
-	err = db.Where("id IN ?", menuIDs).Order("order_num").Find(&menus).Error
+	err = sqldb.GetDB().Where("id IN ?", menuIDs).Order("order_num").Find(&menus).Error
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +100,7 @@ func (s *MenuService) GetMenusByRoleID(roleID uint) ([]*model.Menu, error) {
 func (s *MenuService) GetUserMenus(userID uint) ([]*model.Menu, error) {
 	// 1. 获取用户角色
 	var userRoles []model.UserRole
-	err := db.Where("user_id = ?", userID).Find(&userRoles).Error
+	err := sqldb.GetDB().Where("user_id = ?", userID).Find(&userRoles).Error
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +118,7 @@ func (s *MenuService) GetUserMenus(userID uint) ([]*model.Menu, error) {
 
 	// 2. 获取角色关联的菜单ID
 	var roleMenus []model.RoleMenu
-	err = db.Where("role_id IN ?", roleIDs).Find(&roleMenus).Error
+	err = sqldb.GetDB().Where("role_id IN ?", roleIDs).Find(&roleMenus).Error
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +140,7 @@ func (s *MenuService) GetUserMenus(userID uint) ([]*model.Menu, error) {
 
 	// 3. 查询菜单信息
 	var menus []*model.Menu
-	err = db.Where("id IN ? AND status = ? AND type IN ?", menuIDs, 1, []int8{0, 1}).Order("order_num").Find(&menus).Error
+	err = sqldb.GetDB().Where("id IN ? AND status = ? AND type IN ?", menuIDs, 1, []int8{0, 1}).Order("order_num").Find(&menus).Error
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +193,7 @@ func (s *MenuService) buildMenuTree(menus []*model.Menu) []*model.Menu {
 // 为角色分配菜单
 func (s *MenuService) AssignMenuToRole(roleID uint, menuIDs []uint) error {
 	// 开启事务
-	return db.Transaction(func(tx *gorm.DB) error {
+	return sqldb.GetDB().Transaction(func(tx *gorm.DB) error {
 		// 删除原有的角色菜单关联
 		if err := tx.Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error; err != nil {
 			return err
@@ -219,7 +220,7 @@ func (s *MenuService) AssignMenuToRole(roleID uint, menuIDs []uint) error {
 // GetMenuTree 获取菜单树(用于前端菜单选择)
 func (s *MenuService) GetMenuTree() ([]*model.Menu, error) {
 	var menus []*model.Menu
-	err := db.Order("order_num").Find(&menus).Error
+	err := sqldb.GetDB().Order("order_num").Find(&menus).Error
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +251,7 @@ func (s *MenuService) GetMenuPermsByUserID(userID uint) ([]string, error) {
 
 	// 查询角色菜单
 	var roleMenus []model.RoleMenu
-	err = db.Where("role_id IN ?", roleIDs).Find(&roleMenus).Error
+	err = sqldb.GetDB().Where("role_id IN ?", roleIDs).Find(&roleMenus).Error
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +268,7 @@ func (s *MenuService) GetMenuPermsByUserID(userID uint) ([]string, error) {
 
 	// 查询菜单权限标识
 	var perms []string
-	err = db.Model(&model.Menu{}).
+	err = sqldb.GetDB().Model(&model.Menu{}).
 		Where("id IN ? AND status = ? AND perms != ''", menuIDs, 1).
 		Pluck("perms", &perms).Error
 	if err != nil {

@@ -14,6 +14,7 @@ import (
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
+	"github.com/limitcool/starter/internal/storage/sqldb"
 	"gorm.io/gorm"
 )
 
@@ -29,7 +30,7 @@ func NewUserService() *UserService {
 // GetUserByID 根据ID获取用户
 func (s *UserService) GetUserByID(id uint) (*model.User, error) {
 	var user model.User
-	err := db.First(&user, id).Error
+	err := sqldb.GetDB().First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -42,7 +43,7 @@ func (s *UserService) GetUserByID(id uint) (*model.User, error) {
 // GetUserByUsername 根据用户名获取用户
 func (s *UserService) GetUserByUsername(username string) (*model.User, error) {
 	var user model.User
-	err := db.Where("username = ?", username).First(&user).Error
+	err := sqldb.GetDB().Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -74,7 +75,7 @@ type RegisterRequest struct {
 func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 	// 检查用户名是否已存在
 	var count int64
-	if err := db.Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
+	if err := sqldb.GetDB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
 		return nil, err
 	}
 	if count > 0 {
@@ -101,7 +102,7 @@ func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 		RegisterIP: req.RegisterIP,
 	}
 
-	if err := db.Create(user).Error; err != nil {
+	if err := sqldb.GetDB().Create(user).Error; err != nil {
 		return nil, err
 	}
 
@@ -132,7 +133,7 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 	}
 
 	// 更新最后登录时间和IP
-	db.Model(user).Updates(map[string]interface{}{
+	sqldb.GetDB().Model(user).Updates(map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	})
@@ -183,7 +184,7 @@ func (s *UserService) UpdateUser(id uint, data map[string]interface{}) error {
 	delete(data, "deleted_at")
 
 	// 更新用户信息
-	return db.Model(&model.User{}).Where("id = ?", id).Updates(data).Error
+	return sqldb.GetDB().Model(&model.User{}).Where("id = ?", id).Updates(data).Error
 }
 
 // ChangePassword 修改密码
@@ -206,7 +207,7 @@ func (s *UserService) ChangePassword(id uint, oldPassword, newPassword string) e
 	}
 
 	// 更新密码
-	return db.Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
+	return sqldb.GetDB().Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
 }
 
 func GetUserInfo(ctx *gin.Context) {
@@ -418,7 +419,7 @@ func GetUserList(ctx *gin.Context) {
 
 	// 2. 查询用户
 	var users []model.User
-	db := model.GetDB().Model(&model.User{})
+	db := sqldb.GetDB().Model(&model.User{})
 
 	// 如果有关键字，添加搜索条件
 	if keyword != "" {
@@ -428,7 +429,7 @@ func GetUserList(ctx *gin.Context) {
 
 	// 查询总数
 	var total int64
-	if err := db.Count(&total).Error; err != nil {
+	if err := sqldb.GetDB().Count(&total).Error; err != nil {
 		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
@@ -442,7 +443,7 @@ func GetUserList(ctx *gin.Context) {
 		return
 	}
 
-	if err := db.Offset((pageNum - 1) * pageSizeNum).Limit(pageSizeNum).Find(&users).Error; err != nil {
+	if err := sqldb.GetDB().Offset((pageNum - 1) * pageSizeNum).Limit(pageSizeNum).Find(&users).Error; err != nil {
 		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
