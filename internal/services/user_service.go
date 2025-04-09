@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/internal/pkg/apiresponse"
 	"github.com/limitcool/starter/internal/pkg/code"
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
@@ -219,13 +219,13 @@ func (s *NormalUserService) ChangePassword(id uint, oldPassword, newPassword str
 func GetUserInfo(ctx *gin.Context) {
 	userId, exists := ctx.Get("userID")
 	if !exists {
-		apiresponse.Fail(ctx, code.UserNoLogin, "")
+		response.Fail(ctx, code.UserNoLogin, "")
 		return
 	}
 
 	var user model.User
 	if err := model.GetDB().First(&user, userId).Error; err != nil {
-		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, code.DatabaseQueryError, "")
 		return
 	}
 
@@ -237,7 +237,7 @@ func GetUserInfo(ctx *gin.Context) {
 		}
 	}
 
-	apiresponse.Success[model.User](ctx, user)
+	response.Success[model.User](ctx, user)
 }
 
 // 用户注册
@@ -252,19 +252,19 @@ func UserRegister(ctx *gin.Context) {
 	}
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		apiresponse.Fail(ctx, code.InvalidParams, err.Error())
+		response.Fail(ctx, code.InvalidParams, err.Error())
 		return
 	}
 
 	// 2. 验证用户名是否已存在
 	var count int64
 	if err := model.GetDB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
-		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, code.DatabaseQueryError, "")
 		return
 	}
 
 	if count > 0 {
-		apiresponse.Fail(ctx, code.UserAlreadyExists, "")
+		response.Fail(ctx, code.UserAlreadyExists, "")
 		return
 	}
 
@@ -280,7 +280,7 @@ func UserRegister(ctx *gin.Context) {
 	}
 
 	if err := model.GetDB().Create(&user).Error; err != nil {
-		apiresponse.Fail(ctx, code.DatabaseInsertError, "")
+		response.Fail(ctx, code.DatabaseInsertError, "")
 		return
 	}
 
@@ -295,7 +295,7 @@ func UserRegister(ctx *gin.Context) {
 		Username: user.Username,
 	}
 
-	apiresponse.Success[RegisterResult](ctx, result)
+	response.Success[RegisterResult](ctx, result)
 }
 
 // 用户登录
@@ -307,7 +307,7 @@ func UserLogin(ctx *gin.Context) {
 	}
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		apiresponse.Fail(ctx, code.InvalidParams, "")
+		response.Fail(ctx, code.InvalidParams, "")
 		return
 	}
 
@@ -315,9 +315,9 @@ func UserLogin(ctx *gin.Context) {
 	var user model.User
 	if err := model.GetDB().Where("username = ?", req.Username).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			apiresponse.Fail(ctx, code.UserNameOrPasswordError, "")
+			response.Fail(ctx, code.UserNameOrPasswordError, "")
 		} else {
-			apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+			response.Fail(ctx, code.DatabaseQueryError, "")
 		}
 		return
 	}
@@ -325,13 +325,13 @@ func UserLogin(ctx *gin.Context) {
 	// 3. 验证密码
 	// 注意：实际应用中应该验证加密后的密码
 	if user.Password != req.Password {
-		apiresponse.Fail(ctx, code.UserNameOrPasswordError, "")
+		response.Fail(ctx, code.UserNameOrPasswordError, "")
 		return
 	}
 
 	// 检查用户状态
 	if !user.Enabled {
-		apiresponse.Fail(ctx, code.UserDisabled, "")
+		response.Fail(ctx, code.UserDisabled, "")
 		return
 	}
 
@@ -339,7 +339,7 @@ func UserLogin(ctx *gin.Context) {
 	user.LastLogin = time.Now()
 	user.LastIP = ctx.ClientIP()
 	if err := model.GetDB().Save(&user).Error; err != nil {
-		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, code.DatabaseQueryError, "")
 		return
 	}
 
@@ -366,7 +366,7 @@ func UserLogin(ctx *gin.Context) {
 		UserInfo: user,
 	}
 
-	apiresponse.Success[LoginResult](ctx, result)
+	response.Success[LoginResult](ctx, result)
 }
 
 // 修改密码
@@ -378,41 +378,41 @@ func ChangePassword(ctx *gin.Context) {
 	}
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		apiresponse.Fail(ctx, code.InvalidParams, "")
+		response.Fail(ctx, code.InvalidParams, "")
 		return
 	}
 
 	// 2. 获取当前用户
 	userId, exists := ctx.Get("userID")
 	if !exists {
-		apiresponse.Fail(ctx, code.UserNoLogin, "")
+		response.Fail(ctx, code.UserNoLogin, "")
 		return
 	}
 
 	// 3. 查询用户
 	var user model.User
 	if err := model.GetDB().First(&user, userId).Error; err != nil {
-		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, code.DatabaseQueryError, "")
 		return
 	}
 
 	// 4. 验证旧密码
 	// 注意：实际应用中应该验证加密后的密码
 	if user.Password != req.OldPassword {
-		apiresponse.Fail(ctx, code.UserPasswordError, "")
+		response.Fail(ctx, code.UserPasswordError, "")
 		return
 	}
 
 	// 5. 更新密码
 	// 注意：实际应用中应该对新密码进行加密
-	user.Password = req.NewPassword
-	if err := model.GetDB().Save(&user).Error; err != nil {
-		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+	hashedPassword, _ := crypto.HashPassword(req.NewPassword)
+	if err := model.GetDB().Model(&user).Update("password", hashedPassword).Error; err != nil {
+		response.Fail(ctx, code.DatabaseQueryError, "")
 		return
 	}
 
 	// 6. 返回成功
-	apiresponse.Success[any](ctx, nil)
+	response.Success[any](ctx, nil)
 }
 
 // 获取用户列表
@@ -435,7 +435,7 @@ func GetUserList(ctx *gin.Context) {
 	// 查询总数
 	var total int64
 	if err := db.Count(&total).Error; err != nil {
-		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, code.DatabaseQueryError, "")
 		return
 	}
 
@@ -444,12 +444,12 @@ func GetUserList(ctx *gin.Context) {
 	_, err1 := fmt.Sscanf(page, "%d", &pageNum)
 	_, err2 := fmt.Sscanf(pageSize, "%d", &pageSizeNum)
 	if err1 != nil || err2 != nil || pageNum <= 0 || pageSizeNum <= 0 {
-		apiresponse.Fail(ctx, code.InvalidParams, "分页参数无效")
+		response.Fail(ctx, code.InvalidParams, "分页参数无效")
 		return
 	}
 
 	if err := db.Offset((pageNum - 1) * pageSizeNum).Limit(pageSizeNum).Find(&users).Error; err != nil {
-		apiresponse.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, code.DatabaseQueryError, "")
 		return
 	}
 
@@ -474,5 +474,5 @@ func GetUserList(ctx *gin.Context) {
 		List:  users,
 	}
 
-	apiresponse.Success[ResponseData](ctx, result)
+	response.Success[ResponseData](ctx, result)
 }

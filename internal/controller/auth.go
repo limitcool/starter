@@ -2,8 +2,8 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/internal/pkg/apiresponse"
 )
 
 // LoginRequest 登录请求参数
@@ -28,7 +28,7 @@ type RefreshTokenRequest struct {
 func AdminLogin(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresponse.ParamError(c, "无效的请求参数")
+		response.ParamError(c, "无效的请求参数")
 		return
 	}
 
@@ -39,18 +39,18 @@ func AdminLogin(c *gin.Context) {
 	userService := services.Instance().GetUserService()
 	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
-		apiresponse.HandleError(c, err)
+		response.HandleError(c, err)
 		return
 	}
 
-	apiresponse.Success(c, tokenResponse)
+	response.Success(c, tokenResponse)
 }
 
 // RefreshToken 刷新访问令牌
 func RefreshToken(c *gin.Context) {
 	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresponse.ParamError(c, "无效的请求参数")
+		response.ParamError(c, "无效的请求参数")
 		return
 	}
 
@@ -58,9 +58,9 @@ func RefreshToken(c *gin.Context) {
 	userService := services.Instance().GetUserService()
 	tokenResponse, err := userService.RefreshToken(req.RefreshToken)
 	if err != nil {
-		apiresponse.HandleError(c, err)
+		response.HandleError(c, err)
 		return
 	}
 
-	apiresponse.Success(c, tokenResponse)
+	response.Success(c, tokenResponse)
 }

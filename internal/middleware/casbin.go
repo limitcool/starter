@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/internal/pkg/apiresponse"
+	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/pkg/code"
+	"github.com/limitcool/starter/internal/services"
 	"gorm.io/gorm"
 )
 
@@ -21,7 +21,7 @@ func CasbinMiddleware(db *gorm.DB) gin.HandlerFunc {
 		// 创建Casbin服务
 		casbinService := services.NewCasbinService(db)
 		if casbinService == nil {
-			apiresponse.ServerError(c)
+			response.ServerError(c)
 			c.Abort()
 			return
 		}
@@ -29,13 +29,13 @@ func CasbinMiddleware(db *gorm.DB) gin.HandlerFunc {
 		// 检查权限
 		ok, err := casbinService.CheckPermission(sub, obj, act)
 		if err != nil {
-			apiresponse.ServerError(c)
+			response.ServerError(c)
 			c.Abort()
 			return
 		}
 
 		if !ok {
-			apiresponse.Forbidden(c, code.GetMsg(code.AccessDenied))
+			response.Forbidden(c, code.GetMsg(code.AccessDenied))
 			c.Abort()
 			return
 		}
@@ -57,7 +57,7 @@ func PermissionMiddleware(db *gorm.DB) gin.HandlerFunc {
 		// 创建Casbin服务
 		casbinService := services.NewCasbinService(db)
 		if casbinService == nil {
-			apiresponse.ServerError(c)
+			response.ServerError(c)
 			c.Abort()
 			return
 		}
@@ -65,13 +65,13 @@ func PermissionMiddleware(db *gorm.DB) gin.HandlerFunc {
 		// 检查权限
 		ok, err := casbinService.CheckPermission(sub, obj, act)
 		if err != nil {
-			apiresponse.ServerError(c)
+			response.ServerError(c)
 			c.Abort()
 			return
 		}
 
 		if !ok {
-			apiresponse.Forbidden(c, code.GetMsg(code.AccessDenied))
+			response.Forbidden(c, code.GetMsg(code.AccessDenied))
 			c.Abort()
 			return
 		}

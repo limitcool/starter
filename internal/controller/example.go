@@ -2,10 +2,10 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/internal/pkg/apiresponse"
 	"github.com/limitcool/starter/internal/pkg/code"
+	"github.com/limitcool/starter/internal/services"
 )
 
 // ExampleHandler 是演示错误处理的示例控制器
@@ -16,11 +16,11 @@ func ExampleHandler(c *gin.Context) {
 	// 1. 使用apiresponse.HandleError处理错误
 	if err := db.First(&user, 9999).Error; err != nil {
 		// 这会自动处理GORM的ErrRecordNotFound错误
-		apiresponse.HandleError(c, err)
+		response.HandleError(c, err)
 		return
 	}
 
-	apiresponse.Success(c, user)
+	response.Success(c, user)
 }
 
 // ExampleErrorHandler 演示使用gin的错误处理机制
@@ -35,7 +35,7 @@ func ExampleErrorHandler(c *gin.Context) {
 		return
 	}
 
-	apiresponse.Success(c, user)
+	response.Success(c, user)
 }
 
 // ExampleCustomError 演示使用自定义错误
@@ -45,7 +45,7 @@ func ExampleCustomError(c *gin.Context) {
 	// 3. 使用自定义错误码
 	if id == "" {
 		// 直接使用自定义错误
-		apiresponse.HandleError(c, code.NewErrCode(code.InvalidParams))
+		response.HandleError(c, code.NewErrCode(code.InvalidParams))
 		return
 	}
 
@@ -55,7 +55,7 @@ func ExampleCustomError(c *gin.Context) {
 		return
 	}
 
-	apiresponse.Success(c, gin.H{"id": id})
+	response.Success(c, gin.H{"id": id})
 }
 
 // ExampleDBOperationError 演示数据库操作错误处理
@@ -68,9 +68,9 @@ func ExampleDBOperationError(c *gin.Context) {
 
 	// 插入会失败，因为用户名已存在(唯一约束)
 	if err := db.Create(&user).Error; err != nil {
-		apiresponse.HandleError(c, err)
+		response.HandleError(c, err)
 		return
 	}
 
-	apiresponse.Success(c, user)
+	response.Success(c, user)
 }

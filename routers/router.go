@@ -7,9 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/controller"
 	"github.com/limitcool/starter/internal/middleware"
+	"github.com/limitcool/starter/internal/pkg/storage"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/casbin"
-	"github.com/limitcool/starter/internal/pkg/storage"
 )
 
 // NewRouter 初始化并返回一个配置完整的Gin路由引擎
@@ -86,8 +86,8 @@ func NewRouter() *gin.Engine {
 		// 普通用户认证路由
 		user := auth.Group("/user")
 		{
-			user.GET("/info", middleware.RequireNormalUser(), controller.UserInfo)
-			user.POST("/change-password", middleware.RequireNormalUser(), controller.UserChangePassword)
+			user.GET("/info", middleware.AuthNormalUser(), controller.UserInfo)
+			user.POST("/change-password", middleware.AuthNormalUser(), controller.UserChangePassword)
 		}
 
 		// 管理员权限路由（如果启用了权限系统）
@@ -140,10 +140,18 @@ func NewRouter() *gin.Engine {
 				{
 					oplog.GET("", controller.GetOperationLogs)
 					oplog.DELETE("/:id", controller.DeleteOperationLog)
-					oplog.DELETE("/batch", controller.BatchDeleteOperationLogs)
+					oplog.DELETE("/batch", controller.ClearOperationLogs)
 				}
 			}
 		}
+	}
+
+	// 用户管理
+	userAuthGroup := api.Group("/users")
+	{
+		userAuthGroup.GET("/info", services.GetUserInfo)
+		userAuthGroup.PUT("/", middleware.AuthNormalUser(), services.UserRegister)
+		userAuthGroup.POST("/register", middleware.AuthNormalUser(), services.UserRegister)
 	}
 
 	// 如果存储服务可用，设置文件相关路由

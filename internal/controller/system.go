@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/internal/pkg/apiresponse"
 	"github.com/spf13/viper"
 )
 
@@ -22,7 +22,7 @@ func GetSystemSettings(c *gin.Context) {
 		},
 	}
 
-	apiresponse.Success(c, settings)
+	response.Success(c, settings)
 }
 
 // 更新权限系统设置
@@ -33,7 +33,7 @@ func UpdatePermissionSettings(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		apiresponse.ParamError(c, err.Error())
+		response.ParamError(c, err.Error())
 		return
 	}
 
@@ -49,7 +49,7 @@ func UpdatePermissionSettings(c *gin.Context) {
 	v.SetConfigFile(filepath.Join("configs", "config.yaml"))
 
 	if err := v.ReadInConfig(); err != nil {
-		apiresponse.ServerError(c)
+		response.ServerError(c)
 		return
 	}
 
@@ -57,11 +57,11 @@ func UpdatePermissionSettings(c *gin.Context) {
 	v.Set("permission.default_allow", req.DefaultAllow)
 
 	if err := v.WriteConfig(); err != nil {
-		apiresponse.ServerError(c)
+		response.ServerError(c)
 		return
 	}
 
-	apiresponse.Success(c, map[string]interface{}{
+	response.Success(c, map[string]interface{}{
 		"message":       "权限系统设置已更新",
 		"enabled":       req.Enabled,
 		"default_allow": req.DefaultAllow,

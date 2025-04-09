@@ -6,10 +6,10 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/internal/api/response"
+	"github.com/limitcool/starter/internal/pkg/code"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/casbin"
-	"github.com/limitcool/starter/internal/pkg/apiresponse"
-	"github.com/limitcool/starter/internal/pkg/code"
 )
 
 // CasbinComponentMiddleware 基于Casbin组件的权限控制中间件
@@ -25,7 +25,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 		// 从上下文中获取用户ID
 		userIDInterface, exists := c.Get("userID")
 		if !exists {
-			apiresponse.Unauthorized(c, code.GetMsg(code.UserAuthFailed))
+			response.Unauthorized(c, code.GetMsg(code.UserAuthFailed))
 			c.Abort()
 			return
 		}
@@ -41,7 +41,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 		// 获取Casbin实例
 		enforcer := casbin.GetEnforcer()
 		if enforcer == nil {
-			apiresponse.ServerError(c)
+			response.ServerError(c)
 			c.Abort()
 			return
 		}
@@ -52,7 +52,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 		pass, err := enforcer.Enforce(userID, obj, act)
 		if err != nil {
 			log.Error("权限检查错误", "error", err)
-			apiresponse.ServerError(c)
+			response.ServerError(c)
 			c.Abort()
 			return
 		}
@@ -62,7 +62,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 			roles, _ := enforcer.GetRolesForUser(userID)
 			log.Debug("权限检查失败", "userID", userID, "roles", strings.Join(roles, ","))
 
-			apiresponse.Forbidden(c, code.GetMsg(code.AccessDenied))
+			response.Forbidden(c, code.GetMsg(code.AccessDenied))
 			c.Abort()
 			return
 		}
@@ -93,7 +93,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		// 从上下文中获取用户ID
 		userIDInterface, exists := c.Get("userID")
 		if !exists {
-			apiresponse.Unauthorized(c, code.GetMsg(code.UserAuthFailed))
+			response.Unauthorized(c, code.GetMsg(code.UserAuthFailed))
 			c.Abort()
 			return
 		}
@@ -103,7 +103,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		// 获取Casbin实例
 		enforcer := casbin.GetEnforcer()
 		if enforcer == nil {
-			apiresponse.ServerError(c)
+			response.ServerError(c)
 			c.Abort()
 			return
 		}
@@ -112,7 +112,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		roles, err := enforcer.GetRolesForUser(userID)
 		if err != nil {
 			log.Error("获取用户角色失败", "error", err)
-			apiresponse.ServerError(c)
+			response.ServerError(c)
 			c.Abort()
 			return
 		}
@@ -140,7 +140,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		}
 
 		if !hasPermission {
-			apiresponse.Forbidden(c, code.GetMsg(code.AccessDenied))
+			response.Forbidden(c, code.GetMsg(code.AccessDenied))
 			c.Abort()
 			return
 		}
