@@ -100,7 +100,7 @@ func (sm *ServiceManager) GetOperationLogService() *OperationLogService {
 // GetNormalUserService 获取NormalUserService实例
 func (sm *ServiceManager) GetNormalUserService() *NormalUserService {
 	if sm.normalUserService == nil {
-		sm.normalUserService = NewNormalUserService(sm.GetDB())
+		sm.normalUserService = NewNormalUserService()
 	}
 	return sm.normalUserService
 }

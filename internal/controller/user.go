@@ -26,9 +26,7 @@ func (uc *UserController) UserLogin(ctx *gin.Context) {
 
 	// 获取客户端IP地址
 	clientIP := ctx.ClientIP()
-
-	db := services.Instance().GetDB()
-	userService := services.NewNormalUserService(db)
+	userService := services.NewNormalUserService()
 	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
 		if errorx.IsErrCode(err) {
@@ -65,8 +63,7 @@ func (uc *UserController) UserRegister(c *gin.Context) {
 		RegisterIP: clientIP,
 	}
 
-	db := services.Instance().GetDB()
-	userService := services.NewNormalUserService(db)
+	userService := services.NewNormalUserService()
 	user, err := userService.Register(registerReq)
 	if err != nil {
 		if errorx.IsErrCode(err) {
@@ -98,8 +95,7 @@ func (uc *UserController) UserChangePassword(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	userService := services.NewNormalUserService(db)
+	userService := services.NewNormalUserService()
 	err := userService.ChangePassword(userID.(uint), req.OldPassword, req.NewPassword)
 	if err != nil {
 		if errorx.IsErrCode(err) {
@@ -118,8 +114,8 @@ func (uc *UserController) UserInfo(c *gin.Context) {
 	// 获取用户ID
 	userID, _ := c.Get("user_id")
 
-	db := services.Instance().GetDB()
-	userService := services.NewNormalUserService(db)
+
+	userService := services.NewNormalUserService()
 	user, err := userService.GetUserByID(userID.(uint))
 	if err != nil {
 		if errorx.IsErrCode(err) {

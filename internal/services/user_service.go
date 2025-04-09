@@ -18,20 +18,17 @@ import (
 
 // NormalUserService 普通用户服务
 type NormalUserService struct {
-	db *gorm.DB
 }
 
 // NewNormalUserService 创建普通用户服务
-func NewNormalUserService(db *gorm.DB) *NormalUserService {
-	return &NormalUserService{
-		db: db,
-	}
+func NewNormalUserService() *NormalUserService {
+	return &NormalUserService{}
 }
 
 // GetUserByID 根据ID获取用户
 func (s *NormalUserService) GetUserByID(id uint) (*model.User, error) {
 	var user model.User
-	err := s.db.First(&user, id).Error
+	err := db.First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.NewErrCodeMsg(errorx.UserNotFound, "用户不存在")
 	}
@@ -44,7 +41,7 @@ func (s *NormalUserService) GetUserByID(id uint) (*model.User, error) {
 // GetUserByUsername 根据用户名获取用户
 func (s *NormalUserService) GetUserByUsername(username string) (*model.User, error) {
 	var user model.User
-	err := s.db.Where("username = ?", username).First(&user).Error
+	err := db.Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.NewErrCodeMsg(errorx.UserNotFound, "用户不存在")
 	}
@@ -76,7 +73,7 @@ type RegisterRequest struct {
 func (s *NormalUserService) Register(req RegisterRequest) (*model.User, error) {
 	// 检查用户名是否已存在
 	var count int64
-	if err := s.db.Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
+	if err := db.Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
 		return nil, err
 	}
 	if count > 0 {
@@ -103,7 +100,7 @@ func (s *NormalUserService) Register(req RegisterRequest) (*model.User, error) {
 		RegisterIP: req.RegisterIP,
 	}
 
-	if err := s.db.Create(user).Error; err != nil {
+	if err := db.Create(user).Error; err != nil {
 		return nil, err
 	}
 
@@ -137,7 +134,7 @@ func (s *NormalUserService) Login(username, password string, ip string) (*LoginR
 	}
 
 	// 更新最后登录时间和IP
-	s.db.Model(user).Updates(map[string]interface{}{
+	db.Model(user).Updates(map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	})
@@ -190,7 +187,7 @@ func (s *NormalUserService) UpdateUser(id uint, data map[string]interface{}) err
 	delete(data, "deleted_at")
 
 	// 更新用户信息
-	return s.db.Model(&model.User{}).Where("id = ?", id).Updates(data).Error
+	return db.Model(&model.User{}).Where("id = ?", id).Updates(data).Error
 }
 
 // ChangePassword 修改密码
@@ -213,11 +210,11 @@ func (s *NormalUserService) ChangePassword(id uint, oldPassword, newPassword str
 	}
 
 	// 更新密码
-	return s.db.Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
+	return db.Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
 }
 
 func GetUserInfo(ctx *gin.Context) {
-	userId, exists := ctx.Get("userID")
+	userId, exists := ctx.Get("userID") 
 	if !exists {
 		response.Fail(ctx, errorx.UserNoLogin, "")
 		return

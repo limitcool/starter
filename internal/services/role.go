@@ -10,7 +10,6 @@ import (
 
 // RoleService 角色服务
 type RoleService struct {
-	db            *gorm.DB
 	casbinService *CasbinService
 }
 
@@ -20,32 +19,30 @@ func NewRoleService() *RoleService {
 	if serviceInstance != nil {
 		// 使用ServiceManager获取依赖服务
 		return &RoleService{
-			db:            db,
 			casbinService: serviceInstance.GetCasbinService(),
 		}
 	}
 
 	// 兼容旧代码，如果ServiceManager未初始化，则直接创建依赖服务
 	return &RoleService{
-		db:            db,
 		casbinService: NewCasbinService(),
 	}
 }
 
 // CreateRole 创建角色
 func (s *RoleService) CreateRole(role *model.Role) error {
-	return s.db.Create(role).Error
+	return db.Create(role).Error
 }
 
 // UpdateRole 更新角色
 func (s *RoleService) UpdateRole(role *model.Role) error {
-	return s.db.Model(&model.Role{}).Where("id = ?", role.ID).Updates(role).Error
+	return db.Model(&model.Role{}).Where("id = ?", role.ID).Updates(role).Error
 }
 
 // DeleteRole 删除角色
 func (s *RoleService) DeleteRole(id uint) error {
 	// 开启事务
-	return s.db.Transaction(func(tx *gorm.DB) error {
+	return db.Transaction(func(tx *gorm.DB) error {
 		// 检查角色是否已分配给用户
 		var count int64
 		if err := tx.Model(&model.UserRole{}).Where("role_id = ?", id).Count(&count).Error; err != nil {
@@ -80,21 +77,21 @@ func (s *RoleService) DeleteRole(id uint) error {
 // GetRoleByID 根据ID获取角色
 func (s *RoleService) GetRoleByID(id uint) (*model.Role, error) {
 	var role model.Role
-	err := s.db.Where("id = ?", id).First(&role).Error
+	err := db.Where("id = ?", id).First(&role).Error
 	return &role, err
 }
 
 // GetRoles 获取角色列表
 func (s *RoleService) GetRoles() ([]model.Role, error) {
 	var roles []model.Role
-	err := s.db.Order("sort").Find(&roles).Error
+	err := db.Order("sort").Find(&roles).Error
 	return roles, err
 }
 
 // AssignRolesToUser 为用户分配角色
 func (s *RoleService) AssignRolesToUser(userID uint, roleIDs []uint) error {
 	// 开启事务
-	return s.db.Transaction(func(tx *gorm.DB) error {
+	return db.Transaction(func(tx *gorm.DB) error {
 		// 删除原有的用户角色关联
 		if err := tx.Where("user_id = ?", userID).Delete(&model.UserRole{}).Error; err != nil {
 			return err
@@ -155,7 +152,7 @@ func (s *RoleService) AssignRolesToUser(userID uint, roleIDs []uint) error {
 // GetUserRoleIDs 获取用户角色ID列表
 func (s *RoleService) GetUserRoleIDs(userID uint) ([]uint, error) {
 	var userRoles []model.UserRole
-	err := s.db.Where("user_id = ?", userID).Find(&userRoles).Error
+	err := db.Where("user_id = ?", userID).Find(&userRoles).Error
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +168,7 @@ func (s *RoleService) GetUserRoleIDs(userID uint) ([]uint, error) {
 // GetRoleMenuIDs 获取角色菜单ID列表
 func (s *RoleService) GetRoleMenuIDs(roleID uint) ([]uint, error) {
 	var roleMenus []model.RoleMenu
-	err := s.db.Where("role_id = ?", roleID).Find(&roleMenus).Error
+	err := db.Where("role_id = ?", roleID).Find(&roleMenus).Error
 	if err != nil {
 		return nil, err
 	}
