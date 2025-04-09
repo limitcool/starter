@@ -1,4 +1,4 @@
-package request
+package v1
 
 // 默认分页大小
 const DefaultPageSize = 20

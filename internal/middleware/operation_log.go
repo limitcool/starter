@@ -36,8 +36,7 @@ func OperationLogMiddleware(module, action, description string) gin.HandlerFunc 
 		}
 
 		// 创建操作日志服务
-		db := services.Instance().GetDB()
-		logService := services.NewOperationLogService(db)
+		logService := services.NewOperationLogService()
 
 		// 提取用户信息
 		mapClaims, ok := claims.(jwt.MapClaims)

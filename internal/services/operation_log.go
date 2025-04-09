@@ -5,23 +5,19 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/internal/api/request"
 	"github.com/limitcool/starter/internal/api/response"
+	v1 "github.com/limitcool/starter/internal/api/v1"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/options"
-	"gorm.io/gorm"
 )
 
 // OperationLogService 操作日志服务
 type OperationLogService struct {
-	db *gorm.DB
 }
 
 // NewOperationLogService 创建操作日志服务
-func NewOperationLogService(db *gorm.DB) *OperationLogService {
-	return &OperationLogService{
-		db: db,
-	}
+func NewOperationLogService() *OperationLogService {
+	return &OperationLogService{}
 }
 
 // CreateSysUserLog 创建系统用户操作日志
@@ -69,7 +65,7 @@ func (s *OperationLogService) CreateSysUserLog(c *gin.Context, userID uint, user
 		Username:    username,
 	}
 
-	return s.db.Create(&operationLog).Error
+	return db.Create(&operationLog).Error
 }
 
 // CreateUserLog 创建普通用户操作日志
@@ -117,11 +113,11 @@ func (s *OperationLogService) CreateUserLog(c *gin.Context, userID uint, usernam
 		Username:    username,
 	}
 
-	return s.db.Create(&operationLog).Error
+	return db.Create(&operationLog).Error
 }
 
 // GetOperationLogs 分页获取操作日志
-func (s *OperationLogService) GetOperationLogs(query *request.OperationLogQuery) (*response.PageResult[[]model.OperationLog], error) {
+func (s *OperationLogService) GetOperationLogs(query *v1.OperationLogQuery) (*response.PageResult[[]model.OperationLog], error) {
 	// 标准化分页请求
 	query.PageRequest.Normalize()
 
@@ -161,7 +157,7 @@ func (s *OperationLogService) GetOperationLogs(query *request.OperationLogQuery)
 	}
 
 	// 构建查询
-	tx := s.db.Model(&model.OperationLog{})
+	tx := db.Model(&model.OperationLog{})
 
 	// 获取总数
 	var total int64
@@ -184,10 +180,10 @@ func (s *OperationLogService) GetOperationLogs(query *request.OperationLogQuery)
 
 // DeleteOperationLog 删除操作日志
 func (s *OperationLogService) DeleteOperationLog(id uint) error {
-	return s.db.Delete(&model.OperationLog{}, id).Error
+	return db.Delete(&model.OperationLog{}, id).Error
 }
 
 // BatchDeleteOperationLogs 批量删除操作日志
 func (s *OperationLogService) BatchDeleteOperationLogs(ids []uint) error {
-	return s.db.Where("id IN ?", ids).Delete(&model.OperationLog{}).Error
+	return db.Where("id IN ?", ids).Delete(&model.OperationLog{}).Error
 }

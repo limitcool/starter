@@ -19,7 +19,7 @@ func CasbinMiddleware(db *gorm.DB) gin.HandlerFunc {
 		sub := c.GetString("role")
 
 		// 创建Casbin服务
-		casbinService := services.NewCasbinService(db)
+		casbinService := services.NewCasbinService()
 		if casbinService == nil {
 			response.ServerError(c)
 			c.Abort()
@@ -55,7 +55,7 @@ func PermissionMiddleware(db *gorm.DB) gin.HandlerFunc {
 		sub := c.GetString("role")
 
 		// 创建Casbin服务
-		casbinService := services.NewCasbinService(db)
+		casbinService := services.NewCasbinService()
 		if casbinService == nil {
 			response.ServerError(c)
 			c.Abort()

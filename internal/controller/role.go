@@ -18,8 +18,7 @@ func CreateRole(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	roleService := services.NewRoleService(db)
+	roleService := services.NewRoleService()
 	if err := roleService.CreateRole(&role); err != nil {
 		response.HandleError(c, err)
 		return
@@ -43,8 +42,7 @@ func UpdateRole(c *gin.Context) {
 	}
 
 	role.ID = uint(id)
-	db := services.Instance().GetDB()
-	roleService := services.NewRoleService(db)
+	roleService := services.NewRoleService()
 	if err := roleService.UpdateRole(&role); err != nil {
 		response.HandleError(c, err)
 		return
@@ -61,8 +59,7 @@ func DeleteRole(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	roleService := services.NewRoleService(db)
+	roleService := services.NewRoleService()
 	if err := roleService.DeleteRole(uint(id)); err != nil {
 		response.HandleError(c, err)
 		return
@@ -79,8 +76,7 @@ func GetRole(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	roleService := services.NewRoleService(db)
+	roleService := services.NewRoleService()
 	role, err := roleService.GetRoleByID(uint(id))
 	if err != nil {
 		response.HandleError(c, err)
@@ -88,7 +84,7 @@ func GetRole(c *gin.Context) {
 	}
 
 	// 获取角色菜单ID
-	menuService := services.NewMenuService(db)
+	menuService := services.NewMenuService()
 	roleMenus, err := menuService.GetMenusByRoleID(role.ID)
 	if err != nil {
 		response.HandleError(c, err)
@@ -107,8 +103,7 @@ func GetRole(c *gin.Context) {
 
 // 获取角色列表
 func GetRoles(c *gin.Context) {
-	db := services.Instance().GetDB()
-	roleService := services.NewRoleService(db)
+	roleService := services.NewRoleService()
 	roles, err := roleService.GetRoles()
 	if err != nil {
 		response.HandleError(c, err)
@@ -130,8 +125,7 @@ func AssignMenuToRole(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	menuService := services.NewMenuService(db)
+	menuService := services.NewMenuService()
 	if err := menuService.AssignMenuToRole(req.RoleID, req.MenuIDs); err != nil {
 		response.HandleError(c, err)
 		return
@@ -153,8 +147,7 @@ func SetRolePermission(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	roleService := services.NewRoleService(db)
+	roleService := services.NewRoleService()
 	if err := roleService.SetRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
 		response.HandleError(c, err)
 		return
@@ -176,8 +169,7 @@ func DeleteRolePermission(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	roleService := services.NewRoleService(db)
+	roleService := services.NewRoleService()
 	if err := roleService.DeleteRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
 		response.HandleError(c, err)
 		return

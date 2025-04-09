@@ -3,50 +3,48 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
+	v1 "github.com/limitcool/starter/internal/api/v1"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
 )
 
-// UserRegisterRequest 用户注册请求参数
-type UserRegisterRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-	Nickname string `json:"nickname"`
-	Email    string `json:"email"`
-	Mobile   string `json:"mobile"`
-	Gender   string `json:"gender"`
-	Address  string `json:"address"`
+var UserControllerInstance = UserController{
+	userService: services.Instance().GetUserService(),
+}
+
+type UserController struct {
+	userService *services.UserService
 }
 
 // UserLogin 普通用户登录
-func UserLogin(c *gin.Context) {
-	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ParamError(c, "无效的请求参数")
+func (uc *UserController) UserLogin(ctx *gin.Context) {
+	var req v1.LoginRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		response.ParamError(ctx, "无效的请求参数")
 		return
 	}
 
 	// 获取客户端IP地址
-	clientIP := c.ClientIP()
+	clientIP := ctx.ClientIP()
 
 	db := services.Instance().GetDB()
 	userService := services.NewNormalUserService(db)
 	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
 		if errorx.IsErrCode(err) {
-			response.HandleError(c, err)
+			response.HandleError(ctx, err)
 		} else {
-			response.ServerError(c)
+			response.ServerError(ctx)
 		}
 		return
 	}
 
-	response.Success(c, tokenResponse)
+	response.Success(ctx, tokenResponse)
 }
 
 // UserRegister 普通用户注册
-func UserRegister(c *gin.Context) {
-	var req UserRegisterRequest
+func (uc *UserController) UserRegister(c *gin.Context) {
+	var req v1.UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.ParamError(c, "无效的请求参数")
 		return
@@ -86,7 +84,7 @@ func UserRegister(c *gin.Context) {
 }
 
 // UserChangePassword 修改密码
-func UserChangePassword(c *gin.Context) {
+func (uc *UserController) UserChangePassword(c *gin.Context) {
 	// 获取用户ID
 	userID, _ := c.Get("user_id")
 
@@ -116,7 +114,7 @@ func UserChangePassword(c *gin.Context) {
 }
 
 // UserInfo 获取用户信息
-func UserInfo(c *gin.Context) {
+func (uc *UserController) UserInfo(c *gin.Context) {
 	// 获取用户ID
 	userID, _ := c.Get("user_id")
 
@@ -136,4 +134,23 @@ func UserInfo(c *gin.Context) {
 	user.Password = ""
 
 	response.Success(c, user)
+}
+
+// RefreshToken 刷新访问令牌
+func (uc *UserController) RefreshToken(c *gin.Context) {
+	var req v1.RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ParamError(c, "无效的请求参数")
+		return
+	}
+
+	// 使用服务管理器获取用户服务
+	userService := services.Instance().GetUserService()
+	tokenResponse, err := userService.RefreshToken(req.RefreshToken)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
+
+	response.Success(c, tokenResponse)
 }

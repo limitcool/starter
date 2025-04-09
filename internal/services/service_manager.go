@@ -76,7 +76,7 @@ func (sm *ServiceManager) GetUserService() *UserService {
 // GetRoleService 获取RoleService实例
 func (sm *ServiceManager) GetRoleService() *RoleService {
 	if sm.roleService == nil {
-		sm.roleService = NewRoleService(sm.GetDB())
+		sm.roleService = NewRoleService()
 	}
 	return sm.roleService
 }
@@ -84,7 +84,7 @@ func (sm *ServiceManager) GetRoleService() *RoleService {
 // GetCasbinService 获取CasbinService实例
 func (sm *ServiceManager) GetCasbinService() *CasbinService {
 	if sm.casbinService == nil {
-		sm.casbinService = NewCasbinService(sm.GetDB())
+		sm.casbinService = NewCasbinService()
 	}
 	return sm.casbinService
 }
@@ -92,7 +92,7 @@ func (sm *ServiceManager) GetCasbinService() *CasbinService {
 // GetOperationLogService 获取OperationLogService实例
 func (sm *ServiceManager) GetOperationLogService() *OperationLogService {
 	if sm.operationLogService == nil {
-		sm.operationLogService = NewOperationLogService(sm.GetDB())
+		sm.operationLogService = NewOperationLogService()
 	}
 	return sm.operationLogService
 }

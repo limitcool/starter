@@ -4,15 +4,15 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/internal/api/request"
 	"github.com/limitcool/starter/internal/api/response"
+	v1 "github.com/limitcool/starter/internal/api/v1"
 	"github.com/limitcool/starter/internal/services"
 )
 
 // GetOperationLogs 获取操作日志列表
 func GetOperationLogs(c *gin.Context) {
 	// 解析查询参数
-	var query request.OperationLogQuery
+	var query v1.OperationLogQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		response.ParamError(c, "无效的查询参数")
 		return
@@ -27,8 +27,7 @@ func GetOperationLogs(c *gin.Context) {
 	}
 
 	// 获取操作日志
-	db := services.Instance().GetDB()
-	opLogService := services.NewOperationLogService(db)
+	opLogService := services.NewOperationLogService()
 	result, err := opLogService.GetOperationLogs(&query)
 	if err != nil {
 		response.ServerError(c)
@@ -46,8 +45,7 @@ func DeleteOperationLog(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	opLogService := services.NewOperationLogService(db)
+	opLogService := services.NewOperationLogService()
 	if err := opLogService.DeleteOperationLog(uint(id)); err != nil {
 		response.ServerError(c)
 		return
@@ -58,14 +56,13 @@ func DeleteOperationLog(c *gin.Context) {
 
 // ClearOperationLogs 清空操作日志
 func ClearOperationLogs(c *gin.Context) {
-	var req request.OperationLogBatchDeleteRequest
+	var req v1.OperationLogBatchDeleteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.ParamError(c, "无效的请求参数")
 		return
 	}
 
-	db := services.Instance().GetDB()
-	opLogService := services.NewOperationLogService(db)
+	opLogService := services.NewOperationLogService()
 	if err := opLogService.BatchDeleteOperationLogs(req.IDs); err != nil {
 		response.ServerError(c)
 		return

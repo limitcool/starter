@@ -68,12 +68,12 @@ func NewRouter() *gin.Engine {
 	// 公共路由
 	{
 		apiV1.GET("/ping", controller.Ping)
-		apiV1.POST("/admin/login", controller.AdminLogin)
-		apiV1.POST("/refresh", controller.RefreshToken)
+		apiV1.POST("/admin/login", controller.AdminControllerInstance.AdminLogin)
+		apiV1.POST("/refresh", controller.UserControllerInstance.RefreshToken)
 
 		// 普通用户公共路由
-		apiV1.POST("/user/register", controller.UserRegister)
-		apiV1.POST("/user/login", controller.UserLogin)
+		apiV1.POST("/user/register", controller.UserControllerInstance.UserRegister)
+		apiV1.POST("/user/login", controller.UserControllerInstance.UserLogin)
 	}
 
 	// 需要认证的路由
@@ -86,8 +86,8 @@ func NewRouter() *gin.Engine {
 		// 普通用户认证路由
 		user := auth.Group("/user")
 		{
-			user.GET("/info", middleware.AuthNormalUser(), controller.UserInfo)
-			user.POST("/change-password", middleware.AuthNormalUser(), controller.UserChangePassword)
+			user.GET("/info", middleware.AuthNormalUser(), controller.UserControllerInstance.UserInfo)
+			user.POST("/change-password", middleware.AuthNormalUser(), controller.UserControllerInstance.UserChangePassword)
 		}
 
 		// 管理员权限路由（如果启用了权限系统）

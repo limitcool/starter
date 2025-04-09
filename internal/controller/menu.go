@@ -17,8 +17,7 @@ func CreateMenu(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	menuService := services.NewMenuService(db)
+	menuService := services.NewMenuService()
 	if err := menuService.CreateMenu(&menu); err != nil {
 		response.ServerError(c)
 		return
@@ -42,8 +41,7 @@ func UpdateMenu(c *gin.Context) {
 	}
 
 	menu.ID = uint(id)
-	db := services.Instance().GetDB()
-	menuService := services.NewMenuService(db)
+	menuService := services.NewMenuService()
 	if err := menuService.UpdateMenu(&menu); err != nil {
 		response.ServerError(c)
 		return
@@ -60,8 +58,7 @@ func DeleteMenu(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	menuService := services.NewMenuService(db)
+	menuService := services.NewMenuService()
 	if err := menuService.DeleteMenu(uint(id)); err != nil {
 		response.ServerError(c)
 		return
@@ -78,8 +75,7 @@ func GetMenu(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	menuService := services.NewMenuService(db)
+	menuService := services.NewMenuService()
 	menu, err := menuService.GetMenuByID(uint(id))
 	if err != nil {
 		response.ServerError(c)
@@ -91,8 +87,7 @@ func GetMenu(c *gin.Context) {
 
 // 获取菜单树
 func GetMenuTree(c *gin.Context) {
-	db := services.Instance().GetDB()
-	menuService := services.NewMenuService(db)
+	menuService := services.NewMenuService()
 	menus, err := menuService.GetMenuTree()
 	if err != nil {
 		response.ServerError(c)
@@ -111,8 +106,7 @@ func GetUserMenus(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	menuService := services.NewMenuService(db)
+	menuService := services.NewMenuService()
 	menus, err := menuService.GetUserMenus(uint(userID.(float64)))
 	if err != nil {
 		response.ServerError(c)
@@ -131,8 +125,7 @@ func GetUserMenuPerms(c *gin.Context) {
 		return
 	}
 
-	db := services.Instance().GetDB()
-	menuService := services.NewMenuService(db)
+	menuService := services.NewMenuService()
 	perms, err := menuService.GetMenuPermsByUserID(uint(userID.(float64)))
 	if err != nil {
 		response.ServerError(c)

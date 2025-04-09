@@ -1,4 +1,4 @@
-package request
+package v1
 
 // ListResponse 列表响应
 type ListResponse[T any] struct {

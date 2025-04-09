@@ -8,7 +8,6 @@ import (
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/internal/storage/sqldb"
-	"gorm.io/gorm"
 )
 
 var (
@@ -18,25 +17,23 @@ var (
 
 // CasbinService Casbin权限服务
 type CasbinService struct {
-	db       *gorm.DB
 	enforcer *casbin.Enforcer
 }
 
 // NewCasbinService 创建Casbin服务
-func NewCasbinService(db *gorm.DB) *CasbinService {
-	e, err := InitCasbin(db)
+func NewCasbinService() *CasbinService {
+	e, err := InitCasbin()
 	if err != nil {
 		log.Error("初始化Casbin失败", "error", err)
 		return nil
 	}
 	return &CasbinService{
-		db:       db,
 		enforcer: e,
 	}
 }
 
 // InitCasbin 初始化Casbin
-func InitCasbin(db *gorm.DB) (*casbin.Enforcer, error) {
+func InitCasbin() (*casbin.Enforcer, error) {
 	var err error
 
 	// 如果权限系统未启用，直接返回nil

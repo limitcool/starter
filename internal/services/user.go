@@ -16,29 +16,20 @@ import (
 
 // UserService 用户服务
 type UserService struct {
-	db            *gorm.DB
+
 	roleService   *RoleService
 	casbinService *CasbinService
 }
 
 // NewUserService 创建用户服务
 func NewUserService(db *gorm.DB) *UserService {
-	// 检查ServiceManager是否已初始化
-	if serviceInstance != nil {
-		// 使用ServiceManager获取依赖服务
-		return &UserService{
-			db:            db,
-			roleService:   serviceInstance.GetRoleService(),
-			casbinService: serviceInstance.GetCasbinService(),
-		}
+
+	// 使用ServiceManager获取依赖服务
+	return &UserService{
+		roleService:   serviceInstance.GetRoleService(),
+		casbinService: serviceInstance.GetCasbinService(),
 	}
 
-	// 兼容旧代码，如果ServiceManager未初始化，则直接创建依赖服务
-	return &UserService{
-		db:            db,
-		roleService:   NewRoleService(db),
-		casbinService: NewCasbinService(db),
-	}
 }
 
 // 获取配置，优先使用ServiceManager
@@ -52,7 +43,7 @@ func (s *UserService) getConfig() *configs.Config {
 // GetUserByID 根据ID获取用户
 func (s *UserService) GetUserByID(id uint) (*model.SysUser, error) {
 	var user model.SysUser
-	err := s.db.First(&user, id).Error
+	err := db.First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.NewErrCodeMsg(errorx.UserNotFound, "用户不存在")
 	}
@@ -61,7 +52,7 @@ func (s *UserService) GetUserByID(id uint) (*model.SysUser, error) {
 	}
 
 	// 获取用户的角色
-	if err := s.db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+	if err := db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
 		return nil, err
 	}
 
@@ -76,7 +67,7 @@ func (s *UserService) GetUserByID(id uint) (*model.SysUser, error) {
 // GetUserByUsername 根据用户名获取用户
 func (s *UserService) GetUserByUsername(username string) (*model.SysUser, error) {
 	var user model.SysUser
-	err := s.db.Where("username = ?", username).First(&user).Error
+	err := db.Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.NewErrCodeMsg(errorx.UserNotFound, "用户不存在")
 	}
@@ -85,7 +76,7 @@ func (s *UserService) GetUserByUsername(username string) (*model.SysUser, error)
 	}
 
 	// 获取用户的角色
-	if err := s.db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+	if err := db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
 		return nil, err
 	}
 
@@ -128,7 +119,7 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 	}
 
 	// 更新最后登录时间和IP
-	s.db.Model(user).Updates(map[string]interface{}{
+	db.Model(user).Updates(map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	})
