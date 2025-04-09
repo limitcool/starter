@@ -1,13 +1,12 @@
 package services
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/charmbracelet/log"
-	"github.com/limitcool/starter/internal/storage/sqldb"
+	"github.com/limitcool/starter/internal/core"
 )
 
 var (
@@ -37,7 +36,7 @@ func InitCasbin() (*casbin.Enforcer, error) {
 	var err error
 
 	// 如果权限系统未启用，直接返回nil
-	config := Instance().GetConfig()
+	config := core.Instance().GetConfig()
 	if config != nil && !config.Permission.Enabled {
 		return nil, nil
 	}
@@ -48,15 +47,6 @@ func InitCasbin() (*casbin.Enforcer, error) {
 	}
 
 	once.Do(func() {
-		// 检查数据库连接是否为nil
-		if db == nil {
-			// 尝试从SQL组件获取数据库连接
-			db = sqldb.GetDB()
-			if db == nil {
-				err = fmt.Errorf("数据库未初始化")
-				return
-			}
-		}
 
 		// 使用gorm适配器
 		adapter, adapterErr := gormadapter.NewAdapterByDB(db)

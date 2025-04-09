@@ -6,9 +6,9 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/controller"
+	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/pkg/storage"
-	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/casbin"
 )
 
@@ -23,7 +23,7 @@ func NewRouter() *gin.Engine {
 	r.Use(middleware.Cors())
 
 	// 获取服务配置
-	config := services.Instance().GetConfig()
+	config := core.Instance().GetConfig()
 
 	// 初始化Casbin权限系统（如果启用）
 	var casbinComponent *casbin.Component

@@ -7,11 +7,13 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
+	"github.com/limitcool/starter/internal/storage/sqldb"
 	"gorm.io/gorm"
 )
 
@@ -23,27 +25,22 @@ type SysUserService struct {
 
 // NewSysUserService 创建用户服务
 func NewSysUserService() *SysUserService {
-
-	// 使用ServiceManager获取依赖服务
+	// 直接创建依赖服务
 	return &SysUserService{
-		roleService:   serviceInstance.GetRoleService(),
-		casbinService: serviceInstance.GetCasbinService(),
+		roleService:   NewRoleService(),
+		casbinService: NewCasbinService(),
 	}
-
 }
 
 // GetConfig 获取配置
 func (s *SysUserService) getConfig() *configs.Config {
-	if serviceInstance != nil {
-		return serviceInstance.GetConfig()
-	}
-	panic("配置未初始化")
+	return core.Instance().GetConfig()
 }
 
 // GetUserByID 根据ID获取用户
 func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
 	var user model.SysUser
-	err := Instance().GetDB().First(&user, id).Error
+	err := db.First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -52,7 +49,7 @@ func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
 	}
 
 	// 获取用户的角色
-	if err := Instance().GetDB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+	if err := db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
 		return nil, err
 	}
 
@@ -67,7 +64,7 @@ func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
 // GetUserByUsername 根据用户名获取用户
 func (s *SysUserService) GetUserByUsername(username string) (*model.SysUser, error) {
 	var user model.SysUser
-	err := Instance().GetDB().Where("username = ?", username).First(&user).Error
+	err := sqldb.DB.Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -76,7 +73,7 @@ func (s *SysUserService) GetUserByUsername(username string) (*model.SysUser, err
 	}
 
 	// 获取用户的角色
-	if err := Instance().GetDB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+	if err := db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
 		return nil, err
 	}
 
@@ -120,7 +117,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	}
 
 	// 更新最后登录时间和IP
-	Instance().GetDB().Model(user).Updates(map[string]interface{}{
+	db.Model(user).Updates(map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	})

@@ -115,9 +115,7 @@ func (s *FileService) GetFile(id string) (*model.File, error) {
 func (s *FileService) DeleteFile(id string) error {
 	var file model.File
 	if err := db.First(&file, id).Error; err != nil {
-
 		return errorx.ErrNotFound.WithError(err)
-
 	}
 
 	// 删除存储中的文件

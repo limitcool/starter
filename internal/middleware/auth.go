@@ -8,9 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/api/response"
+	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/jwt"
-	"github.com/limitcool/starter/internal/services"
 )
 
 // JWTAuth JWT认证中间件
@@ -34,7 +34,7 @@ func JWTAuth() gin.HandlerFunc {
 		}
 
 		// 解析token
-		claims, err := jwt.ParseToken(token, services.Instance().GetConfig().JwtAuth.AccessSecret)
+		claims, err := jwt.ParseToken(token, core.Instance().GetConfig().JwtAuth.AccessSecret)
 		if err != nil {
 			log.Error("Authentication token parse failed", "error", err)
 			response.Error(c, errorx.ErrUserTokenError)

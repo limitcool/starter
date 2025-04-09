@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/pkg/env"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/spf13/cobra"
@@ -70,9 +69,6 @@ func InitConfig(cmd *cobra.Command, args []string) *configs.Config {
 	if err := viper.Unmarshal(cfg); err != nil {
 		log.Fatal("Config unmarshal failed", "error", err)
 	}
-
-	// 初始化服务管理器
-	services.Init(cfg, nil)
 	globalConfig = cfg
 
 	return cfg

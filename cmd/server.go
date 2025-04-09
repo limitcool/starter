@@ -10,7 +10,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/internal/core"
-	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/mongodb"
 	"github.com/limitcool/starter/internal/storage/redisdb"
 	"github.com/limitcool/starter/internal/storage/sqldb"
@@ -81,14 +80,6 @@ func runServer(cmd *cobra.Command, args []string) {
 
 	// 确保资源清理
 	defer app.Cleanup()
-
-	// 获取数据库连接
-	db := sqldb.GetDB()
-
-	// 初始化服务管理器，传入配置和数据库连接
-	services.Init(cfg, db)
-	log.Info("Service Manager initialized")
-
 	// 初始化路由
 	router := routers.NewRouter()
 	s := &http.Server{

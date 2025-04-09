@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/api/response"
+	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	"github.com/limitcool/starter/internal/pkg/enum"
@@ -28,7 +29,7 @@ func NewUserService() *UserService {
 // GetUserByID 根据ID获取用户
 func (s *UserService) GetUserByID(id uint) (*model.User, error) {
 	var user model.User
-	err := Instance().GetDB().First(&user, id).Error
+	err := db.First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -41,7 +42,7 @@ func (s *UserService) GetUserByID(id uint) (*model.User, error) {
 // GetUserByUsername 根据用户名获取用户
 func (s *UserService) GetUserByUsername(username string) (*model.User, error) {
 	var user model.User
-	err := Instance().GetDB().Where("username = ?", username).First(&user).Error
+	err := db.Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -73,7 +74,7 @@ type RegisterRequest struct {
 func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 	// 检查用户名是否已存在
 	var count int64
-	if err := Instance().GetDB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
+	if err := db.Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
 		return nil, err
 	}
 	if count > 0 {
@@ -100,19 +101,16 @@ func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 		RegisterIP: req.RegisterIP,
 	}
 
-	if err := Instance().GetDB().Create(user).Error; err != nil {
+	if err := db.Create(user).Error; err != nil {
 		return nil, err
 	}
 
 	return user, nil
 }
 
-// 获取配置，优先使用ServiceManager
+// 获取配置，使用新的函数
 func (s *UserService) getConfig() *configs.Config {
-	if serviceInstance != nil {
-		return serviceInstance.GetConfig()
-	}
-	panic("配置未初始化")
+	return core.Instance().GetConfig()
 }
 
 // Login 用户登录
@@ -134,7 +132,7 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 	}
 
 	// 更新最后登录时间和IP
-	Instance().GetDB().Model(user).Updates(map[string]interface{}{
+	db.Model(user).Updates(map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	})
@@ -185,7 +183,7 @@ func (s *UserService) UpdateUser(id uint, data map[string]interface{}) error {
 	delete(data, "deleted_at")
 
 	// 更新用户信息
-	return Instance().GetDB().Model(&model.User{}).Where("id = ?", id).Updates(data).Error
+	return db.Model(&model.User{}).Where("id = ?", id).Updates(data).Error
 }
 
 // ChangePassword 修改密码
@@ -208,7 +206,7 @@ func (s *UserService) ChangePassword(id uint, oldPassword, newPassword string) e
 	}
 
 	// 更新密码
-	return Instance().GetDB().Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
+	return db.Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
 }
 
 func GetUserInfo(ctx *gin.Context) {

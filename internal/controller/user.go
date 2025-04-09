@@ -11,7 +11,7 @@ import (
 
 func NewUserController() *UserController {
 	return &UserController{
-		userService: services.Instance().GetUserService(),
+		userService: services.NewSysUserService(),
 	}
 }
 
@@ -144,7 +144,7 @@ func (uc *UserController) RefreshToken(c *gin.Context) {
 	}
 
 	// 使用服务管理器获取用户服务
-	userService := services.Instance().GetUserService()
+	userService := services.NewSysUserService()
 	tokenResponse, err := userService.RefreshToken(req.RefreshToken)
 	if err != nil {
 		response.Error(c, err)

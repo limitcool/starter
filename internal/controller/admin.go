@@ -27,7 +27,7 @@ func (ac *AdminController) AdminLogin(c *gin.Context) {
 	clientIP := c.ClientIP()
 
 	// 使用服务管理器获取用户服务
-	userService := services.Instance().GetUserService()
+	userService := services.NewSysUserService()
 	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
 		log.Error("AdminLogin 登录失败", "err", err)
