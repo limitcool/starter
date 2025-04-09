@@ -3,7 +3,7 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/pkg/code"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
 )
 
@@ -33,7 +33,7 @@ func UserLogin(c *gin.Context) {
 	userService := services.NewNormalUserService(db)
 	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
-		if code.IsErrCode(err) {
+		if errorx.IsErrCode(err) {
 			response.HandleError(c, err)
 		} else {
 			response.ServerError(c)
@@ -71,7 +71,7 @@ func UserRegister(c *gin.Context) {
 	userService := services.NewNormalUserService(db)
 	user, err := userService.Register(registerReq)
 	if err != nil {
-		if code.IsErrCode(err) {
+		if errorx.IsErrCode(err) {
 			response.HandleError(c, err)
 		} else {
 			response.ServerError(c)
@@ -104,7 +104,7 @@ func UserChangePassword(c *gin.Context) {
 	userService := services.NewNormalUserService(db)
 	err := userService.ChangePassword(userID.(uint), req.OldPassword, req.NewPassword)
 	if err != nil {
-		if code.IsErrCode(err) {
+		if errorx.IsErrCode(err) {
 			response.HandleError(c, err)
 		} else {
 			response.ServerError(c)
@@ -124,7 +124,7 @@ func UserInfo(c *gin.Context) {
 	userService := services.NewNormalUserService(db)
 	user, err := userService.GetUserByID(userID.(uint))
 	if err != nil {
-		if code.IsErrCode(err) {
+		if errorx.IsErrCode(err) {
 			response.HandleError(c, err)
 		} else {
 			response.ServerError(c)

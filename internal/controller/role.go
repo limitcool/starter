@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/internal/pkg/code"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
 )
 
@@ -14,7 +14,7 @@ import (
 func CreateRole(c *gin.Context) {
 	var role model.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
+		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, err.Error()))
 		return
 	}
 
@@ -32,13 +32,13 @@ func CreateRole(c *gin.Context) {
 func UpdateRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
+		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, "无效的角色ID"))
 		return
 	}
 
 	var role model.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
+		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, err.Error()))
 		return
 	}
 
@@ -57,7 +57,7 @@ func UpdateRole(c *gin.Context) {
 func DeleteRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
+		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, "无效的角色ID"))
 		return
 	}
 
@@ -75,7 +75,7 @@ func DeleteRole(c *gin.Context) {
 func GetRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, "无效的角色ID"))
+		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, "无效的角色ID"))
 		return
 	}
 
@@ -126,7 +126,7 @@ func AssignMenuToRole(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
+		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, err.Error()))
 		return
 	}
 
@@ -149,7 +149,7 @@ func SetRolePermission(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
+		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, err.Error()))
 		return
 	}
 
@@ -172,7 +172,7 @@ func DeleteRolePermission(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.HandleError(c, code.NewErrCodeMsg(code.InvalidParams, err.Error()))
+		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, err.Error()))
 		return
 	}
 

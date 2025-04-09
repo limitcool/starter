@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/limitcool/starter/internal/pkg/errors"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/qor/oss"
 	"github.com/qor/oss/filesystem"
 	"github.com/qor/oss/s3"
@@ -50,13 +50,13 @@ func New(config Config) (*Storage, error) {
 		// 确保本地存储路径存在
 		err = os.MkdirAll(config.Path, os.ModePerm)
 		if err != nil {
-			return nil, errors.NewStorageError("初始化", "", err)
+			return nil, errorx.NewStorageError("初始化", "", err)
 		}
 		ossStorage = filesystem.New(config.Path)
 	case StorageTypeS3:
 		// S3配置检查
 		if config.AccessKey == "" || config.SecretKey == "" || config.Bucket == "" {
-			return nil, errors.New("S3配置不完整")
+			return nil, errorx.New("S3配置不完整")
 		}
 		ossStorage = s3.New(&s3.Config{
 			AccessID:  config.AccessKey,
@@ -66,7 +66,7 @@ func New(config Config) (*Storage, error) {
 			Endpoint:  config.Endpoint,
 		})
 	default:
-		return nil, errors.New("不支持的存储类型")
+		return nil, errorx.New("不支持的存储类型")
 	}
 
 	return &Storage{
@@ -79,7 +79,7 @@ func New(config Config) (*Storage, error) {
 func (s *Storage) Put(path string, reader io.Reader) error {
 	_, err := s.oss.Put(path, reader)
 	if err != nil {
-		return errors.NewStorageError("上传", path, err)
+		return errorx.NewStorageError("上传", path, err)
 	}
 	return nil
 }
@@ -89,9 +89,9 @@ func (s *Storage) Get(path string) (*os.File, error) {
 	file, err := s.oss.Get(path)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such file") || strings.Contains(err.Error(), "not found") {
-			return nil, errors.NewStorageError("获取", path, fmt.Errorf(errors.ErrStorageNotFound))
+			return nil, errorx.NewStorageError("获取", path, fmt.Errorf(errorx.ErrStorageNotFound))
 		}
-		return nil, errors.NewStorageError("获取", path, err)
+		return nil, errorx.NewStorageError("获取", path, err)
 	}
 	return file, nil
 }
@@ -101,9 +101,9 @@ func (s *Storage) GetStream(path string) (io.ReadCloser, error) {
 	stream, err := s.oss.GetStream(path)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such file") || strings.Contains(err.Error(), "not found") {
-			return nil, errors.NewStorageError("获取流", path, fmt.Errorf(errors.ErrStorageNotFound))
+			return nil, errorx.NewStorageError("获取流", path, fmt.Errorf(errorx.ErrStorageNotFound))
 		}
-		return nil, errors.NewStorageError("获取流", path, err)
+		return nil, errorx.NewStorageError("获取流", path, err)
 	}
 	return stream, nil
 }
@@ -112,7 +112,7 @@ func (s *Storage) GetStream(path string) (io.ReadCloser, error) {
 func (s *Storage) Delete(path string) error {
 	err := s.oss.Delete(path)
 	if err != nil {
-		return errors.NewStorageError("删除", path, err)
+		return errorx.NewStorageError("删除", path, err)
 	}
 	return nil
 }
@@ -121,7 +121,7 @@ func (s *Storage) Delete(path string) error {
 func (s *Storage) List(path string) ([]*oss.Object, error) {
 	objects, err := s.oss.List(path)
 	if err != nil {
-		return nil, errors.NewStorageError("列表", path, err)
+		return nil, errorx.NewStorageError("列表", path, err)
 	}
 	return objects, nil
 }
@@ -135,7 +135,7 @@ func (s *Storage) GetURL(path string) (string, error) {
 
 	url, err := s.oss.GetURL(path)
 	if err != nil {
-		return "", errors.NewStorageError("获取URL", path, err)
+		return "", errorx.NewStorageError("获取URL", path, err)
 	}
 	return url, nil
 }

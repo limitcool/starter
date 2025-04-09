@@ -8,8 +8,8 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/internal/pkg/code"
 	"github.com/limitcool/starter/internal/pkg/crypto"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
 	"gorm.io/gorm"
 )
@@ -54,7 +54,7 @@ func (s *UserService) GetUserByID(id uint) (*model.SysUser, error) {
 	var user model.SysUser
 	err := s.db.First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, code.NewErrCodeMsg(code.UserNotFound, "用户不存在")
+		return nil, errorx.NewErrCodeMsg(errorx.UserNotFound, "用户不存在")
 	}
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (s *UserService) GetUserByUsername(username string) (*model.SysUser, error)
 	var user model.SysUser
 	err := s.db.Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, code.NewErrCodeMsg(code.UserNotFound, "用户不存在")
+		return nil, errorx.NewErrCodeMsg(errorx.UserNotFound, "用户不存在")
 	}
 	if err != nil {
 		return nil, err
@@ -119,12 +119,12 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 
 	// 检查用户是否启用
 	if !user.Enabled {
-		return nil, code.NewErrCodeMsg(code.UserDisabled, "用户已禁用")
+		return nil, errorx.NewErrCodeMsg(errorx.UserDisabled, "用户已禁用")
 	}
 
 	// 验证密码
 	if !s.VerifyPassword(password, user.Password) {
-		return nil, code.NewErrCodeMsg(code.UserPasswordError, "密码错误")
+		return nil, errorx.NewErrCodeMsg(errorx.UserPasswordError, "密码错误")
 	}
 
 	// 更新最后登录时间和IP
@@ -180,20 +180,20 @@ func (s *UserService) RefreshToken(refreshToken string) (*LoginResponse, error) 
 	// 验证刷新令牌
 	tokenClaims, err := jwtpkg.ParseToken(refreshToken, cfg.JwtAuth.RefreshSecret)
 	if err != nil {
-		return nil, code.NewErrCodeMsg(code.UserTokenError, "无效的刷新令牌")
+		return nil, errorx.NewErrCodeMsg(errorx.UserTokenError, "无效的刷新令牌")
 	}
 
 	// 检查令牌类型
 	claims := *tokenClaims
 	tokenType, ok := claims["type"].(string)
 	if !ok || tokenType != "refresh_token" {
-		return nil, code.NewErrCodeMsg(code.UserTokenError, "无效的令牌类型")
+		return nil, errorx.NewErrCodeMsg(errorx.UserTokenError, "无效的令牌类型")
 	}
 
 	// 获取用户信息
 	userID, ok := claims["user_id"].(float64)
 	if !ok {
-		return nil, code.NewErrCodeMsg(code.UserTokenError, "无效的用户信息")
+		return nil, errorx.NewErrCodeMsg(errorx.UserTokenError, "无效的用户信息")
 	}
 
 	user, err := s.GetUserByID(uint(userID))
@@ -203,7 +203,7 @@ func (s *UserService) RefreshToken(refreshToken string) (*LoginResponse, error) 
 
 	// 检查用户是否启用
 	if !user.Enabled {
-		return nil, code.NewErrCodeMsg(code.UserDisabled, "用户已禁用")
+		return nil, errorx.NewErrCodeMsg(errorx.UserDisabled, "用户已禁用")
 	}
 
 	// 生成新的访问令牌

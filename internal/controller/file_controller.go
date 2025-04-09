@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/internal/pkg/errors"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/storage"
 	"github.com/limitcool/starter/internal/services"
 )
@@ -124,7 +124,7 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 	c.Status(http.StatusOK)
 	_, err = io.Copy(c.Writer, fileStream)
 	if err != nil {
-		response.HandleError(c, errors.NewStorageError("下载", file.Path, err))
+		response.HandleError(c, errorx.NewStorageError("下载", file.Path, err))
 		return
 	}
 }

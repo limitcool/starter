@@ -10,8 +10,8 @@ import (
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/internal/pkg/code"
 	"github.com/limitcool/starter/internal/pkg/crypto"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
 	"gorm.io/gorm"
 )
@@ -33,7 +33,7 @@ func (s *NormalUserService) GetUserByID(id uint) (*model.User, error) {
 	var user model.User
 	err := s.db.First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, code.NewErrCodeMsg(code.UserNotFound, "用户不存在")
+		return nil, errorx.NewErrCodeMsg(errorx.UserNotFound, "用户不存在")
 	}
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (s *NormalUserService) GetUserByUsername(username string) (*model.User, err
 	var user model.User
 	err := s.db.Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, code.NewErrCodeMsg(code.UserNotFound, "用户不存在")
+		return nil, errorx.NewErrCodeMsg(errorx.UserNotFound, "用户不存在")
 	}
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (s *NormalUserService) Register(req RegisterRequest) (*model.User, error) {
 		return nil, err
 	}
 	if count > 0 {
-		return nil, code.NewErrCodeMsg(code.UserAlreadyExists, "用户名已存在")
+		return nil, errorx.NewErrCodeMsg(errorx.UserAlreadyExists, "用户名已存在")
 	}
 
 	// 哈希密码
@@ -128,12 +128,12 @@ func (s *NormalUserService) Login(username, password string, ip string) (*LoginR
 
 	// 检查用户是否启用
 	if !user.Enabled {
-		return nil, code.NewErrCodeMsg(code.UserDisabled, "用户已禁用")
+		return nil, errorx.NewErrCodeMsg(errorx.UserDisabled, "用户已禁用")
 	}
 
 	// 验证密码
 	if !s.VerifyPassword(password, user.Password) {
-		return nil, code.NewErrCodeMsg(code.UserPasswordError, "密码错误")
+		return nil, errorx.NewErrCodeMsg(errorx.UserPasswordError, "密码错误")
 	}
 
 	// 更新最后登录时间和IP
@@ -203,7 +203,7 @@ func (s *NormalUserService) ChangePassword(id uint, oldPassword, newPassword str
 
 	// 验证旧密码
 	if !s.VerifyPassword(oldPassword, user.Password) {
-		return code.NewErrCodeMsg(code.UserPasswordError, "原密码错误")
+		return errorx.NewErrCodeMsg(errorx.UserPasswordError, "原密码错误")
 	}
 
 	// 哈希新密码
@@ -219,13 +219,13 @@ func (s *NormalUserService) ChangePassword(id uint, oldPassword, newPassword str
 func GetUserInfo(ctx *gin.Context) {
 	userId, exists := ctx.Get("userID")
 	if !exists {
-		response.Fail(ctx, code.UserNoLogin, "")
+		response.Fail(ctx, errorx.UserNoLogin, "")
 		return
 	}
 
 	var user model.User
 	if err := model.GetDB().First(&user, userId).Error; err != nil {
-		response.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, errorx.DatabaseQueryError, "")
 		return
 	}
 
@@ -252,19 +252,19 @@ func UserRegister(ctx *gin.Context) {
 	}
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		response.Fail(ctx, code.InvalidParams, err.Error())
+		response.Fail(ctx, errorx.InvalidParams, err.Error())
 		return
 	}
 
 	// 2. 验证用户名是否已存在
 	var count int64
 	if err := model.GetDB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
-		response.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, errorx.DatabaseQueryError, "")
 		return
 	}
 
 	if count > 0 {
-		response.Fail(ctx, code.UserAlreadyExists, "")
+		response.Fail(ctx, errorx.UserAlreadyExists, "")
 		return
 	}
 
@@ -280,7 +280,11 @@ func UserRegister(ctx *gin.Context) {
 	}
 
 	if err := model.GetDB().Create(&user).Error; err != nil {
-		response.Fail(ctx, code.DatabaseInsertError, "")
+		if errorx.IsDuplicate(err) {
+			response.Fail(ctx, errorx.UserAlreadyExists, "")
+			return
+		}
+		response.Fail(ctx, errorx.DatabaseInsertError, "")
 		return
 	}
 
@@ -307,7 +311,7 @@ func UserLogin(ctx *gin.Context) {
 	}
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		response.Fail(ctx, code.InvalidParams, "")
+		response.Fail(ctx, errorx.InvalidParams, "")
 		return
 	}
 
@@ -315,9 +319,9 @@ func UserLogin(ctx *gin.Context) {
 	var user model.User
 	if err := model.GetDB().Where("username = ?", req.Username).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			response.Fail(ctx, code.UserNameOrPasswordError, "")
+			response.Fail(ctx, errorx.UserNameOrPasswordError, "")
 		} else {
-			response.Fail(ctx, code.DatabaseQueryError, "")
+			response.Fail(ctx, errorx.DatabaseQueryError, "")
 		}
 		return
 	}
@@ -325,13 +329,13 @@ func UserLogin(ctx *gin.Context) {
 	// 3. 验证密码
 	// 注意：实际应用中应该验证加密后的密码
 	if user.Password != req.Password {
-		response.Fail(ctx, code.UserNameOrPasswordError, "")
+		response.Fail(ctx, errorx.UserNameOrPasswordError, "")
 		return
 	}
 
 	// 检查用户状态
 	if !user.Enabled {
-		response.Fail(ctx, code.UserDisabled, "")
+		response.Fail(ctx, errorx.UserDisabled, "")
 		return
 	}
 
@@ -339,7 +343,7 @@ func UserLogin(ctx *gin.Context) {
 	user.LastLogin = time.Now()
 	user.LastIP = ctx.ClientIP()
 	if err := model.GetDB().Save(&user).Error; err != nil {
-		response.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, errorx.DatabaseQueryError, "")
 		return
 	}
 
@@ -378,28 +382,28 @@ func ChangePassword(ctx *gin.Context) {
 	}
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		response.Fail(ctx, code.InvalidParams, "")
+		response.Fail(ctx, errorx.InvalidParams, "")
 		return
 	}
 
 	// 2. 获取当前用户
 	userId, exists := ctx.Get("userID")
 	if !exists {
-		response.Fail(ctx, code.UserNoLogin, "")
+		response.Fail(ctx, errorx.UserNoLogin, "")
 		return
 	}
 
 	// 3. 查询用户
 	var user model.User
 	if err := model.GetDB().First(&user, userId).Error; err != nil {
-		response.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, errorx.DatabaseQueryError, "")
 		return
 	}
 
 	// 4. 验证旧密码
 	// 注意：实际应用中应该验证加密后的密码
 	if user.Password != req.OldPassword {
-		response.Fail(ctx, code.UserPasswordError, "")
+		response.Fail(ctx, errorx.UserPasswordError, "")
 		return
 	}
 
@@ -407,7 +411,7 @@ func ChangePassword(ctx *gin.Context) {
 	// 注意：实际应用中应该对新密码进行加密
 	hashedPassword, _ := crypto.HashPassword(req.NewPassword)
 	if err := model.GetDB().Model(&user).Update("password", hashedPassword).Error; err != nil {
-		response.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, errorx.DatabaseQueryError, "")
 		return
 	}
 
@@ -435,7 +439,7 @@ func GetUserList(ctx *gin.Context) {
 	// 查询总数
 	var total int64
 	if err := db.Count(&total).Error; err != nil {
-		response.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, errorx.DatabaseQueryError, "")
 		return
 	}
 
@@ -444,12 +448,12 @@ func GetUserList(ctx *gin.Context) {
 	_, err1 := fmt.Sscanf(page, "%d", &pageNum)
 	_, err2 := fmt.Sscanf(pageSize, "%d", &pageSizeNum)
 	if err1 != nil || err2 != nil || pageNum <= 0 || pageSizeNum <= 0 {
-		response.Fail(ctx, code.InvalidParams, "分页参数无效")
+		response.Fail(ctx, errorx.InvalidParams, "分页参数无效")
 		return
 	}
 
 	if err := db.Offset((pageNum - 1) * pageSizeNum).Limit(pageSizeNum).Find(&users).Error; err != nil {
-		response.Fail(ctx, code.DatabaseQueryError, "")
+		response.Fail(ctx, errorx.DatabaseQueryError, "")
 		return
 	}
 

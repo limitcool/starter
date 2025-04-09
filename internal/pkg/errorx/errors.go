@@ -1,10 +1,9 @@
-package errors
+package errorx
 
 import (
 	"errors"
 	"strings"
 
-	"github.com/limitcool/starter/internal/pkg/code"
 	"go.mongodb.org/mongo-driver/mongo"
 	"gorm.io/gorm"
 )
@@ -217,7 +216,7 @@ const (
 
 // WithCode 创建带错误码的错误
 func WithCode(errCode int, message string) error {
-	return code.NewErrCodeMsg(errCode, message)
+	return NewErrCodeMsg(errCode, message)
 }
 
 // 错误类型判断函数
@@ -240,8 +239,8 @@ func IsNotFound(err error) bool {
 	}
 
 	// 检查是否为自定义的NotFound错误码
-	var codeErr *code.CodeError
-	if errors.As(err, &codeErr) && codeErr.GetErrCode() == code.ErrorNotFound {
+	var codeErr *CodeError
+	if errors.As(err, &codeErr) && codeErr.GetErrCode() == ErrorNotFound {
 		return true
 	}
 
@@ -266,8 +265,8 @@ func IsDuplicate(err error) bool {
 	}
 
 	// 检查是否为自定义的重复错误码
-	var codeErr *code.CodeError
-	if errors.As(err, &codeErr) && codeErr.GetErrCode() == code.UserAlreadyExists {
+	var codeErr *CodeError
+	if errors.As(err, &codeErr) && codeErr.GetErrCode() == UserAlreadyExists {
 		return true
 	}
 
@@ -287,8 +286,8 @@ func IsPermissionDenied(err error) bool {
 	}
 
 	// 检查是否为自定义的权限拒绝错误码
-	var codeErr *code.CodeError
-	if errors.As(err, &codeErr) && (codeErr.GetErrCode() == code.AccessDenied || codeErr.GetErrCode() == code.UserNoPermission) {
+	var codeErr *CodeError
+	if errors.As(err, &codeErr) && (codeErr.GetErrCode() == AccessDenied || codeErr.GetErrCode() == UserNoPermission) {
 		return true
 	}
 
@@ -308,13 +307,13 @@ func IsAuthenticationFailed(err error) bool {
 	}
 
 	// 检查是否为自定义的认证错误码
-	var codeErr *code.CodeError
+	var codeErr *CodeError
 	if errors.As(err, &codeErr) &&
-		(codeErr.GetErrCode() == code.UserNoLogin ||
-			codeErr.GetErrCode() == code.UserTokenError ||
-			codeErr.GetErrCode() == code.UserTokenExpired ||
-			codeErr.GetErrCode() == code.UserPasswordError ||
-			codeErr.GetErrCode() == code.UserNameOrPasswordError) {
+		(codeErr.GetErrCode() == UserNoLogin ||
+			codeErr.GetErrCode() == UserTokenError ||
+			codeErr.GetErrCode() == UserTokenExpired ||
+			codeErr.GetErrCode() == UserPasswordError ||
+			codeErr.GetErrCode() == UserNameOrPasswordError) {
 		return true
 	}
 
@@ -357,12 +356,12 @@ func IsDBError(err error) bool {
 	}
 
 	// 检查是否为自定义的数据库错误码
-	var codeErr *code.CodeError
+	var codeErr *CodeError
 	if errors.As(err, &codeErr) &&
-		(codeErr.GetErrCode() == code.ErrorDatabase ||
-			codeErr.GetErrCode() == code.DatabaseInsertError ||
-			codeErr.GetErrCode() == code.DatabaseDeleteError ||
-			codeErr.GetErrCode() == code.DatabaseQueryError) {
+		(codeErr.GetErrCode() == ErrorDatabase ||
+			codeErr.GetErrCode() == DatabaseInsertError ||
+			codeErr.GetErrCode() == DatabaseDeleteError ||
+			codeErr.GetErrCode() == DatabaseQueryError) {
 		return true
 	}
 
@@ -411,12 +410,12 @@ func IsCacheError(err error) bool {
 	}
 
 	// 检查是否为自定义的缓存错误码
-	var codeErr *code.CodeError
+	var codeErr *CodeError
 	if errors.As(err, &codeErr) &&
-		(codeErr.GetErrCode() == code.ErrorCache ||
-			codeErr.GetErrCode() == code.ErrorCacheTimeout ||
-			codeErr.GetErrCode() == code.ErrorCacheKey ||
-			codeErr.GetErrCode() == code.ErrorCacheValue) {
+		(codeErr.GetErrCode() == ErrorCache ||
+			codeErr.GetErrCode() == ErrorCacheTimeout ||
+			codeErr.GetErrCode() == ErrorCacheKey ||
+			codeErr.GetErrCode() == ErrorCacheValue) {
 		return true
 	}
 
@@ -450,8 +449,8 @@ func IsValidationError(err error) bool {
 	}
 
 	// 检查是否为自定义的参数错误码
-	var codeErr *code.CodeError
-	if errors.As(err, &codeErr) && codeErr.GetErrCode() == code.InvalidParams {
+	var codeErr *CodeError
+	if errors.As(err, &codeErr) && codeErr.GetErrCode() == InvalidParams {
 		return true
 	}
 
@@ -496,11 +495,11 @@ func isOSSError(err error) bool {
 // ParseError 解析错误并返回对应的错误码和消息
 func ParseError(err error) (int, string) {
 	if err == nil {
-		return code.Success, code.GetMsg(code.Success)
+		return Success, GetMsg(Success)
 	}
 
 	// 如果是自定义错误码，直接使用错误码和消息
-	var codeErr *code.CodeError
+	var codeErr *CodeError
 	if errors.As(err, &codeErr) {
 		return codeErr.GetErrCode(), codeErr.GetErrMsg()
 	}
@@ -509,25 +508,25 @@ func ParseError(err error) (int, string) {
 	if IsNotFound(err) {
 		var notFoundErr *NotFoundError
 		if errors.As(err, &notFoundErr) && notFoundErr.Resource != "" {
-			return code.ErrorNotFound, notFoundErr.Resource + "不存在"
+			return ErrorNotFound, notFoundErr.Resource + "不存在"
 		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return code.ErrorNotFound, "记录不存在"
+			return ErrorNotFound, "记录不存在"
 		}
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return code.ErrorNotFound, "文档不存在"
+			return ErrorNotFound, "文档不存在"
 		}
-		return code.ErrorNotFound, code.GetMsg(code.ErrorNotFound)
+		return ErrorNotFound, GetMsg(ErrorNotFound)
 	}
 
 	// 判断重复错误
 	if IsDuplicate(err) {
 		var dupErr *DuplicateError
 		if errors.As(err, &dupErr) && dupErr.Resource != "" {
-			return code.UserAlreadyExists, dupErr.Resource + "已存在"
+			return UserAlreadyExists, dupErr.Resource + "已存在"
 		}
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return code.UserAlreadyExists, "记录已存在"
+			return UserAlreadyExists, "记录已存在"
 		}
 
 		// 检查MongoDB的重复键错误
@@ -535,81 +534,81 @@ func ParseError(err error) (int, string) {
 		if errors.As(err, &writeErr) {
 			for _, we := range writeErr.WriteErrors {
 				if we.Code == 11000 { // MongoDB重复键错误码
-					return code.UserAlreadyExists, "记录已存在"
+					return UserAlreadyExists, "记录已存在"
 				}
 			}
 		}
 
-		return code.UserAlreadyExists, code.GetMsg(code.UserAlreadyExists)
+		return UserAlreadyExists, GetMsg(UserAlreadyExists)
 	}
 
 	// 判断权限错误
 	if IsPermissionDenied(err) {
 		var permErr *PermissionDeniedError
 		if errors.As(err, &permErr) && permErr.Resource != "" && permErr.Action != "" {
-			return code.AccessDenied, "您没有权限" + permErr.Action + permErr.Resource
+			return AccessDenied, "您没有权限" + permErr.Action + permErr.Resource
 		}
-		return code.AccessDenied, code.GetMsg(code.AccessDenied)
+		return AccessDenied, GetMsg(AccessDenied)
 	}
 
 	// 判断认证错误
 	if IsAuthenticationFailed(err) {
 		var authErr *AuthenticationError
 		if errors.As(err, &authErr) && authErr.Reason != "" {
-			return code.UserAuthFailed, "认证失败：" + authErr.Reason
+			return UserAuthFailed, "认证失败：" + authErr.Reason
 		}
-		return code.UserAuthFailed, code.GetMsg(code.UserAuthFailed)
+		return UserAuthFailed, GetMsg(UserAuthFailed)
 	}
 
 	// 判断数据库错误
 	if IsDBError(err) {
 		if errors.Is(err, gorm.ErrForeignKeyViolated) {
-			return code.ErrorDatabase, "关联数据约束错误，请先删除相关数据"
+			return ErrorDatabase, "关联数据约束错误，请先删除相关数据"
 		}
 
 		// 详细处理GORM常见错误
 		if errors.Is(err, gorm.ErrInvalidTransaction) {
-			return code.ErrorDatabase, "数据库事务无效"
+			return ErrorDatabase, "数据库事务无效"
 		}
 		if errors.Is(err, gorm.ErrNotImplemented) {
-			return code.ErrorDatabase, "数据库操作未实现"
+			return ErrorDatabase, "数据库操作未实现"
 		}
 		if errors.Is(err, gorm.ErrMissingWhereClause) {
-			return code.ErrorDatabase, "数据库操作缺少WHERE条件"
+			return ErrorDatabase, "数据库操作缺少WHERE条件"
 		}
 		if errors.Is(err, gorm.ErrUnsupportedRelation) {
-			return code.ErrorDatabase, "数据库不支持的关联关系"
+			return ErrorDatabase, "数据库不支持的关联关系"
 		}
 		if errors.Is(err, gorm.ErrPrimaryKeyRequired) {
-			return code.ErrorDatabase, "数据库操作需要主键"
+			return ErrorDatabase, "数据库操作需要主键"
 		}
 		if errors.Is(err, gorm.ErrModelValueRequired) {
-			return code.ErrorDatabase, "数据库模型值为空"
+			return ErrorDatabase, "数据库模型值为空"
 		}
 
 		// 检查MongoDB错误
 		if isMongoDBError(err) {
 			var cmdErr mongo.CommandError
 			if errors.As(err, &cmdErr) {
-				return code.ErrorDatabase, "MongoDB命令错误: " + cmdErr.Message
+				return ErrorDatabase, "MongoDB命令错误: " + cmdErr.Message
 			}
 
 			if mongo.IsTimeout(err) {
-				return code.ErrorDatabase, "MongoDB操作超时"
+				return ErrorDatabase, "MongoDB操作超时"
 			}
 
 			if mongo.IsNetworkError(err) {
-				return code.ErrorDatabase, "MongoDB网络错误"
+				return ErrorDatabase, "MongoDB网络错误"
 			}
 
-			return code.ErrorDatabase, "MongoDB操作失败"
+			return ErrorDatabase, "MongoDB操作失败"
 		}
 
 		var dbErr *DatabaseError
 		if errors.As(err, &dbErr) && dbErr.Operation != "" {
-			return code.ErrorDatabase, "数据库" + dbErr.Operation + "操作失败"
+			return ErrorDatabase, "数据库" + dbErr.Operation + "操作失败"
 		}
-		return code.ErrorDatabase, code.GetMsg(code.ErrorDatabase)
+		return ErrorDatabase, GetMsg(ErrorDatabase)
 	}
 
 	// 判断缓存错误
@@ -617,27 +616,27 @@ func ParseError(err error) (int, string) {
 		var cacheErr *CacheError
 		if errors.As(err, &cacheErr) && cacheErr.Operation != "" {
 			if cacheErr.Key != "" {
-				return code.ErrorCache, "缓存" + cacheErr.Operation + "操作失败，键：" + cacheErr.Key
+				return ErrorCache, "缓存" + cacheErr.Operation + "操作失败，键：" + cacheErr.Key
 			}
-			return code.ErrorCache, "缓存" + cacheErr.Operation + "操作失败"
+			return ErrorCache, "缓存" + cacheErr.Operation + "操作失败"
 		}
 
 		// Redis错误处理
 		if isRedisError(err) {
 			errMsg := err.Error()
 			if strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "connection reset") {
-				return code.ErrorCache, "Redis连接失败"
+				return ErrorCache, "Redis连接失败"
 			}
 			if strings.Contains(errMsg, "connection timeout") {
-				return code.ErrorCacheTimeout, "Redis连接超时"
+				return ErrorCacheTimeout, "Redis连接超时"
 			}
 			if strings.Contains(errMsg, "nil") {
-				return code.ErrorCacheKey, "Redis键不存在"
+				return ErrorCacheKey, "Redis键不存在"
 			}
-			return code.ErrorCache, "Redis操作失败"
+			return ErrorCache, "Redis操作失败"
 		}
 
-		return code.ErrorCache, code.GetMsg(code.ErrorCache)
+		return ErrorCache, GetMsg(ErrorCache)
 	}
 
 	// 判断验证错误
@@ -645,11 +644,11 @@ func ParseError(err error) (int, string) {
 		var validErr *ValidationError
 		if errors.As(err, &validErr) {
 			if validErr.Field != "" {
-				return code.InvalidParams, "参数" + validErr.Field + "错误：" + validErr.Message
+				return InvalidParams, "参数" + validErr.Field + "错误：" + validErr.Message
 			}
-			return code.InvalidParams, validErr.Message
+			return InvalidParams, validErr.Message
 		}
-		return code.InvalidParams, code.GetMsg(code.InvalidParams)
+		return InvalidParams, GetMsg(InvalidParams)
 	}
 
 	// 判断文件存储错误
@@ -658,27 +657,27 @@ func ParseError(err error) (int, string) {
 		if errors.As(err, &storageErr) {
 			if storageErr.Operation != "" {
 				if storageErr.Path != "" {
-					return code.ErrorUnknown, "文件" + storageErr.Operation + "操作失败，路径：" + storageErr.Path
+					return ErrorUnknown, "文件" + storageErr.Operation + "操作失败，路径：" + storageErr.Path
 				}
-				return code.ErrorUnknown, "文件" + storageErr.Operation + "操作失败"
+				return ErrorUnknown, "文件" + storageErr.Operation + "操作失败"
 			}
 		}
 
 		// 特定OSS错误处理
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "not found") || strings.Contains(errMsg, ErrStorageNotFound) {
-			return code.ErrorNotFound, "文件不存在"
+			return ErrorNotFound, "文件不存在"
 		}
 		if strings.Contains(errMsg, "already exists") || strings.Contains(errMsg, ErrStorageExists) {
-			return code.Error, "文件已存在"
+			return Error, "文件已存在"
 		}
 		if strings.Contains(errMsg, "forbidden") || strings.Contains(errMsg, "permission denied") || strings.Contains(errMsg, ErrStorageForbidden) {
-			return code.AccessDenied, "没有文件操作权限"
+			return AccessDenied, "没有文件操作权限"
 		}
 
-		return code.Error, "文件操作失败"
+		return Error, "文件操作失败"
 	}
 
 	// 其他错误
-	return code.ErrorUnknown, code.GetMsg(code.ErrorUnknown)
+	return ErrorUnknown, GetMsg(ErrorUnknown)
 }

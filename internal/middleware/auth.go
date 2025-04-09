@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/pkg/code"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/jwt"
 	"github.com/limitcool/starter/internal/services"
 )
@@ -27,7 +27,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// 如果没有token,返回错误并中止
 		if token == "" {
-			response.Unauthorized(c, code.GetMsg(code.UserAuthFailed))
+			response.Unauthorized(c, errorx.GetMsg(errorx.UserAuthFailed))
 			c.Abort()
 			return
 		}
@@ -35,7 +35,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		log.Debug("Authentication token received", "token", token)
 		claims, err := jwt.ParseToken(token, services.Instance().GetConfig().JwtAuth.AccessSecret)
 		if err != nil {
-			response.Unauthorized(c, code.GetMsg(code.UserAuthFailed)+":"+err.Error())
+			response.Unauthorized(c, errorx.GetMsg(errorx.UserAuthFailed)+":"+err.Error())
 			c.Abort()
 			return
 		}
@@ -70,7 +70,7 @@ func JWTAuth() gin.HandlerFunc {
 
 		// 如果没有token,返回错误并中止
 		if token == "" {
-			response.Unauthorized(c, code.GetMsg(code.UserNoLogin))
+			response.Unauthorized(c, errorx.GetMsg(errorx.UserNoLogin))
 			c.Abort()
 			return
 		}
@@ -78,7 +78,7 @@ func JWTAuth() gin.HandlerFunc {
 		// 解析token
 		claims, err := jwt.ParseToken(token, services.Instance().GetConfig().JwtAuth.AccessSecret)
 		if err != nil {
-			response.Unauthorized(c, code.GetMsg(code.UserTokenError)+":"+err.Error())
+			response.Unauthorized(c, errorx.GetMsg(errorx.UserTokenError)+":"+err.Error())
 			c.Abort()
 			return
 		}

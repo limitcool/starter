@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/pkg/code"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
 	"gorm.io/gorm"
 )
@@ -35,7 +35,7 @@ func CasbinMiddleware(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		if !ok {
-			response.Forbidden(c, code.GetMsg(code.AccessDenied))
+			response.Forbidden(c, errorx.GetMsg(errorx.AccessDenied))
 			c.Abort()
 			return
 		}
@@ -71,7 +71,7 @@ func PermissionMiddleware(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		if !ok {
-			response.Forbidden(c, code.GetMsg(code.AccessDenied))
+			response.Forbidden(c, errorx.GetMsg(errorx.AccessDenied))
 			c.Abort()
 			return
 		}

@@ -6,8 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/internal/pkg/code"
-	"github.com/limitcool/starter/internal/pkg/errors"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 )
 
 // Response API标准响应结构
@@ -39,7 +38,7 @@ func NewPageResult[T any](list T, total int64, page, pageSize int) *PageResult[T
 func Send[T any](c *gin.Context, httpStatus int, errCode int, message string, data T) {
 	// 如果没有自定义消息，则使用错误码对应的默认消息
 	if message == "" {
-		message = code.GetMsg(errCode)
+		message = errorx.GetMsg(errCode)
 	}
 
 	c.JSON(httpStatus, Response[T]{
@@ -51,12 +50,12 @@ func Send[T any](c *gin.Context, httpStatus int, errCode int, message string, da
 
 // Success 成功响应
 func Success[T any](c *gin.Context, data T) {
-	Send(c, http.StatusOK, code.Success, code.GetMsg(code.Success), data)
+	Send(c, http.StatusOK, errorx.Success, errorx.GetMsg(errorx.Success), data)
 }
 
 // SuccessWithMsg 带消息的成功响应
 func SuccessWithMsg[T any](c *gin.Context, message string, data T) {
-	Send(c, http.StatusOK, code.Success, message, data)
+	Send(c, http.StatusOK, errorx.Success, message, data)
 }
 
 // Fail 失败响应
@@ -72,42 +71,42 @@ func Error(c *gin.Context, httpStatus int, errorCode int, message string) {
 // ParamError 参数错误响应
 func ParamError(c *gin.Context, message string) {
 	if message == "" {
-		message = code.GetMsg(code.InvalidParams)
+		message = errorx.GetMsg(errorx.InvalidParams)
 	}
-	Send[any](c, http.StatusBadRequest, code.InvalidParams, message, nil)
+	Send[any](c, http.StatusBadRequest, errorx.InvalidParams, message, nil)
 }
 
 // ServerError 服务器错误响应
 func ServerError(c *gin.Context, message ...string) {
-	msg := code.GetMsg(code.ErrorInternal)
+	msg := errorx.GetMsg(errorx.ErrorInternal)
 	if len(message) > 0 && message[0] != "" {
 		msg = message[0]
 	}
-	Send[any](c, http.StatusInternalServerError, code.ErrorInternal, msg, nil)
+	Send[any](c, http.StatusInternalServerError, errorx.ErrorInternal, msg, nil)
 }
 
 // Unauthorized 未授权响应
 func Unauthorized(c *gin.Context, message string) {
 	if message == "" {
-		message = code.GetMsg(code.UserNoLogin)
+		message = errorx.GetMsg(errorx.UserNoLogin)
 	}
-	Send[any](c, http.StatusUnauthorized, code.UserNoLogin, message, nil)
+	Send[any](c, http.StatusUnauthorized, errorx.UserNoLogin, message, nil)
 }
 
 // NotFound 资源不存在响应
 func NotFound(c *gin.Context, message string) {
 	if message == "" {
-		message = code.GetMsg(code.ErrorNotFound)
+		message = errorx.GetMsg(errorx.ErrorNotFound)
 	}
-	Send[any](c, http.StatusNotFound, code.ErrorNotFound, message, nil)
+	Send[any](c, http.StatusNotFound, errorx.ErrorNotFound, message, nil)
 }
 
 // Forbidden 禁止访问响应
 func Forbidden(c *gin.Context, message string) {
 	if message == "" {
-		message = code.GetMsg(code.AccessDenied)
+		message = errorx.GetMsg(errorx.AccessDenied)
 	}
-	Send[any](c, http.StatusForbidden, code.AccessDenied, message, nil)
+	Send[any](c, http.StatusForbidden, errorx.AccessDenied, message, nil)
 }
 
 // HandleError 统一处理错误并返回响应
@@ -117,20 +116,20 @@ func HandleError(c *gin.Context, err error) {
 	}
 
 	// 使用errors包解析错误
-	errCode, errMsg := errors.ParseError(err)
+	errCode, errMsg := errorx.ParseError(err)
 
 	// 根据错误类型决定HTTP状态码
 	httpStatus := http.StatusOK
 
-	if errors.IsAuthenticationFailed(err) {
+	if errorx.IsAuthenticationFailed(err) {
 		httpStatus = http.StatusUnauthorized
-	} else if errors.IsPermissionDenied(err) {
+	} else if errorx.IsPermissionDenied(err) {
 		httpStatus = http.StatusForbidden
-	} else if errors.IsValidationError(err) {
+	} else if errorx.IsValidationError(err) {
 		httpStatus = http.StatusBadRequest
-	} else if errors.IsNotFound(err) {
+	} else if errorx.IsNotFound(err) {
 		httpStatus = http.StatusNotFound
-	} else if errors.IsDBError(err) || errors.IsCacheError(err) {
+	} else if errorx.IsDBError(err) || errorx.IsCacheError(err) {
 		httpStatus = http.StatusInternalServerError
 	}
 

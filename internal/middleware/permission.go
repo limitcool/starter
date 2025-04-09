@@ -7,12 +7,12 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/pkg/code"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/casbin"
 )
 
-// CasbinComponentMiddleware 基于Casbin组件的权限控制中间件
+// CasbinComponentMiddleware 基于路径和方法的权限控制中间件
 func CasbinComponentMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
@@ -25,7 +25,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 		// 从上下文中获取用户ID
 		userIDInterface, exists := c.Get("userID")
 		if !exists {
-			response.Unauthorized(c, code.GetMsg(code.UserAuthFailed))
+			response.Unauthorized(c, errorx.GetMsg(errorx.UserAuthFailed))
 			c.Abort()
 			return
 		}
@@ -62,7 +62,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 			roles, _ := enforcer.GetRolesForUser(userID)
 			log.Debug("权限检查失败", "userID", userID, "roles", strings.Join(roles, ","))
 
-			response.Forbidden(c, code.GetMsg(code.AccessDenied))
+			response.Forbidden(c, errorx.GetMsg(errorx.AccessDenied))
 			c.Abort()
 			return
 		}
@@ -93,7 +93,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		// 从上下文中获取用户ID
 		userIDInterface, exists := c.Get("userID")
 		if !exists {
-			response.Unauthorized(c, code.GetMsg(code.UserAuthFailed))
+			response.Unauthorized(c, errorx.GetMsg(errorx.UserAuthFailed))
 			c.Abort()
 			return
 		}
@@ -140,7 +140,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		}
 
 		if !hasPermission {
-			response.Forbidden(c, code.GetMsg(code.AccessDenied))
+			response.Forbidden(c, errorx.GetMsg(errorx.AccessDenied))
 			c.Abort()
 			return
 		}
