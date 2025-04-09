@@ -3,6 +3,7 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 )
 
 // AuthSystemUser 验证是否系统用户中间件
@@ -10,14 +11,14 @@ func AuthSystemUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userType, exists := c.Get("userType")
 		if !exists {
-			response.Unauthorized(c, "未授权访问")
+			response.Error(c, errorx.ErrUserAuthFailed)
 			c.Abort()
 			return
 		}
 
 		// 验证是否系统用户
 		if userType != "system" {
-			response.Forbidden(c, "访问被拒绝，需要系统用户权限")
+			response.Error(c, errorx.ErrAccessDenied)
 			c.Abort()
 			return
 		}
@@ -31,14 +32,14 @@ func AuthNormalUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userType, exists := c.Get("userType")
 		if !exists {
-			response.Unauthorized(c, "未授权访问")
+			response.Error(c, errorx.ErrUserAuthFailed)
 			c.Abort()
 			return
 		}
 
 		// 验证是否普通用户
 		if userType != "user" {
-			response.Forbidden(c, "访问被拒绝，需要普通用户权限")
+			response.Error(c, errorx.ErrAccessDenied)
 			c.Abort()
 			return
 		}

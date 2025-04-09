@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	v1 "github.com/limitcool/starter/internal/api/v1"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
 )
 
@@ -21,7 +22,7 @@ func (olc *OperationLogController) GetOperationLogs(c *gin.Context) {
 	// 解析查询参数
 	var query v1.OperationLogQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
-		response.ParamError(c, "无效的查询参数")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
@@ -37,7 +38,7 @@ func (olc *OperationLogController) GetOperationLogs(c *gin.Context) {
 	opLogService := services.NewOperationLogService()
 	result, err := opLogService.GetOperationLogs(&query)
 	if err != nil {
-		response.ServerError(c)
+		response.Error(c, err)
 		return
 	}
 
@@ -48,13 +49,13 @@ func (olc *OperationLogController) GetOperationLogs(c *gin.Context) {
 func (olc *OperationLogController) DeleteOperationLog(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.ParamError(c, "无效的ID参数")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	opLogService := services.NewOperationLogService()
 	if err := opLogService.DeleteOperationLog(uint(id)); err != nil {
-		response.ServerError(c)
+		response.Error(c, err)
 		return
 	}
 
@@ -65,13 +66,13 @@ func (olc *OperationLogController) DeleteOperationLog(c *gin.Context) {
 func (olc *OperationLogController) ClearOperationLogs(c *gin.Context) {
 	var req v1.OperationLogBatchDeleteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ParamError(c, "无效的请求参数")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	opLogService := services.NewOperationLogService()
 	if err := opLogService.BatchDeleteOperationLogs(req.IDs); err != nil {
-		response.ServerError(c)
+		response.Error(c, err)
 		return
 	}
 

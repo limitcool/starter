@@ -27,7 +27,8 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// 如果没有token,返回错误并中止
 		if token == "" {
-			response.Unauthorized(c, errorx.GetMsg(errorx.UserAuthFailed))
+			log.Error("No authentication token provided")
+			response.Error(c, errorx.ErrUserAuthFailed)
 			c.Abort()
 			return
 		}
@@ -35,7 +36,8 @@ func AuthMiddleware() gin.HandlerFunc {
 		log.Debug("Authentication token received", "token", token)
 		claims, err := jwt.ParseToken(token, services.Instance().GetConfig().JwtAuth.AccessSecret)
 		if err != nil {
-			response.Unauthorized(c, errorx.GetMsg(errorx.UserAuthFailed)+":"+err.Error())
+			log.Error("Authentication token parse failed", "error", err)
+			response.Error(c, errorx.ErrUserAuthFailed)
 			c.Abort()
 			return
 		}
@@ -70,7 +72,8 @@ func JWTAuth() gin.HandlerFunc {
 
 		// 如果没有token,返回错误并中止
 		if token == "" {
-			response.Unauthorized(c, errorx.GetMsg(errorx.UserNoLogin))
+			log.Error("No authentication token provided")
+			response.Error(c, errorx.ErrUserNoLogin)
 			c.Abort()
 			return
 		}
@@ -78,7 +81,8 @@ func JWTAuth() gin.HandlerFunc {
 		// 解析token
 		claims, err := jwt.ParseToken(token, services.Instance().GetConfig().JwtAuth.AccessSecret)
 		if err != nil {
-			response.Unauthorized(c, errorx.GetMsg(errorx.UserTokenError)+":"+err.Error())
+			log.Error("Authentication token parse failed", "error", err)
+			response.Error(c, errorx.ErrUserTokenError)
 			c.Abort()
 			return
 		}

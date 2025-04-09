@@ -21,7 +21,7 @@ func CasbinMiddleware(db *gorm.DB) gin.HandlerFunc {
 		// 创建Casbin服务
 		casbinService := services.NewCasbinService()
 		if casbinService == nil {
-			response.ServerError(c)
+			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
 			return
 		}
@@ -29,13 +29,13 @@ func CasbinMiddleware(db *gorm.DB) gin.HandlerFunc {
 		// 检查权限
 		ok, err := casbinService.CheckPermission(sub, obj, act)
 		if err != nil {
-			response.ServerError(c)
+			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
 			return
 		}
 
 		if !ok {
-			response.Forbidden(c, errorx.GetMsg(errorx.AccessDenied))
+			response.Error(c, errorx.ErrAccessDenied)
 			c.Abort()
 			return
 		}
@@ -57,7 +57,7 @@ func PermissionMiddleware(db *gorm.DB) gin.HandlerFunc {
 		// 创建Casbin服务
 		casbinService := services.NewCasbinService()
 		if casbinService == nil {
-			response.ServerError(c)
+			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
 			return
 		}
@@ -65,13 +65,13 @@ func PermissionMiddleware(db *gorm.DB) gin.HandlerFunc {
 		// 检查权限
 		ok, err := casbinService.CheckPermission(sub, obj, act)
 		if err != nil {
-			response.ServerError(c)
+			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
 			return
 		}
 
 		if !ok {
-			response.Forbidden(c, errorx.GetMsg(errorx.AccessDenied))
+			response.Error(c, errorx.ErrAccessDenied)
 			c.Abort()
 			return
 		}

@@ -25,7 +25,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 		// 从上下文中获取用户ID
 		userIDInterface, exists := c.Get("userID")
 		if !exists {
-			response.Unauthorized(c, errorx.GetMsg(errorx.UserAuthFailed))
+			response.Error(c, errorx.ErrUserAuthFailed)
 			c.Abort()
 			return
 		}
@@ -41,7 +41,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 		// 获取Casbin实例
 		enforcer := casbin.GetEnforcer()
 		if enforcer == nil {
-			response.ServerError(c)
+			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
 			return
 		}
@@ -52,7 +52,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 		pass, err := enforcer.Enforce(userID, obj, act)
 		if err != nil {
 			log.Error("权限检查错误", "error", err)
-			response.ServerError(c)
+			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
 			return
 		}
@@ -62,7 +62,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 			roles, _ := enforcer.GetRolesForUser(userID)
 			log.Debug("权限检查失败", "userID", userID, "roles", strings.Join(roles, ","))
 
-			response.Forbidden(c, errorx.GetMsg(errorx.AccessDenied))
+			response.Error(c, errorx.ErrAccessDenied)
 			c.Abort()
 			return
 		}
@@ -93,7 +93,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		// 从上下文中获取用户ID
 		userIDInterface, exists := c.Get("userID")
 		if !exists {
-			response.Unauthorized(c, errorx.GetMsg(errorx.UserAuthFailed))
+			response.Error(c, errorx.ErrUserAuthFailed)
 			c.Abort()
 			return
 		}
@@ -103,7 +103,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		// 获取Casbin实例
 		enforcer := casbin.GetEnforcer()
 		if enforcer == nil {
-			response.ServerError(c)
+			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
 			return
 		}
@@ -112,7 +112,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		roles, err := enforcer.GetRolesForUser(userID)
 		if err != nil {
 			log.Error("获取用户角色失败", "error", err)
-			response.ServerError(c)
+			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
 			return
 		}
@@ -140,7 +140,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		}
 
 		if !hasPermission {
-			response.Forbidden(c, errorx.GetMsg(errorx.AccessDenied))
+			response.Error(c, errorx.ErrAccessDenied)
 			c.Abort()
 			return
 		}

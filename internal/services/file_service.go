@@ -12,7 +12,6 @@ import (
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/storage"
-	"gorm.io/gorm"
 )
 
 // FileService 文件服务
@@ -30,7 +29,7 @@ func NewFileService(storage *storage.Storage) *FileService {
 // UploadFile 上传文件
 func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeader, fileType, uploader string) (*model.File, error) {
 	if fileHeader == nil {
-		return nil, errorx.NewValidationError("file", "文件不能为空")
+		return nil, errorx.ErrInvalidParams
 	}
 
 	// 获取文件基本信息
@@ -41,18 +40,18 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 
 	// 验证文件类型
 	if !isAllowedFileType(ext, fileType) {
-		return nil, errorx.NewValidationError("file", "不支持的文件类型")
+		return nil, errorx.ErrInvalidParams
 	}
 
 	// 验证文件大小
 	if !isAllowedFileSize(size, fileType) {
-		return nil, errorx.NewValidationError("file", "文件大小超出限制")
+		return nil, errorx.ErrInvalidParams.WithMsg("文件大小超出限制")
 	}
 
 	// 打开上传的文件
 	file, err := fileHeader.Open()
 	if err != nil {
-		return nil, errorx.NewStorageError("读取", originalName, err)
+		return nil, errorx.ErrInvalidParams.WithError(err)
 	}
 	defer file.Close()
 
@@ -63,13 +62,13 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 	// 上传文件到存储
 	err = s.storage.Put(storagePath, file)
 	if err != nil {
-		return nil, errorx.NewStorageError("上传", storagePath, err)
+		return nil, errorx.ErrFileStroage.WithError(err)
 	}
 
 	// 获取文件访问URL
 	fileURL, err := s.storage.GetURL(storagePath)
 	if err != nil {
-		return nil, errorx.NewStorageError("获取URL", storagePath, err)
+		return nil, errorx.ErrFileStroage.WithError(err)
 	}
 
 	// 记录到数据库
@@ -97,7 +96,7 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 	}
 
 	if err := db.Create(fileModel).Error; err != nil {
-		return nil, errorx.NewDatabaseError("创建文件记录", err)
+		return nil, errorx.ErrDatabase.WithError(err)
 	}
 
 	return fileModel, nil
@@ -107,10 +106,7 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 func (s *FileService) GetFile(id string) (*model.File, error) {
 	var file model.File
 	if err := db.First(&file, id).Error; err != nil {
-		if errorx.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errorx.NewNotFoundError("文件", id)
-		}
-		return nil, errorx.NewDatabaseError("查询", err)
+		return nil, errorx.ErrNotFound.WithError(err)
 	}
 	return &file, nil
 }
@@ -119,20 +115,19 @@ func (s *FileService) GetFile(id string) (*model.File, error) {
 func (s *FileService) DeleteFile(id string) error {
 	var file model.File
 	if err := db.First(&file, id).Error; err != nil {
-		if errorx.Is(err, gorm.ErrRecordNotFound) {
-			return errorx.NewNotFoundError("文件", id)
-		}
-		return errorx.NewDatabaseError("查询", err)
+
+		return errorx.ErrNotFound.WithError(err)
+
 	}
 
 	// 删除存储中的文件
 	if err := s.storage.Delete(file.Path); err != nil {
-		return errorx.NewStorageError("删除", file.Path, err)
+		return errorx.ErrFileStroage.WithError(err)
 	}
 
 	// 从数据库中删除记录
 	if err := db.Delete(&file).Error; err != nil {
-		return errorx.NewDatabaseError("删除", err)
+		return errorx.ErrDatabase.WithError(err)
 	}
 
 	return nil
@@ -142,16 +137,13 @@ func (s *FileService) DeleteFile(id string) error {
 func (s *FileService) GetFileContent(id string) (io.ReadCloser, string, error) {
 	var file model.File
 	if err := db.First(&file, id).Error; err != nil {
-		if errorx.Is(err, gorm.ErrRecordNotFound) {
-			return nil, "", errorx.NewNotFoundError("文件", id)
-		}
-		return nil, "", errorx.NewDatabaseError("查询", err)
+		return nil, "", errorx.ErrNotFound.WithError(err)
 	}
 
 	// 获取文件流
 	fileStream, err := s.storage.GetStream(file.Path)
 	if err != nil {
-		return nil, "", errorx.NewStorageError("读取", file.Path, err)
+		return nil, "", errorx.ErrFileStroage.WithError(err)
 	}
 
 	return fileStream, file.MimeType, nil
@@ -168,16 +160,13 @@ func (s *FileService) UpdateUserAvatar(userID string, fileHeader *multipart.File
 	// 查找用户
 	user := model.User{}
 	if err := db.First(&user, userID).Error; err != nil {
-		if errorx.Is(err, gorm.ErrRecordNotFound) {
-			return "", errorx.NewNotFoundError("用户", userID)
-		}
-		return "", errorx.NewDatabaseError("查询", err)
+		return "", errorx.ErrNotFound.WithError(err)
 	}
 
 	// 更新用户头像
 	user.Avatar = fmt.Sprintf("%d", file.ID)
 	if err := db.Save(&user).Error; err != nil {
-		return "", errorx.NewDatabaseError("更新", err)
+		return "", errorx.ErrDatabase.WithError(err)
 	}
 
 	return file.URL, nil
@@ -194,16 +183,13 @@ func (s *FileService) UpdateSysUserAvatar(userID string, fileHeader *multipart.F
 	// 查找系统用户
 	sysUser := model.SysUser{}
 	if err := db.First(&sysUser, userID).Error; err != nil {
-		if errorx.Is(err, gorm.ErrRecordNotFound) {
-			return "", errorx.NewNotFoundError("系统用户", userID)
-		}
-		return "", errorx.NewDatabaseError("查询", err)
+		return "", errorx.ErrNotFound.WithError(err)
 	}
 
 	// 更新用户头像
 	sysUser.Avatar = fmt.Sprintf("%d", file.ID)
 	if err := db.Save(&sysUser).Error; err != nil {
-		return "", errorx.NewDatabaseError("更新", err)
+		return "", errorx.ErrDatabase.WithError(err)
 	}
 
 	return file.URL, nil

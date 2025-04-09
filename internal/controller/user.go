@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	v1 "github.com/limitcool/starter/internal/api/v1"
@@ -22,7 +23,8 @@ type UserController struct {
 func (uc *UserController) UserLogin(ctx *gin.Context) {
 	var req v1.LoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		response.ParamError(ctx, "无效的请求参数")
+		log.Error("UserLogin 无效的请求参数", "err", err)
+		response.Error(ctx, errorx.ErrInvalidParams)
 		return
 	}
 
@@ -31,10 +33,10 @@ func (uc *UserController) UserLogin(ctx *gin.Context) {
 	userService := services.NewNormalUserService()
 	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
-		if errorx.IsErrCode(err) {
-			response.HandleError(ctx, err)
+		if errorx.IsAppErr(err) {
+			response.Error(ctx, err)
 		} else {
-			response.ServerError(ctx)
+			response.Error(ctx, errorx.ErrDatabaseQuery)
 		}
 		return
 	}
@@ -46,7 +48,7 @@ func (uc *UserController) UserLogin(ctx *gin.Context) {
 func (uc *UserController) UserRegister(c *gin.Context) {
 	var req v1.UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ParamError(c, "无效的请求参数")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
@@ -68,10 +70,10 @@ func (uc *UserController) UserRegister(c *gin.Context) {
 	userService := services.NewNormalUserService()
 	user, err := userService.Register(registerReq)
 	if err != nil {
-		if errorx.IsErrCode(err) {
-			response.HandleError(c, err)
+		if errorx.IsAppErr(err) {
+			response.Error(c, err)
 		} else {
-			response.ServerError(c)
+			response.Error(c, errorx.ErrDatabaseQuery)
 		}
 		return
 	}
@@ -93,17 +95,17 @@ func (uc *UserController) UserChangePassword(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ParamError(c, "无效的请求参数")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	userService := services.NewNormalUserService()
 	err := userService.ChangePassword(userID.(uint), req.OldPassword, req.NewPassword)
 	if err != nil {
-		if errorx.IsErrCode(err) {
-			response.HandleError(c, err)
+		if errorx.IsAppErr(err) {
+			response.Error(c, err)
 		} else {
-			response.ServerError(c)
+			response.Error(c, errorx.ErrDatabaseQuery)
 		}
 		return
 	}
@@ -119,10 +121,10 @@ func (uc *UserController) UserInfo(c *gin.Context) {
 	userService := services.NewNormalUserService()
 	user, err := userService.GetUserByID(userID.(uint))
 	if err != nil {
-		if errorx.IsErrCode(err) {
-			response.HandleError(c, err)
+		if errorx.IsAppErr(err) {
+			response.Error(c, err)
 		} else {
-			response.ServerError(c)
+			response.Error(c, errorx.ErrDatabaseQuery)
 		}
 		return
 	}
@@ -137,7 +139,7 @@ func (uc *UserController) UserInfo(c *gin.Context) {
 func (uc *UserController) RefreshToken(c *gin.Context) {
 	var req v1.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ParamError(c, "无效的请求参数")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
@@ -145,7 +147,7 @@ func (uc *UserController) RefreshToken(c *gin.Context) {
 	userService := services.Instance().GetUserService()
 	tokenResponse, err := userService.RefreshToken(req.RefreshToken)
 	if err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 

@@ -21,13 +21,13 @@ type RoleController struct {
 func (rc *RoleController) CreateRole(c *gin.Context) {
 	var role model.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
-		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, err.Error()))
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	roleService := services.NewRoleService()
 	if err := roleService.CreateRole(&role); err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -38,20 +38,20 @@ func (rc *RoleController) CreateRole(c *gin.Context) {
 func (rc *RoleController) UpdateRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, "无效的角色ID"))
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	var role model.Role
 	if err := c.ShouldBindJSON(&role); err != nil {
-		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, err.Error()))
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	role.ID = uint(id)
 	roleService := services.NewRoleService()
 	if err := roleService.UpdateRole(&role); err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -62,13 +62,13 @@ func (rc *RoleController) UpdateRole(c *gin.Context) {
 func (rc *RoleController) DeleteRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, "无效的角色ID"))
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	roleService := services.NewRoleService()
 	if err := roleService.DeleteRole(uint(id)); err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -79,14 +79,14 @@ func (rc *RoleController) DeleteRole(c *gin.Context) {
 func (rc *RoleController) GetRole(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, "无效的角色ID"))
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	roleService := services.NewRoleService()
 	role, err := roleService.GetRoleByID(uint(id))
 	if err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -94,7 +94,7 @@ func (rc *RoleController) GetRole(c *gin.Context) {
 	menuService := services.NewMenuService()
 	roleMenus, err := menuService.GetMenusByRoleID(role.ID)
 	if err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -113,7 +113,7 @@ func (rc *RoleController) GetRoles(c *gin.Context) {
 	roleService := services.NewRoleService()
 	roles, err := roleService.GetRoles()
 	if err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -128,13 +128,13 @@ func (rc *RoleController) AssignMenuToRole(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, err.Error()))
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	menuService := services.NewMenuService()
 	if err := menuService.AssignMenuToRole(req.RoleID, req.MenuIDs); err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -150,13 +150,13 @@ func (rc *RoleController) SetRolePermission(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, err.Error()))
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	roleService := services.NewRoleService()
 	if err := roleService.SetRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -172,13 +172,13 @@ func (rc *RoleController) DeleteRolePermission(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.HandleError(c, errorx.NewErrCodeMsg(errorx.InvalidParams, err.Error()))
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	roleService := services.NewRoleService()
 	if err := roleService.DeleteRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 

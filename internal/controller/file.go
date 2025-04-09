@@ -42,7 +42,7 @@ func (ctrl *FileController) UploadFile(c *gin.Context) {
 	// 获取文件
 	file, err := c.FormFile("file")
 	if err != nil {
-		response.ParamError(c, "获取上传文件失败")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
@@ -52,7 +52,7 @@ func (ctrl *FileController) UploadFile(c *gin.Context) {
 	// 上传文件
 	fileModel, err := ctrl.fileService.UploadFile(c, file, fileType, userID)
 	if err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -63,13 +63,13 @@ func (ctrl *FileController) UploadFile(c *gin.Context) {
 func (ctrl *FileController) GetFile(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.ParamError(c, "文件ID不能为空")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	file, err := ctrl.fileService.GetFile(id)
 	if err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -80,13 +80,13 @@ func (ctrl *FileController) GetFile(c *gin.Context) {
 func (ctrl *FileController) DeleteFile(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.ParamError(c, "文件ID不能为空")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	err := ctrl.fileService.DeleteFile(id)
 	if err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -97,14 +97,14 @@ func (ctrl *FileController) DeleteFile(c *gin.Context) {
 func (ctrl *FileController) DownloadFile(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.ParamError(c, "文件ID不能为空")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	// 获取文件内容
 	fileStream, contentType, err := ctrl.fileService.GetFileContent(id)
 	if err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 	defer fileStream.Close()
@@ -112,7 +112,7 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 	// 获取文件信息以设置文件名
 	file, err := ctrl.fileService.GetFile(id)
 	if err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -124,7 +124,7 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 	c.Status(http.StatusOK)
 	_, err = io.Copy(c.Writer, fileStream)
 	if err != nil {
-		response.HandleError(c, errorx.NewStorageError("下载", file.Path, err))
+		response.Error(c, errorx.ErrFileStroage)
 		return
 	}
 }
@@ -134,7 +134,7 @@ func (ctrl *FileController) UpdateUserAvatar(c *gin.Context) {
 	// 获取当前用户
 	user, exists := c.Get("user")
 	if !exists {
-		response.Unauthorized(c, "未登录")
+		response.Error(c, errorx.ErrUserNoLogin)
 		return
 	}
 
@@ -143,21 +143,21 @@ func (ctrl *FileController) UpdateUserAvatar(c *gin.Context) {
 	if u, ok := user.(*model.User); ok {
 		userID = strconv.FormatUint(uint64(u.ID), 10)
 	} else {
-		response.ParamError(c, "用户类型无效")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	// 获取头像文件
 	avatar, err := c.FormFile("avatar")
 	if err != nil {
-		response.ParamError(c, "获取头像文件失败")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	// 更新头像
 	avatarURL, err := ctrl.fileService.UpdateUserAvatar(userID, avatar)
 	if err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 
@@ -169,7 +169,7 @@ func (ctrl *FileController) UpdateSysUserAvatar(c *gin.Context) {
 	// 获取当前用户
 	user, exists := c.Get("user")
 	if !exists {
-		response.Unauthorized(c, "未登录")
+		response.Error(c, errorx.ErrUserNoLogin)
 		return
 	}
 
@@ -178,21 +178,21 @@ func (ctrl *FileController) UpdateSysUserAvatar(c *gin.Context) {
 	if su, ok := user.(*model.SysUser); ok {
 		userID = strconv.FormatUint(uint64(su.ID), 10)
 	} else {
-		response.ParamError(c, "用户类型无效")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	// 获取头像文件
 	avatar, err := c.FormFile("avatar")
 	if err != nil {
-		response.ParamError(c, "获取头像文件失败")
+		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	// 更新头像
 	avatarURL, err := ctrl.fileService.UpdateSysUserAvatar(userID, avatar)
 	if err != nil {
-		response.HandleError(c, err)
+		response.Error(c, err)
 		return
 	}
 

@@ -34,116 +34,60 @@ func NewPageResult[T any](list T, total int64, page, pageSize int) *PageResult[T
 	}
 }
 
-// Send 发送响应
-func Send[T any](c *gin.Context, httpStatus int, errCode int, message string, data T) {
-	// 如果没有自定义消息，则使用错误码对应的默认消息
-	if message == "" {
-		message = errorx.GetMsg(errCode)
+// Success 返回成功响应
+func Success[T any](c *gin.Context, data T, msg ...string) {
+	message := errorx.ErrSuccess.GetErrMsg()
+	if len(msg) > 0 {
+		message = msg[0]
 	}
 
-	c.JSON(httpStatus, Response[T]{
-		Code:    errCode,
+	c.JSON(http.StatusOK, Response[T]{
+		Code:    0, // 成功码为0
 		Message: message,
 		Data:    data,
 	})
 }
 
-// Success 成功响应
-func Success[T any](c *gin.Context, data T) {
-	Send(c, http.StatusOK, errorx.Success, errorx.GetMsg(errorx.Success), data)
-}
-
-// SuccessWithMsg 带消息的成功响应
-func SuccessWithMsg[T any](c *gin.Context, message string, data T) {
-	Send(c, http.StatusOK, errorx.Success, message, data)
-}
-
-// Fail 失败响应
-func Fail(c *gin.Context, errorCode int, message string) {
-	Send[any](c, http.StatusOK, errorCode, message, nil)
-}
-
-// Error 错误响应
-func Error(c *gin.Context, httpStatus int, errorCode int, message string) {
-	Send[any](c, httpStatus, errorCode, message, nil)
-}
-
-// ParamError 参数错误响应
-func ParamError(c *gin.Context, message string) {
-	if message == "" {
-		message = errorx.GetMsg(errorx.InvalidParams)
-	}
-	Send[any](c, http.StatusBadRequest, errorx.InvalidParams, message, nil)
-}
-
-// ServerError 服务器错误响应
-func ServerError(c *gin.Context, message ...string) {
-	msg := errorx.GetMsg(errorx.ErrorInternal)
-	if len(message) > 0 && message[0] != "" {
-		msg = message[0]
-	}
-	Send[any](c, http.StatusInternalServerError, errorx.ErrorInternal, msg, nil)
-}
-
-// Unauthorized 未授权响应
-func Unauthorized(c *gin.Context, message string) {
-	if message == "" {
-		message = errorx.GetMsg(errorx.UserNoLogin)
-	}
-	Send[any](c, http.StatusUnauthorized, errorx.UserNoLogin, message, nil)
-}
-
-// NotFound 资源不存在响应
-func NotFound(c *gin.Context, message string) {
-	if message == "" {
-		message = errorx.GetMsg(errorx.ErrorNotFound)
-	}
-	Send[any](c, http.StatusNotFound, errorx.ErrorNotFound, message, nil)
-}
-
-// Forbidden 禁止访问响应
-func Forbidden(c *gin.Context, message string) {
-	if message == "" {
-		message = errorx.GetMsg(errorx.AccessDenied)
-	}
-	Send[any](c, http.StatusForbidden, errorx.AccessDenied, message, nil)
-}
-
-// HandleError 统一处理错误并返回响应
-func HandleError(c *gin.Context, err error) {
-	if err == nil {
-		return
+// SuccessNoData 返回无数据的成功响应
+func SuccessNoData(c *gin.Context, msg ...string) {
+	message := errorx.ErrSuccess.GetErrMsg()
+	if len(msg) > 0 {
+		message = msg[0]
 	}
 
-	// 使用errors包解析错误
-	errCode, errMsg := errorx.ParseError(err)
+	c.JSON(http.StatusOK, Response[struct{}]{
+		Code:    0, // 成功码为0
+		Message: message,
+		Data:    struct{}{},
+	})
+}
 
-	// 根据错误类型决定HTTP状态码
-	httpStatus := http.StatusOK
-
-	if errorx.IsAuthenticationFailed(err) {
-		httpStatus = http.StatusUnauthorized
-	} else if errorx.IsPermissionDenied(err) {
-		httpStatus = http.StatusForbidden
-	} else if errorx.IsValidationError(err) {
-		httpStatus = http.StatusBadRequest
-	} else if errorx.IsNotFound(err) {
-		httpStatus = http.StatusNotFound
-	} else if errorx.IsDBError(err) || errorx.IsCacheError(err) {
-		httpStatus = http.StatusInternalServerError
+// Error 返回错误响应
+func Error(c *gin.Context, err error, msg ...string) {
+	message := err.Error()
+	if len(msg) > 0 {
+		message = msg[0]
 	}
-
-	Send[any](c, httpStatus, errCode, errMsg, nil)
+	var data struct{}
+	if appErr, ok := err.(*errorx.AppError); ok {
+		c.JSON(getHttpStatus(appErr), Response[struct{}]{
+			Code:    appErr.GetErrCode(),
+			Message: message,
+			Data:    data,
+		})
+	} else {
+		c.JSON(http.StatusInternalServerError, Response[struct{}]{
+			Code:    errorx.ErrorUnknownCode,
+			Message: message,
+			Data:    data,
+		})
+	}
 }
 
-// SuccessPage 返回成功的分页数据
-func SuccessPage[T any](c *gin.Context, list T, total int64, page, pageSize int) {
-	pageResult := NewPageResult(list, total, page, pageSize)
-	Success(c, pageResult)
-}
-
-// SuccessPageWithMsg 返回带消息的成功分页数据
-func SuccessPageWithMsg[T any](c *gin.Context, message string, list T, total int64, page, pageSize int) {
-	pageResult := NewPageResult(list, total, page, pageSize)
-	SuccessWithMsg(c, message, pageResult)
+// getHttpStatus 获取HTTP状态码，如果AppError没有设置HttpStatus则返回500
+func getHttpStatus(err *errorx.AppError) int {
+	if err.HttpStatus == 0 {
+		return http.StatusInternalServerError
+	}
+	return err.HttpStatus
 }

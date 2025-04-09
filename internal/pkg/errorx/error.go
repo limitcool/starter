@@ -2,52 +2,54 @@ package errorx
 
 import "fmt"
 
-var _ error = &CodeError{}
+var _ error = &AppError{}
 
-// CodeError 自定义带错误码的错误类型
-type CodeError struct {
-	errCode int
-	errMsg  string
+// AppError 自定义应用错误类型
+type AppError struct {
+	errCode    int
+	errMsg     string
+	HttpStatus int
 }
 
 // GetErrCode 返回错误码
-func (e *CodeError) GetErrCode() int {
+func (e *AppError) GetErrCode() int {
 	return e.errCode
 }
 
 // GetErrMsg 返回错误消息
-func (e *CodeError) GetErrMsg() string {
+func (e *AppError) GetErrMsg() string {
 	return e.errMsg
 }
 
 // Error 实现error接口
-func (e *CodeError) Error() string {
+func (e *AppError) Error() string {
 	return fmt.Sprintf("ErrCode:%d，ErrMsg:%s", e.errCode, e.errMsg)
 }
 
-// NewErrCodeMsg 创建带有自定义错误码和消息的错误
-func NewErrCodeMsg(errCode int, errMsg string) *CodeError {
-	return &CodeError{errCode: errCode, errMsg: errMsg}
+// WithMsg 为错误添加额外的错误信息
+func (e *AppError) WithMsg(msg string) error {
+	e.errMsg = fmt.Sprintf("%s, %s", e.errMsg, msg)
+	return e
 }
 
-// NewErrCode 创建带有错误码的错误，自动获取对应的消息
-func NewErrCode(errCode int) *CodeError {
-	return &CodeError{errCode: errCode, errMsg: GetMsg(errCode)}
+// WithError 为错误添加额外的错误
+func (e *AppError) WithError(err error) error {
+	e.errMsg = fmt.Sprintf("%s, %s", e.errMsg, err.Error())
+	return e
+}
+
+// NewErrCodeMsg 创建带有自定义错误码和消息的错误
+func NewErrCodeMsg(errCode int, errMsg string) *AppError {
+	return &AppError{errCode: errCode, errMsg: errMsg}
 }
 
 // NewErrMsg 创建带有自定义消息的通用错误
-func NewErrMsg(errMsg string) *CodeError {
-	return &CodeError{errCode: ErrorUnknown, errMsg: errMsg}
+func NewErrMsg(errMsg string) *AppError {
+	return &AppError{errCode: ErrorUnknownCode, errMsg: errMsg}
 }
 
-// IsCodeErr 判断错误码是否存在
-func IsCodeErr(errcode int) bool {
-	_, ok := MsgFlags[errcode]
-	return ok
-}
-
-// IsErrCode 判断错误是否为CodeError类型
-func IsErrCode(err error) bool {
-	_, ok := err.(*CodeError)
+// IsAppErr 判断错误是否为AppError类型
+func IsAppErr(err error) bool {
+	_, ok := err.(*AppError)
 	return ok
 }
