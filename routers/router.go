@@ -66,102 +66,123 @@ func NewRouter() *gin.Engine {
 	MenuControllerInstance := controller.NewMenuController()
 	RoleControllerInstance := controller.NewRoleController()
 	SystemControllerInstance := controller.NewSystemController()
+
 	// 设置API路由组
-	api := r.Group("/api")
-	apiV1 := api.Group("/v1")
+	apiV1 := r.Group("/api/v1")
 
 	// 公共路由
 	{
 		apiV1.GET("/ping", controller.Ping)
-		apiV1.POST("/admin/login", controller.AdminControllerInstance.AdminLogin)
-		apiV1.POST("/refresh", UserControllerInstance.RefreshToken)
 
-		// 普通用户公共路由
-		apiV1.POST("/user/register", UserControllerInstance.UserRegister)
-		apiV1.POST("/user/login", UserControllerInstance.UserLogin)
+		// 认证相关
+		auth := apiV1.Group("/auth")
+		{
+			auth.POST("/admin/login", controller.AdminControllerInstance.AdminLogin)
+			auth.POST("/tokens/refresh", UserControllerInstance.RefreshToken) // 改为更RESTful的路径
+
+			// 普通用户认证
+			auth.POST("/users/register", UserControllerInstance.UserRegister)
+			auth.POST("/users/login", UserControllerInstance.UserLogin)
+		}
 	}
 
 	// 需要认证的路由
-	auth := apiV1.Group("")
-	auth.Use(middleware.JWTAuth())
+	authRequired := apiV1.Group("")
+	authRequired.Use(middleware.JWTAuth())
 	{
-		auth.GET("/user/menus", MenuControllerInstance.GetUserMenus)
-		auth.GET("/user/perms", MenuControllerInstance.GetUserMenuPerms)
-
-		// 普通用户认证路由
-		user := auth.Group("/user")
+		// 用户相关
+		users := authRequired.Group("/users")
 		{
-			user.GET("/info", middleware.AuthNormalUser(), UserControllerInstance.UserInfo)
-			user.POST("/change-password", middleware.AuthNormalUser(), UserControllerInstance.UserChangePassword)
+			users.GET("/menus", MenuControllerInstance.GetUserMenus)
+			users.GET("/permissions", MenuControllerInstance.GetUserMenuPerms)                                     // 更改为复数形式
+			users.GET("/current", middleware.AuthNormalUser(), UserControllerInstance.UserInfo)                    // 使用/current表示当前用户
+			users.PUT("/current/password", middleware.AuthNormalUser(), UserControllerInstance.UserChangePassword) // 更改为更符合RESTful的形式
 		}
 
 		// 管理员权限路由（如果启用了权限系统）
 		if config.Permission.Enabled && casbinComponent != nil {
-			admin := auth.Group("/admin")
+			admin := authRequired.Group("")
 			admin.Use(middleware.CasbinComponentMiddleware())
 			{
 				// 系统设置
-				system := admin.Group("/system")
+				systems := admin.Group("/systems")
 				{
-					system.GET("/settings", SystemControllerInstance.GetSystemSettings)
-					system.PUT("/permission", PermissionControllerInstance.UpdatePermissionSettings)
+					systems.GET("", SystemControllerInstance.GetSystemSettings)
+					systems.PUT("/permissions", PermissionControllerInstance.UpdatePermissionSettings)
 				}
 
 				// 菜单管理
-				menu := admin.Group("/menu")
+				menus := admin.Group("/menus")
 				{
-					menu.POST("", MenuControllerInstance.CreateMenu)
-					menu.PUT("/:id", MenuControllerInstance.UpdateMenu)
-					menu.DELETE("/:id", MenuControllerInstance.DeleteMenu)
-					menu.GET("/:id", MenuControllerInstance.GetMenu)
-					menu.GET("", MenuControllerInstance.GetMenuTree)
+					menus.POST("", MenuControllerInstance.CreateMenu)
+					menus.PUT("/:id", MenuControllerInstance.UpdateMenu)
+					menus.DELETE("/:id", MenuControllerInstance.DeleteMenu)
+					menus.GET("/:id", MenuControllerInstance.GetMenu)
+					menus.GET("", MenuControllerInstance.GetMenuTree)
 				}
 
 				// 角色管理
-				role := admin.Group("/role")
+				roles := admin.Group("/roles")
 				{
-					role.POST("", RoleControllerInstance.CreateRole)
-					role.PUT("/:id", RoleControllerInstance.UpdateRole)
-					role.DELETE("/:id", RoleControllerInstance.DeleteRole)
-					role.GET("/:id", RoleControllerInstance.GetRole)
-					role.GET("", RoleControllerInstance.GetRoles)
-					role.POST("/menu", RoleControllerInstance.AssignMenuToRole)
-					role.POST("/permission", RoleControllerInstance.SetRolePermission)
-					role.DELETE("/permission", RoleControllerInstance.DeleteRolePermission)
+					roles.POST("", RoleControllerInstance.CreateRole)
+					roles.PUT("/:id", RoleControllerInstance.UpdateRole)
+					roles.DELETE("/:id", RoleControllerInstance.DeleteRole)
+					roles.GET("/:id", RoleControllerInstance.GetRole)
+					roles.GET("", RoleControllerInstance.GetRoles)
+					roles.POST("/:id/menus", RoleControllerInstance.AssignMenuToRole)             // 使用子资源路径
+					roles.POST("/:id/permissions", RoleControllerInstance.SetRolePermission)      // 使用子资源路径
+					roles.DELETE("/:id/permissions", RoleControllerInstance.DeleteRolePermission) // 使用子资源路径
 				}
 
 				// 权限管理
-				permission := admin.Group("/permission")
+				permissions := admin.Group("/permissions")
 				{
-					permission.GET("", PermissionControllerInstance.GetPermissions)
-					permission.GET("/:id", PermissionControllerInstance.GetPermission)
-					permission.POST("", PermissionControllerInstance.CreatePermission)
-					permission.PUT("/:id", PermissionControllerInstance.UpdatePermission)
-					permission.DELETE("/:id", PermissionControllerInstance.DeletePermission)
+					permissions.GET("", PermissionControllerInstance.GetPermissions)
+					permissions.GET("/:id", PermissionControllerInstance.GetPermission)
+					permissions.POST("", PermissionControllerInstance.CreatePermission)
+					permissions.PUT("/:id", PermissionControllerInstance.UpdatePermission)
+					permissions.DELETE("/:id", PermissionControllerInstance.DeletePermission)
 				}
 
-				// 操作日志管理
-				oplog := admin.Group("/operation-logs")
+				// 操作日志管理 - 更改为复数形式
+				operationLogs := admin.Group("/operation-logs")
 				{
-					oplog.GET("", OperationLogControllerInstance.GetOperationLogs)
-					oplog.DELETE("/:id", OperationLogControllerInstance.DeleteOperationLog)
-					oplog.DELETE("/batch", OperationLogControllerInstance.ClearOperationLogs)
+					operationLogs.GET("", OperationLogControllerInstance.GetOperationLogs)
+					operationLogs.DELETE("/:id", OperationLogControllerInstance.DeleteOperationLog)
+					// 使用POST方法进行批量删除，更符合请求体传递ID列表的设计
+					operationLogs.POST("/batch-delete", OperationLogControllerInstance.ClearOperationLogs)
 				}
 			}
 		}
 	}
 
-	// 用户管理
-	userAuthGroup := api.Group("/users")
-	{
-		userAuthGroup.GET("/info", services.GetUserInfo)
-		userAuthGroup.PUT("/", middleware.AuthNormalUser(), services.UserRegister)
-		userAuthGroup.POST("/register", middleware.AuthNormalUser(), services.UserRegister)
-	}
-
 	// 如果存储服务可用，设置文件相关路由
 	if stg != nil {
-		SetupFileRoutes(api, stg)
+		fileController := controller.NewFileController(stg)
+
+		// 文件资源
+		files := apiV1.Group("/files")
+		{
+			// 上传文件需要登录
+			files.POST("", middleware.JWTAuth(), fileController.UploadFile)
+
+			// 获取文件信息
+			files.GET("/:id", fileController.GetFile)
+
+			// 下载文件
+			files.GET("/:id/download", fileController.DownloadFile)
+
+			// 删除文件需要登录
+			files.DELETE("/:id", middleware.JWTAuth(), fileController.DeleteFile)
+		}
+
+		// 用户头像
+		apiV1.PUT("/users/:id/avatar", middleware.JWTAuth(), fileController.UpdateUserAvatar)
+		apiV1.PUT("/users/current/avatar", middleware.JWTAuth(), fileController.UpdateUserAvatar)
+
+		// 系统用户头像
+		apiV1.PUT("/system-users/:id/avatar", middleware.JWTAuth(), fileController.UpdateSysUserAvatar)
+		apiV1.PUT("/system-users/current/avatar", middleware.JWTAuth(), fileController.UpdateSysUserAvatar)
 	}
 
 	// 打印所有注册的路由

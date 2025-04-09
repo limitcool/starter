@@ -64,24 +64,34 @@ func SuccessNoData(c *gin.Context, msg ...string) {
 
 // Error 返回错误响应
 func Error(c *gin.Context, err error, msg ...string) {
-	message := err.Error()
+	var (
+		httpStatus int
+		errorCode  int
+		message    string
+	)
+
+	// 类型断言获取错误信息
+	if appErr, ok := err.(*errorx.AppError); ok {
+		message = appErr.GetErrorMsg()
+		httpStatus = getHttpStatus(appErr)
+		errorCode = appErr.GetErrorCode()
+	} else {
+		message = err.Error()
+		httpStatus = http.StatusInternalServerError
+		errorCode = errorx.ErrorUnknownCode
+	}
+
+	// 允许调用方覆盖原始错误消息
 	if len(msg) > 0 {
 		message = msg[0]
 	}
-	var data struct{}
-	if appErr, ok := err.(*errorx.AppError); ok {
-		c.JSON(getHttpStatus(appErr), Response[struct{}]{
-			Code:    appErr.GetErrorCode(),
-			Message: message,
-			Data:    data,
-		})
-	} else {
-		c.JSON(http.StatusInternalServerError, Response[struct{}]{
-			Code:    errorx.ErrorUnknownCode,
-			Message: message,
-			Data:    data,
-		})
-	}
+
+	// 统一响应结构
+	c.JSON(httpStatus, Response[struct{}]{
+		Code:    errorCode,
+		Message: message,
+		Data:    struct{}{},
+	})
 }
 
 // getHttpStatus 获取HTTP状态码，如果AppError没有设置HttpStatus则返回500

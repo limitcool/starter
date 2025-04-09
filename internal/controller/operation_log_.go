@@ -62,7 +62,7 @@ func (olc *OperationLogController) DeleteOperationLog(c *gin.Context) {
 	response.Success[any](c, nil)
 }
 
-// ClearOperationLogs 清空操作日志
+// ClearOperationLogs 批量删除操作日志
 func (olc *OperationLogController) ClearOperationLogs(c *gin.Context) {
 	var req v1.OperationLogBatchDeleteRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -70,6 +70,13 @@ func (olc *OperationLogController) ClearOperationLogs(c *gin.Context) {
 		return
 	}
 
+	// 检查ID列表是否为空
+	if len(req.IDs) == 0 {
+		response.Error(c, errorx.ErrInvalidParams.WithMsg("ID列表不能为空"))
+		return
+	}
+
+	// 批量删除操作日志
 	opLogService := services.NewOperationLogService()
 	if err := opLogService.BatchDeleteOperationLogs(req.IDs); err != nil {
 		response.Error(c, err)
