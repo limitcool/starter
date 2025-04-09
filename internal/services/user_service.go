@@ -222,7 +222,7 @@ func GetUserInfo(ctx *gin.Context) {
 
 	var user model.User
 	if err := model.GetDB().First(&user, userId).Error; err != nil {
-		response.Error(ctx, errorx.ErrDatabaseQuery)
+		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
 
@@ -256,7 +256,7 @@ func UserRegister(ctx *gin.Context) {
 	// 2. 验证用户名是否已存在
 	var count int64
 	if err := model.GetDB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
-		response.Error(ctx, errorx.ErrDatabaseQuery)
+		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
 
@@ -278,7 +278,7 @@ func UserRegister(ctx *gin.Context) {
 
 	if err := model.GetDB().Create(&user).Error; err != nil {
 
-		response.Error(ctx, errorx.ErrDatabaseInsert)
+		response.Error(ctx, errorx.ErrDatabaseInsertError)
 		return
 	}
 
@@ -315,7 +315,7 @@ func UserLogin(ctx *gin.Context) {
 		if err == gorm.ErrRecordNotFound {
 			response.Error(ctx, errorx.ErrUserNameOrPasswordError)
 		} else {
-			response.Error(ctx, errorx.ErrDatabaseQuery)
+			response.Error(ctx, errorx.ErrDatabaseQueryError)
 		}
 		return
 	}
@@ -337,7 +337,7 @@ func UserLogin(ctx *gin.Context) {
 	user.LastLogin = time.Now()
 	user.LastIP = ctx.ClientIP()
 	if err := model.GetDB().Save(&user).Error; err != nil {
-		response.Error(ctx, errorx.ErrDatabaseQuery)
+		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
 
@@ -390,7 +390,7 @@ func ChangePassword(ctx *gin.Context) {
 	// 3. 查询用户
 	var user model.User
 	if err := model.GetDB().First(&user, userId).Error; err != nil {
-		response.Error(ctx, errorx.ErrDatabaseQuery)
+		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
 
@@ -405,7 +405,7 @@ func ChangePassword(ctx *gin.Context) {
 	// 注意：实际应用中应该对新密码进行加密
 	hashedPassword, _ := crypto.HashPassword(req.NewPassword)
 	if err := model.GetDB().Model(&user).Update("password", hashedPassword).Error; err != nil {
-		response.Error(ctx, errorx.ErrDatabaseQuery)
+		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
 
@@ -433,7 +433,7 @@ func GetUserList(ctx *gin.Context) {
 	// 查询总数
 	var total int64
 	if err := db.Count(&total).Error; err != nil {
-		response.Error(ctx, errorx.ErrDatabaseQuery)
+		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
 
@@ -447,7 +447,7 @@ func GetUserList(ctx *gin.Context) {
 	}
 
 	if err := db.Offset((pageNum - 1) * pageSizeNum).Limit(pageSizeNum).Find(&users).Error; err != nil {
-		response.Error(ctx, errorx.ErrDatabaseQuery)
+		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
 

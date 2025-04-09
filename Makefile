@@ -6,6 +6,10 @@ GIT_TREE_STATE ?= $(shell if git status --porcelain 2>/dev/null | grep -q .; the
 BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BUILD_DIR = build
 
+# 错误码生成配置
+ERROR_MD = tools/errorgen/error_codes.md
+ERROR_CODE_FILE = internal/pkg/errorx/code_gen.go
+
 # 默认架构
 ARCH ?= amd64
 
@@ -69,6 +73,12 @@ test:
 run:
 	go run main.go
 
+# 生成错误码
+.PHONY: gen-errors
+gen-errors:
+	@echo "Generating error codes from $(ERROR_MD) to $(ERROR_CODE_FILE)..."
+	go run tools/errorgen/main.go $(ERROR_MD) $(ERROR_CODE_FILE)
+
 # 帮助信息
 .PHONY: help
 help:
@@ -81,9 +91,11 @@ help:
 	@echo "  clean    - Clean build directory"
 	@echo "  test     - Run tests"
 	@echo "  run      - Run the application"
+	@echo "  gen-errors - Generate error codes from Markdown definition"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make linux ARCH=arm64   - Build Linux arm64 version"
 	@echo "  make darwin ARCH=arm64  - Build MacOS arm64 version"
 	@echo "  make all-arch          - Build all platforms in amd64"
 	@echo "  make all-arm64         - Build all platforms in arm64"
+	@echo "  make gen-errors        - Generate error codes from $(ERROR_MD)"

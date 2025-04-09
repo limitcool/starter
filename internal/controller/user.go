@@ -36,7 +36,7 @@ func (uc *UserController) UserLogin(ctx *gin.Context) {
 		if errorx.IsAppErr(err) {
 			response.Error(ctx, err)
 		} else {
-			response.Error(ctx, errorx.ErrDatabaseQuery)
+			response.Error(ctx, errorx.ErrDatabaseQueryError)
 		}
 		return
 	}
@@ -73,7 +73,7 @@ func (uc *UserController) UserRegister(c *gin.Context) {
 		if errorx.IsAppErr(err) {
 			response.Error(c, err)
 		} else {
-			response.Error(c, errorx.ErrDatabaseQuery)
+			response.Error(c, errorx.ErrDatabaseQueryError)
 		}
 		return
 	}
@@ -105,7 +105,7 @@ func (uc *UserController) UserChangePassword(c *gin.Context) {
 		if errorx.IsAppErr(err) {
 			response.Error(c, err)
 		} else {
-			response.Error(c, errorx.ErrDatabaseQuery)
+			response.Error(c, errorx.ErrDatabaseQueryError)
 		}
 		return
 	}
@@ -124,7 +124,7 @@ func (uc *UserController) UserInfo(c *gin.Context) {
 		if errorx.IsAppErr(err) {
 			response.Error(c, err)
 		} else {
-			response.Error(c, errorx.ErrDatabaseQuery)
+			response.Error(c, errorx.ErrDatabaseQueryError)
 		}
 		return
 	}

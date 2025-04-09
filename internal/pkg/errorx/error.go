@@ -53,3 +53,11 @@ func IsAppErr(err error) bool {
 	_, ok := err.(*AppError)
 	return ok
 }
+
+// GetAppErr 将普通错误转换为AppError，如果不是AppError则返回ErrUnknown
+func GetAppErr(err error) *AppError {
+	if appErr, ok := err.(*AppError); ok {
+		return appErr
+	}
+	return ErrUnknown
+}
