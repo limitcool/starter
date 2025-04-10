@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -21,6 +22,9 @@ func Setup(config configs.LogConfig) {
 		config.StackTraceLevel,
 		config.MaxStackFrames,
 	)
+
+	// 设置errorx包的最大堆栈帧数
+	errorx.SetMaxStackFrames(config.MaxStackFrames)
 
 	// 配置日志级别
 	level := parseLogLevel(config.Level)

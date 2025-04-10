@@ -128,9 +128,9 @@ func (e *AppError) Format(s fmt.State, verb rune) {
 // 捕获当前堆栈信息
 func captureStackTrace() []uintptr {
 	const depth = 32
-	var pcs [depth]uintptr
+	pcs := make([]uintptr, depth)
 	// 跳过这个函数本身和调用者
-	n := runtime.Callers(3, pcs[:])
+	n := runtime.Callers(3, pcs)
 	return pcs[0:n]
 }
 
@@ -139,13 +139,13 @@ func formatStackTrace(stackTrace []uintptr) string {
 	frames := runtime.CallersFrames(stackTrace)
 	var result string
 
-	// 默认最大堆栈帧数，可以考虑通过环境变量设置
-	maxFrames := 10
+	// 使用配置的最大堆栈帧数
+	maxFrames := GetMaxStackFrames()
 
 	i := 1
 	for {
 		if i > maxFrames {
-			result += fmt.Sprintf("... 更多堆栈被省略 ...\n")
+			result += fmt.Sprintf("... [stack trace truncated, showing only %d frames] ...\n", maxFrames)
 			break
 		}
 
