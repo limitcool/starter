@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
+	v1 "github.com/limitcool/starter/internal/api/v1"
 	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
@@ -95,7 +96,7 @@ func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 }
 
 // Login 用户登录
-func (s *UserService) Login(username, password string, ip string) (*LoginResponse, error) {
+func (s *UserService) Login(username, password string, ip string) (*v1.LoginResponse, error) {
 	// 获取用户
 	user, err := model.NewUser().GetUserByUsername(username)
 	if err != nil {
@@ -147,7 +148,7 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
 	}
 
-	return &LoginResponse{
+	return &v1.LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    cfg.JwtAuth.AccessExpire,
