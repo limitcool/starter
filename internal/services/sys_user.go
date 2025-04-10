@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
@@ -28,11 +27,6 @@ func NewSysUserService() *SysUserService {
 		roleService:   NewRoleService(),
 		casbinService: NewCasbinService(),
 	}
-}
-
-// GetConfig 获取配置
-func (s *SysUserService) getConfig() *configs.Config {
-	return core.Instance().GetConfig()
 }
 
 // GetUserByID 根据ID获取用户
@@ -121,7 +115,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	})
 
 	// 获取配置
-	cfg := s.getConfig()
+	cfg := core.Instance().GetConfig()
 
 	// 生成访问令牌
 	accessClaims := &jwtpkg.CustomClaims{
@@ -160,7 +154,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 // RefreshToken 刷新访问令牌
 func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, error) {
 	// 获取配置
-	cfg := s.getConfig()
+	cfg := core.Instance().GetConfig()
 
 	// 验证刷新令牌
 	claims, err := jwtpkg.ParseTokenWithCustomClaims(refreshToken, cfg.JwtAuth.RefreshSecret)

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/model"
@@ -109,11 +108,6 @@ func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 	return user, nil
 }
 
-// 获取配置，使用新的函数
-func (s *UserService) getConfig() *configs.Config {
-	return core.Instance().GetConfig()
-}
-
 // Login 用户登录
 func (s *UserService) Login(username, password string, ip string) (*LoginResponse, error) {
 	// 获取用户
@@ -139,7 +133,7 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 	})
 
 	// 获取配置
-	cfg := s.getConfig()
+	cfg := core.Instance().GetConfig()
 
 	// 生成访问令牌
 	accessClaims := &jwtpkg.CustomClaims{
