@@ -39,19 +39,6 @@ func (s *UserService) GetUserByID(id int64) (*model.User, error) {
 	return &user, nil
 }
 
-// GetUserByUsername 根据用户名获取用户
-func (s *UserService) GetUserByUsername(username string) (*model.User, error) {
-	var user model.User
-	err := sqldb.Instance().DB().Where("username = ?", username).First(&user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errorx.ErrUserNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &user, nil
-}
-
 // VerifyPassword 验证用户密码
 func (s *UserService) VerifyPassword(password, hashedPassword string) bool {
 	return crypto.CheckPassword(hashedPassword, password)
@@ -72,19 +59,18 @@ type RegisterRequest struct {
 
 // Register 用户注册
 func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
-	// 检查用户名是否已存在
-	var count int64
-	if err := sqldb.Instance().DB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
-		return nil, err
+	isExist, err := model.NewUser().IsExist()
+	if err != nil {
+		return nil, errorx.ErrDatabaseQueryError.WithError(err)
 	}
-	if count > 0 {
+	if isExist {
 		return nil, errorx.ErrUserAlreadyExists
 	}
 
 	// 哈希密码
 	hashedPassword, err := crypto.HashPassword(req.Password)
 	if err != nil {
-		return nil, fmt.Errorf("密码加密失败: %w", err)
+		return nil, errorx.ErrInternal.WithError(err)
 	}
 
 	// 创建用户
@@ -101,8 +87,8 @@ func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 		RegisterIP: req.RegisterIP,
 	}
 
-	if err := sqldb.Instance().DB().Create(user).Error; err != nil {
-		return nil, err
+	if err := user.Create(); err != nil {
+		return nil, errorx.ErrDatabaseInsertError.WithError(err)
 	}
 
 	return user, nil
@@ -111,7 +97,7 @@ func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 // Login 用户登录
 func (s *UserService) Login(username, password string, ip string) (*LoginResponse, error) {
 	// 获取用户
-	user, err := s.GetUserByUsername(username)
+	user, err := model.NewUser().GetUserByUsername(username)
 	if err != nil {
 		return nil, err
 	}

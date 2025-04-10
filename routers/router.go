@@ -78,8 +78,7 @@ func NewRouter() *gin.Engine {
 		auth := apiV1.Group("/auth")
 		{
 			auth.POST("/admin/login", AdminControllerInstance.AdminLogin)
-			auth.POST("/tokens/refresh", UserControllerInstance.RefreshToken) // 改为更RESTful的路径
-
+			auth.POST("/tokens/refresh", UserControllerInstance.RefreshToken)
 			// 普通用户认证
 			auth.POST("/users/register", UserControllerInstance.UserRegister)
 			auth.POST("/users/login", UserControllerInstance.UserLogin)

@@ -24,7 +24,6 @@ type UserController struct {
 func (uc *UserController) UserLogin(ctx *gin.Context) {
 	var req v1.LoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.LogError("UserLogin 无效的请求参数", err)
 		response.Error(ctx, errorx.ErrInvalidParams)
 		return
 	}
@@ -37,12 +36,7 @@ func (uc *UserController) UserLogin(ctx *gin.Context) {
 		logger.LogError("UserLogin 登录失败", err,
 			"username", req.Username,
 			"ip", clientIP)
-
-		if errorx.IsAppErr(err) {
-			response.Error(ctx, err)
-		} else {
-			response.Error(ctx, errorx.ErrDatabaseQueryError)
-		}
+		response.Error(ctx, err)
 		return
 	}
 
@@ -75,11 +69,7 @@ func (uc *UserController) UserRegister(c *gin.Context) {
 	userService := services.NewUserService()
 	user, err := userService.Register(registerReq)
 	if err != nil {
-		if errorx.IsAppErr(err) {
-			response.Error(c, err)
-		} else {
-			response.Error(c, errorx.ErrDatabaseQueryError)
-		}
+		response.Error(c, err)
 		return
 	}
 
@@ -148,6 +138,8 @@ func (uc *UserController) RefreshToken(c *gin.Context) {
 	userService := services.NewSysUserService()
 	tokenResponse, err := userService.RefreshToken(req.RefreshToken)
 	if err != nil {
+		logger.LogError("RefreshToken 刷新访问令牌失败", err,
+			"refresh_token", req.RefreshToken)
 		response.Error(c, err)
 		return
 	}
