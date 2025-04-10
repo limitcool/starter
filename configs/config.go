@@ -99,10 +99,13 @@ type Redis struct {
 
 // LogConfig 日志配置
 type LogConfig struct {
-	Level      string        // 日志级别: debug, info, warn, error
-	Output     []string      // 输出方式: console, file
-	Format     LogFormat     // 日志格式: text, json
-	FileConfig FileLogConfig // 文件输出配置
+	Level             string        // 日志级别: debug, info, warn, error
+	Output            []string      // 输出方式: console, file
+	Format            LogFormat     // 日志格式: text, json
+	FileConfig        FileLogConfig // 文件输出配置
+	StackTraceEnabled bool          // 是否启用堆栈跟踪
+	StackTraceLevel   string        // 记录堆栈的最低日志级别: debug, info, warn, error
+	MaxStackFrames    int           // 堆栈帧最大数量，0表示不限制
 }
 
 // FileLogConfig 文件日志配置

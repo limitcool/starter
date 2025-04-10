@@ -47,6 +47,9 @@ Log:
   FileConfig:
     Path: logs/app.log
     MaxSize: 10
+  StackTraceEnabled: true
+  StackTraceLevel: error
+  MaxStackFrames: 10
 Admin:
   Username: admin
   Password: admin123

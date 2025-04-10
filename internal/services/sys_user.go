@@ -37,11 +37,13 @@ func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
 		return nil, errorx.ErrUserNotFound
 	}
 	if err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
 		return nil, err
 	}
 
 	// 获取用户的角色
 	if err := sqldb.Instance().DB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
 		return nil, err
 	}
 
@@ -61,11 +63,13 @@ func (s *SysUserService) GetUserByUsername(username string) (*model.SysUser, err
 		return nil, errorx.ErrUserNotFound
 	}
 	if err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
 		return nil, err
 	}
 
 	// 获取用户的角色
 	if err := sqldb.Instance().DB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
 		return nil, err
 	}
 
@@ -94,7 +98,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	// 获取用户
 	user, err := s.GetUserByUsername(username)
 	if err != nil {
-		// 直接包装原始错误并返回
+		// AppError的WithError会自动捕获堆栈
 		return nil, errorx.ErrUserNotFound.WithError(err)
 	}
 
@@ -109,10 +113,13 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	}
 	db := sqldb.Instance().DB()
 	// 更新最后登录时间和IP
-	db.Model(user).Updates(map[string]interface{}{
+	if err := db.Model(user).Updates(map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
-	})
+	}).Error; err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
+		return nil, err
+	}
 
 	// 获取配置
 	cfg := core.Instance().Config()
@@ -136,11 +143,13 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 
 	accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
+		// AppError的WithError会自动捕获堆栈
 		return nil, errorx.ErrInternal.WithError(err)
 	}
 
 	refreshToken, err := jwtpkg.GenerateTokenWithCustomClaims(refreshClaims, cfg.JwtAuth.RefreshSecret, time.Duration(cfg.JwtAuth.RefreshExpire)*time.Second)
 	if err != nil {
+		// AppError的WithError会自动捕获堆栈
 		return nil, errorx.ErrInternal.WithError(err)
 	}
 
@@ -159,6 +168,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, erro
 	// 验证刷新令牌
 	claims, err := jwtpkg.ParseTokenWithCustomClaims(refreshToken, cfg.JwtAuth.RefreshSecret)
 	if err != nil {
+		// AppError的WithError会自动捕获堆栈
 		return nil, errorx.ErrUserTokenError.WithError(err)
 	}
 
@@ -173,9 +183,8 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, erro
 		if errorx.IsAppErr(err) {
 			return nil, err
 		}
-		// 包装错误，保留原始错误信息
-		appErr := errorx.ErrUserNotFound.WithError(err)
-		return nil, appErr
+		// AppError的WithError会自动捕获堆栈
+		return nil, errorx.ErrUserNotFound.WithError(err)
 	}
 
 	// 检查用户是否启用
@@ -194,6 +203,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, erro
 
 	accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
+		// AppError的WithError会自动捕获堆栈
 		return nil, errorx.ErrInternal.WithError(err)
 	}
 

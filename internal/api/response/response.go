@@ -3,10 +3,14 @@
 package response
 
 import (
+	"bytes"
+	"fmt"
 	"net/http"
 
+	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
 // Response API标准响应结构
@@ -70,15 +74,44 @@ func Error(c *gin.Context, err error, msg ...string) {
 		message    string
 	)
 
+	// 检查是否需要显示堆栈
+	showStackTrace := logger.ShouldShowStackTrace(log.DebugLevel)
+
 	// 类型断言获取错误信息
 	if appErr, ok := err.(*errorx.AppError); ok {
 		message = appErr.GetErrorMsg()
 		httpStatus = getHttpStatus(appErr)
 		errorCode = appErr.GetErrorCode()
+
+		// 根据配置决定是否记录堆栈
+		if showStackTrace {
+			// 在开发环境中记录完整错误（包含堆栈）
+			log.Debug("API错误详情", "err", fmt.Sprintf("%+v", appErr))
+		} else {
+			// 不记录堆栈，只记录基本错误信息
+			log.Debug("API错误详情",
+				"err_code", errorCode,
+				"err_msg", message)
+		}
 	} else {
 		message = err.Error()
 		httpStatus = http.StatusInternalServerError
 		errorCode = errorx.ErrorUnknownCode
+
+		// 记录原始错误，对于非AppError类型
+		logFields := []interface{}{"err_code", errorCode, "err_msg", message}
+
+		// 根据配置决定是否记录堆栈
+		if showStackTrace {
+			// 尝试使用Formatter接口获取堆栈
+			if formatter, ok := err.(fmt.Formatter); ok {
+				var buf bytes.Buffer
+				fmt.Fprintf(&buf, "%+v", formatter)
+				logFields = append(logFields, "stack", "\n"+buf.String())
+			}
+		}
+
+		log.Debug("API错误详情", logFields...)
 	}
 
 	// 允许调用方覆盖原始错误消息

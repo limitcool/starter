@@ -1,7 +1,9 @@
 package logger
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -13,6 +15,13 @@ import (
 
 // Setup 初始化日志配置
 func Setup(config configs.LogConfig) {
+	// 更新堆栈跟踪配置
+	UpdateStackTraceConfig(
+		config.StackTraceEnabled,
+		config.StackTraceLevel,
+		config.MaxStackFrames,
+	)
+
 	// 配置日志级别
 	level := parseLogLevel(config.Level)
 
@@ -121,11 +130,50 @@ func parseLogFormat(format configs.LogFormat) log.Formatter {
 //   - keyvals: 额外的键值对信息，按照 key1, value1, key2, value2... 格式提供
 func LogError(msg string, err error, keyvals ...interface{}) {
 	// 构建日志字段
-	fields := []interface{}{"err", err}
+	fields := []interface{}{}
 
-	// 添加原始错误（如果存在）
-	if originalErr := errors.Unwrap(err); originalErr != nil {
-		fields = append(fields, "original_err", originalErr)
+	// 检查是否需要显示堆栈
+	showStackTrace := ShouldShowStackTrace(log.ErrorLevel)
+
+	// 判断错误类型并处理
+	// 这里使用类型断言来避免循环导入
+	if appErr, ok := err.(interface {
+		Error() string
+		GetErrorMsg() string
+		Unwrap() error
+		GetStackTrace() string
+	}); ok {
+		// 根据配置决定是否包含堆栈信息
+		if showStackTrace {
+			// 添加错误本身和原始错误
+			fields = append(fields, "err", fmt.Sprintf("%+v", err)) // 使用+v格式会包含堆栈
+		} else {
+			// 不显示堆栈，只显示基本错误信息
+			fields = append(fields, "err", appErr.Error())
+		}
+
+		// 如果有原始错误，单独添加
+		if originalErr := appErr.Unwrap(); originalErr != nil {
+			fields = append(fields, "original_err", originalErr.Error())
+		}
+	} else {
+		// 不是带堆栈的错误，添加错误信息
+		fields = append(fields, "err", err.Error())
+
+		// 根据配置决定是否显示堆栈
+		if showStackTrace {
+			// 尝试获取和添加堆栈信息
+			if formatter, ok := err.(fmt.Formatter); ok {
+				var buf bytes.Buffer
+				fmt.Fprintf(&buf, "%+v", formatter)
+				fields = append(fields, "stack_trace", "\n"+buf.String())
+			}
+		}
+
+		// 添加原始错误
+		if originalErr := errors.Unwrap(err); originalErr != nil {
+			fields = append(fields, "original_err", originalErr.Error())
+		}
 	}
 
 	// 添加额外的字段
