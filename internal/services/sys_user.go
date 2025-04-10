@@ -2,7 +2,6 @@ package services
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -102,8 +101,8 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	// 获取用户
 	user, err := s.GetUserByUsername(username)
 	if err != nil {
-		log.Error("登录失败", "err", err)
-		return nil, errorx.ErrUserNotFound
+		// 直接包装原始错误并返回
+		return nil, errorx.ErrUserNotFound.WithError(err)
 	}
 
 	// 检查用户是否启用
@@ -144,12 +143,14 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 
 	accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
+		log.Error("生成访问令牌失败", "original_err", err)
+		return nil, errorx.ErrInternal.WithError(err)
 	}
 
 	refreshToken, err := jwtpkg.GenerateTokenWithCustomClaims(refreshClaims, cfg.JwtAuth.RefreshSecret, time.Duration(cfg.JwtAuth.RefreshExpire)*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
+		log.Error("生成刷新令牌失败", "original_err", err)
+		return nil, errorx.ErrInternal.WithError(err)
 	}
 
 	return &LoginResponse{
@@ -167,7 +168,8 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, erro
 	// 验证刷新令牌
 	claims, err := jwtpkg.ParseTokenWithCustomClaims(refreshToken, cfg.JwtAuth.RefreshSecret)
 	if err != nil {
-		return nil, errorx.ErrUserTokenError
+		log.Error("刷新令牌验证失败", "original_err", err)
+		return nil, errorx.ErrUserTokenError.WithError(err)
 	}
 
 	// 检查令牌类型
@@ -178,7 +180,13 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, erro
 	// 获取用户信息
 	user, err := s.GetUserByID(claims.UserID)
 	if err != nil {
-		return nil, err
+		log.Error("刷新令牌时获取用户信息失败", "original_err", err)
+		if errorx.IsAppErr(err) {
+			return nil, err
+		}
+		// 包装错误，保留原始错误信息
+		appErr := errorx.ErrUserNotFound.WithError(err)
+		return nil, appErr
 	}
 
 	// 检查用户是否启用
@@ -197,7 +205,8 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, erro
 
 	accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
+		log.Error("刷新令牌时生成访问令牌失败", "original_err", err)
+		return nil, errorx.ErrInternal.WithError(err)
 	}
 
 	return &LoginResponse{

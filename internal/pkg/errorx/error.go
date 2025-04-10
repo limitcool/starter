@@ -9,6 +9,7 @@ type AppError struct {
 	errorCode  int
 	errorMsg   string
 	httpStatus int
+	causeErr error // 添加存储被包装的原始错误
 }
 
 // GetErrorCode 返回错误码
@@ -39,8 +40,18 @@ func (e *AppError) WithMsg(msg string) error {
 
 // WithError 为错误添加额外的错误
 func (e *AppError) WithError(err error) error {
-	e.errorMsg = fmt.Sprintf("%s, %s", e.errorMsg, err.Error())
-	return e
+	clone := &AppError{
+		errorCode:  e.errorCode,
+		errorMsg:   fmt.Sprintf("%s, %s", e.errorMsg, err.Error()),
+		httpStatus: e.httpStatus,
+		causeErr: err,
+	}
+	return clone
+}
+
+// Unwrap 实现errors.Unwrap接口，这样可以获取原始错误
+func (e *AppError) Unwrap() error {
+	return e.causeErr
 }
 
 // NewAppError 创建带有自定义错误码和消息的错误

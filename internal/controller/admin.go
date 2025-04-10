@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"errors"
+
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
@@ -30,7 +32,13 @@ func (ac *AdminController) AdminLogin(c *gin.Context) {
 	userService := services.NewSysUserService()
 	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
-		log.Error("AdminLogin 登录失败", "err", err)
+		// 记录原始错误信息，无需关心具体类型
+
+		log.Error("AdminLogin 登录失败",
+			"err", err,
+			"original_err", errors.Unwrap(err))
+
+		// 直接返回包装后的错误
 		response.Error(c, err)
 		return
 	}
