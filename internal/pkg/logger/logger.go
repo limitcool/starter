@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"errors"
 	"io"
 	"os"
 	"time"
@@ -111,4 +112,25 @@ func parseLogFormat(format configs.LogFormat) log.Formatter {
 		// 默认使用文本格式
 		return log.TextFormatter
 	}
+}
+
+// LogError 记录错误信息，同时记录原始错误
+// 参数:
+//   - msg: 错误消息
+//   - err: 当前错误
+//   - keyvals: 额外的键值对信息，按照 key1, value1, key2, value2... 格式提供
+func LogError(msg string, err error, keyvals ...interface{}) {
+	// 构建日志字段
+	fields := []interface{}{"err", err}
+
+	// 添加原始错误（如果存在）
+	if originalErr := errors.Unwrap(err); originalErr != nil {
+		fields = append(fields, "original_err", originalErr)
+	}
+
+	// 添加额外的字段
+	fields = append(fields, keyvals...)
+
+	// 记录错误
+	log.Error(msg, fields...)
 }

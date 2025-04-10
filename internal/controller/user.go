@@ -1,11 +1,11 @@
 package controller
 
 import (
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	v1 "github.com/limitcool/starter/internal/api/v1"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/services"
 )
 
@@ -23,7 +23,7 @@ type UserController struct {
 func (uc *UserController) UserLogin(ctx *gin.Context) {
 	var req v1.LoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		log.Error("UserLogin 无效的请求参数", "err", err)
+		logger.LogError("UserLogin 无效的请求参数", err)
 		response.Error(ctx, errorx.ErrInvalidParams)
 		return
 	}
@@ -33,6 +33,10 @@ func (uc *UserController) UserLogin(ctx *gin.Context) {
 	userService := services.NewUserService()
 	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
+		logger.LogError("UserLogin 登录失败", err,
+			"username", req.Username,
+			"ip", clientIP)
+
 		if errorx.IsAppErr(err) {
 			response.Error(ctx, err)
 		} else {

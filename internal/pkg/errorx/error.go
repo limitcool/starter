@@ -9,7 +9,7 @@ type AppError struct {
 	errorCode  int
 	errorMsg   string
 	httpStatus int
-	causeErr error // 添加存储被包装的原始错误
+	causeErr   error // 添加存储被包装的原始错误
 }
 
 // GetErrorCode 返回错误码
@@ -44,7 +44,18 @@ func (e *AppError) WithError(err error) error {
 		errorCode:  e.errorCode,
 		errorMsg:   fmt.Sprintf("%s, %s", e.errorMsg, err.Error()),
 		httpStatus: e.httpStatus,
-		causeErr: err,
+		causeErr:   err,
+	}
+	return clone
+}
+
+// WithNewMsgAndError 同时覆盖错误消息并追加上层错误
+func (e *AppError) WithNewMsgAndError(newMsg string, err error) error {
+	clone := &AppError{
+		errorCode:  e.errorCode,
+		errorMsg:   newMsg,
+		httpStatus: e.httpStatus,
+		causeErr:   err,
 	}
 	return clone
 }

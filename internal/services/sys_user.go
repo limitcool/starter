@@ -4,7 +4,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/model"
@@ -143,13 +142,11 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 
 	accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
-		log.Error("生成访问令牌失败", "original_err", err)
 		return nil, errorx.ErrInternal.WithError(err)
 	}
 
 	refreshToken, err := jwtpkg.GenerateTokenWithCustomClaims(refreshClaims, cfg.JwtAuth.RefreshSecret, time.Duration(cfg.JwtAuth.RefreshExpire)*time.Second)
 	if err != nil {
-		log.Error("生成刷新令牌失败", "original_err", err)
 		return nil, errorx.ErrInternal.WithError(err)
 	}
 
@@ -168,7 +165,6 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, erro
 	// 验证刷新令牌
 	claims, err := jwtpkg.ParseTokenWithCustomClaims(refreshToken, cfg.JwtAuth.RefreshSecret)
 	if err != nil {
-		log.Error("刷新令牌验证失败", "original_err", err)
 		return nil, errorx.ErrUserTokenError.WithError(err)
 	}
 
@@ -180,7 +176,6 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, erro
 	// 获取用户信息
 	user, err := s.GetUserByID(claims.UserID)
 	if err != nil {
-		log.Error("刷新令牌时获取用户信息失败", "original_err", err)
 		if errorx.IsAppErr(err) {
 			return nil, err
 		}
@@ -205,7 +200,6 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, erro
 
 	accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
-		log.Error("刷新令牌时生成访问令牌失败", "original_err", err)
 		return nil, errorx.ErrInternal.WithError(err)
 	}
 
