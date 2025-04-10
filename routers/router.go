@@ -163,7 +163,7 @@ func NewRouter() *gin.Engine {
 		files := apiV1.Group("/files")
 		{
 			// 上传文件需要登录
-			files.POST("", middleware.JWTAuth(), fileController.UploadFile)
+			files.POST("upload", middleware.JWTAuth(), fileController.UploadFile)
 
 			// 获取文件信息
 			files.GET("/:id", fileController.GetFile)
