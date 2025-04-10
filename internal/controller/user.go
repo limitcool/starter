@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	v1 "github.com/limitcool/starter/internal/api/v1"
+	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/services"
@@ -54,20 +55,8 @@ func (uc *UserController) UserRegister(c *gin.Context) {
 	// 获取客户端IP地址
 	clientIP := c.ClientIP()
 
-	// 创建注册请求
-	registerReq := services.RegisterRequest{
-		Username:   req.Username,
-		Password:   req.Password,
-		Nickname:   req.Nickname,
-		Email:      req.Email,
-		Mobile:     req.Mobile,
-		Gender:     req.Gender,
-		Address:    req.Address,
-		RegisterIP: clientIP,
-	}
-
 	userService := services.NewUserService()
-	user, err := userService.Register(registerReq)
+	user, err := userService.Register(req, clientIP)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -107,16 +96,15 @@ func (uc *UserController) UserChangePassword(c *gin.Context) {
 // UserInfo 获取用户信息
 func (uc *UserController) UserInfo(c *gin.Context) {
 	// 获取用户ID
-	userID, _ := c.Get("user_id")
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.Error(c, errorx.ErrUserNotFound)
+		return
+	}
 
-	userService := services.NewUserService()
-	user, err := userService.GetUserByID(cast.ToInt64(userID))
+	user, err := model.NewUser().GetUserByID(cast.ToInt64(userID))
 	if err != nil {
-		if errorx.IsAppErr(err) {
-			response.Error(c, err)
-		} else {
-			response.Error(c, errorx.ErrDatabaseQueryError)
-		}
+		response.Error(c, err)
 		return
 	}
 

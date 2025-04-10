@@ -26,3 +26,8 @@ type LoginResponse struct {
 	RefreshExpiresIn  int64  `json:"refresh_expires_in"`  // 刷新令牌有效期（秒）
 	RefreshExpireTime int64  `json:"refresh_expire_time"` // 刷新令牌过期时间戳
 }
+
+type UserLoginRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}

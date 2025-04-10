@@ -63,3 +63,10 @@ func (u *User) GetUserByUsername(username string) (*User, error) {
 	}
 	return &user, err
 }
+
+func (u *User) GetUserByID(id int64) (*User, error) {
+	db := sqldb.Instance().DB()
+	var user User
+	err := db.Model(&User{}).Where("id = ?", id).First(&user).Error
+	return &user, err
+}

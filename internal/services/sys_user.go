@@ -1,7 +1,6 @@
 package services
 
 import (
-	"errors"
 	"time"
 
 	v1 "github.com/limitcool/starter/internal/api/v1"
@@ -12,7 +11,6 @@ import (
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
 	"github.com/limitcool/starter/internal/storage/sqldb"
-	"gorm.io/gorm"
 )
 
 // SysUserService 用户服务
@@ -28,32 +26,6 @@ func NewSysUserService() *SysUserService {
 		roleService:   NewRoleService(),
 		casbinService: NewCasbinService(),
 	}
-}
-
-// GetUserByID 根据ID获取用户
-func (s *SysUserService) GetUserByID(id int64) (*model.SysUser, error) {
-	var user model.SysUser
-	err := sqldb.Instance().DB().First(&user, id).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errorx.ErrUserNotFound
-	}
-	if err != nil {
-		// 直接返回错误，错误会自动捕获堆栈
-		return nil, err
-	}
-
-	// 获取用户的角色
-	if err := sqldb.Instance().DB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
-		// 直接返回错误，错误会自动捕获堆栈
-		return nil, err
-	}
-
-	// 提取角色编码
-	for _, role := range user.Roles {
-		user.RoleCodes = append(user.RoleCodes, role.Code)
-	}
-
-	return &user, nil
 }
 
 // VerifyPassword 验证用户密码
@@ -158,7 +130,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 	switch userType {
 	case enum.UserTypeSysUser.String():
 		// 系统用户 - 查询系统用户表
-		user, err := s.GetUserByID(claims.UserID)
+		user, err := model.NewSysUser().GetUserByID(claims.UserID)
 		if err != nil {
 			if errorx.IsAppErr(err) {
 				return nil, err
@@ -198,11 +170,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 
 	case enum.UserTypeUser.String():
 		// 普通用户 - 查询普通用户表
-		// 创建用户服务实例
-		userService := NewUserService()
-
-		// 获取普通用户信息
-		user, err := userService.GetUserByID(claims.UserID)
+		user, err := model.NewUser().GetUserByID(claims.UserID)
 		if err != nil {
 			if errorx.IsAppErr(err) {
 				return nil, err
