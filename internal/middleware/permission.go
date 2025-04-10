@@ -16,7 +16,7 @@ import (
 func CasbinComponentMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
-		if !core.Instance().GetConfig().Permission.Enabled {
+		if !core.Instance().Config().Permission.Enabled {
 			// 权限系统未启用，直接放行
 			c.Next()
 			return
@@ -76,7 +76,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 func PermissionCodeMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
-		if !core.Instance().GetConfig().Permission.Enabled {
+		if !core.Instance().Config().Permission.Enabled {
 			// 权限系统未启用，直接放行
 			c.Next()
 			return

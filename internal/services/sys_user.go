@@ -115,7 +115,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	})
 
 	// 获取配置
-	cfg := core.Instance().GetConfig()
+	cfg := core.Instance().Config()
 
 	// 生成访问令牌
 	accessClaims := &jwtpkg.CustomClaims{
@@ -154,7 +154,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 // RefreshToken 刷新访问令牌
 func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, error) {
 	// 获取配置
-	cfg := core.Instance().GetConfig()
+	cfg := core.Instance().Config()
 
 	// 验证刷新令牌
 	claims, err := jwtpkg.ParseTokenWithCustomClaims(refreshToken, cfg.JwtAuth.RefreshSecret)

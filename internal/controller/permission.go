@@ -33,7 +33,7 @@ func (pc *PermissionController) UpdatePermissionSettings(c *gin.Context) {
 	}
 
 	// 获取配置
-	config := core.Instance().GetConfig()
+	config := core.Instance().Config()
 
 	// 更新内存中的配置
 	config.Permission.Enabled = req.Enabled

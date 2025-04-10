@@ -17,7 +17,7 @@ type SystemController struct {
 
 func (sc *SystemController) GetSystemSettings(c *gin.Context) {
 	// 获取配置
-	config := core.Instance().GetConfig()
+	config := core.Instance().Config()
 
 	// 返回当前权限系统设置
 	settings := map[string]interface{}{

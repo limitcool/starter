@@ -133,7 +133,7 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 	})
 
 	// 获取配置
-	cfg := core.Instance().GetConfig()
+	cfg := core.Instance().Config()
 
 	// 生成访问令牌
 	accessClaims := &jwtpkg.CustomClaims{

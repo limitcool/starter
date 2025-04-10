@@ -9,7 +9,7 @@ import (
 // App 应用实例
 type App struct {
 	ComponentManager *ComponentManager
-	Config           *configs.Config
+	AppConfig        *configs.Config
 }
 
 var (
@@ -27,7 +27,7 @@ func Setup(cfg *configs.Config) *App {
 	once.Do(func() {
 		instance = &App{
 			ComponentManager: NewComponentManager(cfg),
-			Config:           cfg,
+			AppConfig:        cfg,
 		}
 	})
 	return instance
@@ -43,7 +43,7 @@ func (a *App) Cleanup() {
 	a.ComponentManager.Cleanup()
 }
 
-// GetConfig 获取配置
-func (a *App) GetConfig() *configs.Config {
-	return a.Config
+// Config 获取配置
+func (a *App) Config() *configs.Config {
+	return a.AppConfig
 }

@@ -23,7 +23,7 @@ func NewRouter() *gin.Engine {
 	r.Use(middleware.Cors())
 
 	// 获取服务配置
-	config := core.Instance().GetConfig()
+	config := core.Instance().Config()
 
 	// 初始化Casbin权限系统（如果启用）
 	var casbinComponent *casbin.Component

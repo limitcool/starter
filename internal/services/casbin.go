@@ -37,7 +37,7 @@ func InitCasbin() (*casbin.Enforcer, error) {
 	var err error
 
 	// 如果权限系统未启用，直接返回nil
-	config := core.Instance().GetConfig()
+	config := core.Instance().Config()
 	if config != nil && !config.Permission.Enabled {
 		return nil, nil
 	}

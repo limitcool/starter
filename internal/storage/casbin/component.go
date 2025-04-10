@@ -107,7 +107,7 @@ func (c *Component) GetEnforcer() *casbin.Enforcer {
 // 获取全局Enforcer实例
 func GetEnforcer() *casbin.Enforcer {
 	// 如果权限系统未启用，直接返回nil
-	cfg := core.Instance().GetConfig()
+	cfg := core.Instance().Config()
 	if cfg != nil && !cfg.Permission.Enabled {
 		return nil
 	}

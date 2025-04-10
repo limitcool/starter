@@ -34,7 +34,7 @@ func JWTAuth() gin.HandlerFunc {
 		}
 
 		// 解析token
-		claims, err := jwt.ParseToken(token, core.Instance().GetConfig().JwtAuth.AccessSecret)
+		claims, err := jwt.ParseToken(token, core.Instance().Config().JwtAuth.AccessSecret)
 		if err != nil {
 			log.Error("Authentication token parse failed", "error", err)
 			response.Error(c, errorx.ErrUserTokenError)
