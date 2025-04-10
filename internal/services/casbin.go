@@ -50,7 +50,7 @@ func InitCasbin() (*casbin.Enforcer, error) {
 	once.Do(func() {
 
 		// 使用gorm适配器
-		adapter, adapterErr := gormadapter.NewAdapterByDB(sqldb.GetDB())
+		adapter, adapterErr := gormadapter.NewAdapterByDB(sqldb.Instance().DB())
 		if adapterErr != nil {
 			err = adapterErr
 			return

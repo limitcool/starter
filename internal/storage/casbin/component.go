@@ -40,10 +40,10 @@ func (c *Component) Initialize() error {
 	}
 
 	// 获取数据库连接
-	c.db = sqldb.GetDB()
+	c.db = sqldb.Instance().DB()
 	if c.db == nil {
 		// 尝试从SQL组件获取数据库连接
-		c.db = sqldb.GetDB()
+		c.db = sqldb.Instance().DB()
 		if c.db == nil {
 			return fmt.Errorf("数据库未初始化")
 		}

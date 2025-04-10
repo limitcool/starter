@@ -29,7 +29,7 @@ func NewUserService() *UserService {
 // GetUserByID 根据ID获取用户
 func (s *UserService) GetUserByID(id uint) (*model.User, error) {
 	var user model.User
-	err := sqldb.GetDB().First(&user, id).Error
+	err := sqldb.Instance().DB().First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -42,7 +42,7 @@ func (s *UserService) GetUserByID(id uint) (*model.User, error) {
 // GetUserByUsername 根据用户名获取用户
 func (s *UserService) GetUserByUsername(username string) (*model.User, error) {
 	var user model.User
-	err := sqldb.GetDB().Where("username = ?", username).First(&user).Error
+	err := sqldb.Instance().DB().Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -74,7 +74,7 @@ type RegisterRequest struct {
 func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 	// 检查用户名是否已存在
 	var count int64
-	if err := sqldb.GetDB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
+	if err := sqldb.Instance().DB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
 		return nil, err
 	}
 	if count > 0 {
@@ -101,7 +101,7 @@ func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 		RegisterIP: req.RegisterIP,
 	}
 
-	if err := sqldb.GetDB().Create(user).Error; err != nil {
+	if err := sqldb.Instance().DB().Create(user).Error; err != nil {
 		return nil, err
 	}
 
@@ -127,7 +127,7 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 	}
 
 	// 更新最后登录时间和IP
-	sqldb.GetDB().Model(user).Updates(map[string]interface{}{
+	sqldb.Instance().DB().Model(user).Updates(map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	})
@@ -178,7 +178,7 @@ func (s *UserService) UpdateUser(id uint, data map[string]interface{}) error {
 	delete(data, "deleted_at")
 
 	// 更新用户信息
-	return sqldb.GetDB().Model(&model.User{}).Where("id = ?", id).Updates(data).Error
+	return sqldb.Instance().DB().Model(&model.User{}).Where("id = ?", id).Updates(data).Error
 }
 
 // ChangePassword 修改密码
@@ -201,7 +201,7 @@ func (s *UserService) ChangePassword(id uint, oldPassword, newPassword string) e
 	}
 
 	// 更新密码
-	return sqldb.GetDB().Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
+	return sqldb.Instance().DB().Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
 }
 
 func GetUserInfo(ctx *gin.Context) {
@@ -212,7 +212,7 @@ func GetUserInfo(ctx *gin.Context) {
 	}
 
 	var user model.User
-	if err := model.GetDB().First(&user, userId).Error; err != nil {
+	if err := sqldb.Instance().DB().First(&user, userId).Error; err != nil {
 		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
@@ -220,7 +220,7 @@ func GetUserInfo(ctx *gin.Context) {
 	// 加载头像文件信息
 	if user.Avatar != "" {
 		var avatarFile model.File
-		if err := model.GetDB().First(&avatarFile, user.Avatar).Error; err == nil {
+		if err := sqldb.Instance().DB().First(&avatarFile, user.Avatar).Error; err == nil {
 			user.AvatarURL = avatarFile.URL
 		}
 	}
@@ -246,7 +246,7 @@ func UserRegister(ctx *gin.Context) {
 
 	// 2. 验证用户名是否已存在
 	var count int64
-	if err := model.GetDB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
+	if err := sqldb.Instance().DB().Model(&model.User{}).Where("username = ?", req.Username).Count(&count).Error; err != nil {
 		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
@@ -267,7 +267,7 @@ func UserRegister(ctx *gin.Context) {
 		RegisterIP: ctx.ClientIP(),
 	}
 
-	if err := model.GetDB().Create(&user).Error; err != nil {
+	if err := sqldb.Instance().DB().Create(&user).Error; err != nil {
 
 		response.Error(ctx, errorx.ErrDatabaseInsertError)
 		return
@@ -302,7 +302,7 @@ func UserLogin(ctx *gin.Context) {
 
 	// 2. 查询用户
 	var user model.User
-	if err := model.GetDB().Where("username = ?", req.Username).First(&user).Error; err != nil {
+	if err := sqldb.Instance().DB().Where("username = ?", req.Username).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			response.Error(ctx, errorx.ErrUserNameOrPasswordError)
 		} else {
@@ -327,7 +327,7 @@ func UserLogin(ctx *gin.Context) {
 	// 4. 更新登录信息
 	user.LastLogin = time.Now()
 	user.LastIP = ctx.ClientIP()
-	if err := model.GetDB().Save(&user).Error; err != nil {
+	if err := sqldb.Instance().DB().Save(&user).Error; err != nil {
 		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
@@ -339,7 +339,7 @@ func UserLogin(ctx *gin.Context) {
 	// 加载头像文件信息
 	if user.Avatar != "" {
 		var avatarFile model.File
-		if err := model.GetDB().First(&avatarFile, user.Avatar).Error; err == nil {
+		if err := sqldb.Instance().DB().First(&avatarFile, user.Avatar).Error; err == nil {
 			user.AvatarURL = avatarFile.URL
 		}
 	}
@@ -380,7 +380,7 @@ func ChangePassword(ctx *gin.Context) {
 
 	// 3. 查询用户
 	var user model.User
-	if err := model.GetDB().First(&user, userId).Error; err != nil {
+	if err := sqldb.Instance().DB().First(&user, userId).Error; err != nil {
 		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
@@ -395,7 +395,7 @@ func ChangePassword(ctx *gin.Context) {
 	// 5. 更新密码
 	// 注意：实际应用中应该对新密码进行加密
 	hashedPassword, _ := crypto.HashPassword(req.NewPassword)
-	if err := model.GetDB().Model(&user).Update("password", hashedPassword).Error; err != nil {
+	if err := sqldb.Instance().DB().Model(&user).Update("password", hashedPassword).Error; err != nil {
 		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
@@ -413,7 +413,7 @@ func GetUserList(ctx *gin.Context) {
 
 	// 2. 查询用户
 	var users []model.User
-	db := sqldb.GetDB().Model(&model.User{})
+	db := sqldb.Instance().DB().Model(&model.User{})
 
 	// 如果有关键字，添加搜索条件
 	if keyword != "" {
@@ -423,7 +423,7 @@ func GetUserList(ctx *gin.Context) {
 
 	// 查询总数
 	var total int64
-	if err := sqldb.GetDB().Count(&total).Error; err != nil {
+	if err := sqldb.Instance().DB().Count(&total).Error; err != nil {
 		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
@@ -437,7 +437,7 @@ func GetUserList(ctx *gin.Context) {
 		return
 	}
 
-	if err := sqldb.GetDB().Offset((pageNum - 1) * pageSizeNum).Limit(pageSizeNum).Find(&users).Error; err != nil {
+	if err := sqldb.Instance().DB().Offset((pageNum - 1) * pageSizeNum).Limit(pageSizeNum).Find(&users).Error; err != nil {
 		response.Error(ctx, errorx.ErrDatabaseQueryError)
 		return
 	}
@@ -446,7 +446,7 @@ func GetUserList(ctx *gin.Context) {
 	for i := range users {
 		if users[i].Avatar != "" {
 			var avatarFile model.File
-			if err := model.GetDB().First(&avatarFile, users[i].Avatar).Error; err == nil {
+			if err := sqldb.Instance().DB().First(&avatarFile, users[i].Avatar).Error; err == nil {
 				users[i].AvatarURL = avatarFile.URL
 			}
 		}

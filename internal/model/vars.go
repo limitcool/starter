@@ -9,14 +9,15 @@ import (
 	"gorm.io/gorm"
 )
 
-// GetDB 获取SQL数据库连接
-func GetDB() *gorm.DB {
-	// 使用直接访问方式保持兼容性
+// DB 获取SQL数据库连接
+// 推荐直接使用sqldb.Instance().DB()获取数据库连接
+func DB() *gorm.DB {
+	if sqldb.Instance() != nil {
+		return sqldb.Instance().DB()
+	}
+	// 回退到全局变量
 	if sqldb.DB != nil {
 		return sqldb.DB
-	}
-	if sqldb.Instance() != nil {
-		return sqldb.Instance().GetDB()
 	}
 	return nil
 }

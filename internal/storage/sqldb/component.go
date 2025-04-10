@@ -88,7 +88,10 @@ func (c *Component) IsEnabled() bool {
 	return c.enabled
 }
 
-// GetDB 获取数据库连接
-func (c *Component) GetDB() *gorm.DB {
+// DB 获取数据库连接
+// 这是Component实例的方法，返回组件管理的db实例。
+// 当您已经持有Component实例时，应优先使用此方法而非包级函数GetDB()，
+// 这样可以获得更好的代码组织和依赖管理。
+func (c *Component) DB() *gorm.DB {
 	return c.db
 }

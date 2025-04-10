@@ -17,15 +17,11 @@ import (
 )
 
 // DB 全局数据库连接
+// 推荐使用Instance().DB()方法获取数据库连接，而不是直接使用此变量
 var (
 	DB     *gorm.DB
 	dbOnce sync.Once
 )
-
-// GetDB 获取数据库连接
-func GetDB() *gorm.DB {
-	return DB
-}
 
 func getDSN(c *configs.Config) string {
 	switch c.Driver {

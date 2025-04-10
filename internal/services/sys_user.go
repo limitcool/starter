@@ -32,7 +32,7 @@ func NewSysUserService() *SysUserService {
 // GetUserByID 根据ID获取用户
 func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
 	var user model.SysUser
-	err := sqldb.GetDB().First(&user, id).Error
+	err := sqldb.Instance().DB().First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -41,7 +41,7 @@ func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
 	}
 
 	// 获取用户的角色
-	if err := sqldb.GetDB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+	if err := sqldb.Instance().DB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
 		return nil, err
 	}
 
@@ -56,7 +56,7 @@ func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
 // GetUserByUsername 根据用户名获取用户
 func (s *SysUserService) GetUserByUsername(username string) (*model.SysUser, error) {
 	var user model.SysUser
-	err := sqldb.GetDB().Where("username = ?", username).First(&user).Error
+	err := sqldb.Instance().DB().Where("username = ?", username).First(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
@@ -65,7 +65,7 @@ func (s *SysUserService) GetUserByUsername(username string) (*model.SysUser, err
 	}
 
 	// 获取用户的角色
-	if err := sqldb.GetDB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+	if err := sqldb.Instance().DB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
 		return nil, err
 	}
 
@@ -107,9 +107,9 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	if !s.VerifyPassword(password, user.Password) {
 		return nil, errorx.ErrUserPasswordError
 	}
-
+	db := sqldb.Instance().DB()
 	// 更新最后登录时间和IP
-	sqldb.GetDB().Model(user).Updates(map[string]interface{}{
+	db.Model(user).Updates(map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	})

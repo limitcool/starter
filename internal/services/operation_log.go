@@ -66,7 +66,7 @@ func (s *OperationLogService) CreateSysUserLog(c *gin.Context, userID uint, user
 		Username:    username,
 	}
 
-	return sqldb.GetDB().Create(&operationLog).Error
+	return sqldb.Instance().DB().Create(&operationLog).Error
 }
 
 // CreateUserLog 创建普通用户操作日志
@@ -114,7 +114,7 @@ func (s *OperationLogService) CreateUserLog(c *gin.Context, userID uint, usernam
 		Username:    username,
 	}
 
-	return sqldb.GetDB().Create(&operationLog).Error
+	return sqldb.Instance().DB().Create(&operationLog).Error
 }
 
 // GetOperationLogs 分页获取操作日志
@@ -158,7 +158,7 @@ func (s *OperationLogService) GetOperationLogs(query *v1.OperationLogQuery) (*re
 	}
 
 	// 构建查询
-	tx := sqldb.GetDB().Model(&model.OperationLog{})
+	tx := sqldb.Instance().DB().Model(&model.OperationLog{})
 
 	// 获取总数
 	var total int64
@@ -181,10 +181,10 @@ func (s *OperationLogService) GetOperationLogs(query *v1.OperationLogQuery) (*re
 
 // DeleteOperationLog 删除操作日志
 func (s *OperationLogService) DeleteOperationLog(id uint) error {
-	return sqldb.GetDB().Delete(&model.OperationLog{}, id).Error
+	return sqldb.Instance().DB().Delete(&model.OperationLog{}, id).Error
 }
 
 // BatchDeleteOperationLogs 批量删除操作日志
 func (s *OperationLogService) BatchDeleteOperationLogs(ids []uint) error {
-	return sqldb.GetDB().Where("id IN ?", ids).Delete(&model.OperationLog{}).Error
+	return sqldb.Instance().DB().Where("id IN ?", ids).Delete(&model.OperationLog{}).Error
 }

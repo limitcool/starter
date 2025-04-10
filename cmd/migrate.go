@@ -78,7 +78,7 @@ func runMigration(cmd *cobra.Command, args []string) {
 	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	if err := migration.InitializeMigrator(sqlComponent.GetDB(), cfg); err != nil {
+	if err := migration.InitializeMigrator(sqlComponent.DB(), cfg); err != nil {
 		log.Error("初始化迁移系统失败", "error", err)
 		os.Exit(1)
 	}
@@ -128,7 +128,7 @@ func runMigrationRollback(cmd *cobra.Command, args []string) {
 	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	if err := migration.InitializeMigrator(sqlComponent.GetDB(), cfg); err != nil {
+	if err := migration.InitializeMigrator(sqlComponent.DB(), cfg); err != nil {
 		log.Error("初始化迁移系统失败", "error", err)
 		os.Exit(1)
 	}
@@ -164,7 +164,7 @@ func runMigrationStatus(cmd *cobra.Command, args []string) {
 	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	if err := migration.InitializeMigrator(sqlComponent.GetDB(), cfg); err != nil {
+	if err := migration.InitializeMigrator(sqlComponent.DB(), cfg); err != nil {
 		log.Error("初始化迁移系统失败", "error", err)
 		os.Exit(1)
 	}
@@ -216,7 +216,7 @@ func runMigrationReset(cmd *cobra.Command, args []string) {
 	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	if err := migration.InitializeMigrator(sqlComponent.GetDB(), cfg); err != nil {
+	if err := migration.InitializeMigrator(sqlComponent.DB(), cfg); err != nil {
 		log.Error("初始化迁移系统失败", "error", err)
 		os.Exit(1)
 	}

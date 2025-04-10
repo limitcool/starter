@@ -38,8 +38,8 @@ func GetDBWithError() (*gorm.DB, error) {
 		return DB, nil
 	}
 
-	if instance != nil && instance.GetDB() != nil {
-		return instance.GetDB(), nil
+	if instance != nil && instance.DB() != nil {
+		return instance.DB(), nil
 	}
 
 	return nil, ErrDBNotInitialized

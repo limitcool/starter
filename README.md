@@ -445,3 +445,19 @@ func (s *Service) List(query *request.YourQuery) ([]YourModel, int64, error) {
     return items, total, nil
 }
 ```
+
+## 组件访问规范
+
+本项目使用组件模式管理各种资源，推荐以下访问方式：
+
+```go
+// 获取数据库连接
+db := sqldb.Instance().DB()
+
+// 获取Redis客户端
+client := redisdb.Instance().Client()
+
+// 获取MongoDB数据库
+mongo := mongodb.Instance().DB()
+```
+
