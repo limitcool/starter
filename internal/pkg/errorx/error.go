@@ -42,7 +42,7 @@ func (e *AppError) WithMsg(msg string) error {
 func (e *AppError) WithError(err error) error {
 	clone := &AppError{
 		errorCode:  e.errorCode,
-		errorMsg:   fmt.Sprintf("%s, %s", e.errorMsg, err.Error()),
+		errorMsg:   e.errorMsg,
 		httpStatus: e.httpStatus,
 		causeErr:   err,
 	}
