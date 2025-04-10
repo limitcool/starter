@@ -42,8 +42,8 @@ func (RoleMenu) TableName() string {
 type UserRole struct {
 	BaseModel
 
-	UserID uint `json:"user_id" gorm:"not null;comment:用户ID"`
-	RoleID uint `json:"role_id" gorm:"not null;comment:角色ID"`
+	UserID int64 `json:"user_id" gorm:"type:bigint;not null;comment:用户ID"`
+	RoleID uint  `json:"role_id" gorm:"not null;comment:角色ID"`
 }
 
 // 表名

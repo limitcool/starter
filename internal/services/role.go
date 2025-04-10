@@ -82,7 +82,7 @@ func (s *RoleService) GetRoles() ([]model.Role, error) {
 }
 
 // AssignRolesToUser 为用户分配角色
-func (s *RoleService) AssignRolesToUser(userID uint, roleIDs []uint) error {
+func (s *RoleService) AssignRolesToUser(userID int64, roleIDs []uint) error {
 	// 开启事务
 	return sqldb.Instance().DB().Transaction(func(tx *gorm.DB) error {
 		// 删除原有的用户角色关联

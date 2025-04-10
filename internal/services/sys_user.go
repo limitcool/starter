@@ -30,7 +30,7 @@ func NewSysUserService() *SysUserService {
 }
 
 // GetUserByID 根据ID获取用户
-func (s *SysUserService) GetUserByID(id uint) (*model.SysUser, error) {
+func (s *SysUserService) GetUserByID(id int64) (*model.SysUser, error) {
 	var user model.SysUser
 	err := sqldb.Instance().DB().First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {

@@ -16,7 +16,7 @@ func getUserCollection() *mongo.Collection {
 
 // User 普通用户
 type User struct {
-	BaseModel
+	SnowflakeModel
 
 	Username   string    `json:"username" gorm:"size:50;not null;unique;comment:用户名"`
 	Password   string    `json:"-" gorm:"size:100;not null;comment:密码"`

@@ -34,7 +34,7 @@ type OperationLog struct {
 
 	// 操作人信息 - 支持系统用户和普通用户
 	UserType string   `json:"user_type" gorm:"size:20;comment:用户类型(sys_user/user)"`
-	UserID   uint     `json:"user_id" gorm:"comment:用户ID"`
+	UserID   int64    `json:"user_id" gorm:"type:bigint;comment:用户ID"`
 	Username string   `json:"username" gorm:"size:50;comment:用户名"`
 	SysUser  *SysUser `json:"sys_user,omitempty" gorm:"foreignKey:UserID;references:ID"`
 	User     *User    `json:"user,omitempty" gorm:"foreignKey:UserID;references:ID"`

@@ -56,7 +56,7 @@ func (ctrl *FileController) UploadFile(c *gin.Context) {
 		return
 	}
 
-	response.Success[*model.File](c, fileModel)
+	response.Success(c, fileModel)
 }
 
 // GetFile 获取文件信息
@@ -73,7 +73,7 @@ func (ctrl *FileController) GetFile(c *gin.Context) {
 		return
 	}
 
-	response.Success[*model.File](c, file)
+	response.Success(c, file)
 }
 
 // DeleteFile 删除文件
@@ -161,7 +161,7 @@ func (ctrl *FileController) UpdateUserAvatar(c *gin.Context) {
 		return
 	}
 
-	response.Success[string](c, avatarURL)
+	response.Success(c, avatarURL)
 }
 
 // UpdateSysUserAvatar 更新系统用户头像
@@ -196,5 +196,5 @@ func (ctrl *FileController) UpdateSysUserAvatar(c *gin.Context) {
 		return
 	}
 
-	response.Success[string](c, avatarURL)
+	response.Success(c, avatarURL)
 }

@@ -7,7 +7,7 @@ import (
 // CustomClaims 自定义JWT Claims结构体
 type CustomClaims struct {
 	jwt.RegisteredClaims
-	UserID    uint     `json:"user_id"`
+	UserID    int64    `json:"user_id"`
 	Username  string   `json:"username"`
 	UserType  string   `json:"user_type"`            // sys_user 或 user
 	TokenType string   `json:"token_type,omitempty"` // access_token 或 refresh_token
@@ -35,7 +35,7 @@ func FromMapClaims(claims jwt.MapClaims) *CustomClaims {
 
 	// 用户ID
 	if userID, ok := claims["user_id"].(float64); ok {
-		customClaims.UserID = uint(userID)
+		customClaims.UserID = int64(userID)
 	}
 
 	// 用户名

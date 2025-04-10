@@ -225,7 +225,7 @@ func GetUserInfo(ctx *gin.Context) {
 		}
 	}
 
-	response.Success[model.User](ctx, user)
+	response.Success(ctx, user)
 }
 
 // 用户注册
@@ -275,7 +275,7 @@ func UserRegister(ctx *gin.Context) {
 
 	// 4. 返回成功
 	type RegisterResult struct {
-		ID       uint   `json:"id"`
+		ID       int64  `json:"id"`
 		Username string `json:"username"`
 	}
 
@@ -284,7 +284,7 @@ func UserRegister(ctx *gin.Context) {
 		Username: user.Username,
 	}
 
-	response.Success[RegisterResult](ctx, result)
+	response.Success(ctx, result)
 }
 
 // 用户登录
@@ -355,7 +355,7 @@ func UserLogin(ctx *gin.Context) {
 		UserInfo: user,
 	}
 
-	response.Success[LoginResult](ctx, result)
+	response.Success(ctx, result)
 }
 
 // 修改密码
@@ -417,7 +417,7 @@ func GetUserList(ctx *gin.Context) {
 
 	// 如果有关键字，添加搜索条件
 	if keyword != "" {
-		db = db.Where("username LIKE ? OR nickname LIKE ? OR mobile LIKE ? OR email LIKE ?",
+		db.Where("username LIKE ? OR nickname LIKE ? OR mobile LIKE ? OR email LIKE ?",
 			"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
 	}
 
@@ -463,5 +463,5 @@ func GetUserList(ctx *gin.Context) {
 		List:  users,
 	}
 
-	response.Success[ResponseData](ctx, result)
+	response.Success(ctx, result)
 }

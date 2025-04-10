@@ -37,7 +37,7 @@ type File struct {
 	MimeType     string    `json:"mime_type" gorm:"size:100;comment:MIME类型"`
 	Extension    string    `json:"extension" gorm:"size:20;comment:扩展名"`
 	StorageType  string    `json:"storage_type" gorm:"size:20;comment:存储类型(local/s3/oss)"`
-	UploadedBy   uint      `json:"uploaded_by" gorm:"comment:上传者ID"`
+	UploadedBy   int64     `json:"uploaded_by" gorm:"type:bigint;comment:上传者ID"`
 	UploadedAt   time.Time `json:"uploaded_at" gorm:"comment:上传时间"`
 	Status       int       `json:"status" gorm:"comment:状态(1:正常,0:禁用,-1:删除)"`
 }

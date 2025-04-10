@@ -45,12 +45,12 @@ func OperationLogMiddleware(module, action, description string) gin.HandlerFunc 
 		}
 
 		// 提取用户ID、用户名和用户类型
-		var userID uint
+		var userID int64
 		var username string
 		var userType string
 
-		if uid, ok := mapClaims["user_id"].(float64); ok {
-			userID = uint(uid)
+		if uid, ok := mapClaims["user_id"].(int64); ok {
+			userID = uid
 		}
 		if un, ok := mapClaims["username"].(string); ok {
 			username = un

@@ -3,6 +3,7 @@ module github.com/limitcool/starter
 go 1.24.1
 
 require (
+	github.com/bwmarrin/snowflake v0.3.0
 	github.com/casbin/casbin/v2 v2.104.0
 	github.com/casbin/gorm-adapter/v3 v3.32.0
 	github.com/charmbracelet/log v0.4.1
@@ -10,6 +11,7 @@ require (
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-eagle/eagle v1.10.0
 	github.com/golang-jwt/jwt/v4 v4.5.2
+	github.com/google/uuid v1.6.0
 	github.com/pkg/errors v0.9.1
 	github.com/qor/oss v0.0.0-20241126061828-4629f3a3524a
 	github.com/redis/go-redis/extra/redisotel/v9 v9.7.3
@@ -82,7 +84,6 @@ require (
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect

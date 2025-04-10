@@ -89,7 +89,7 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 
 	// 如果有上传者ID，转换并设置
 	if uploader != "" {
-		var uploaderID uint
+		var uploaderID int64
 		fmt.Sscanf(uploader, "%d", &uploaderID)
 		if uploaderID > 0 {
 			fileModel.UploadedBy = uploaderID

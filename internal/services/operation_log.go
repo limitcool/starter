@@ -22,7 +22,7 @@ func NewOperationLogService() *OperationLogService {
 }
 
 // CreateSysUserLog 创建系统用户操作日志
-func (s *OperationLogService) CreateSysUserLog(c *gin.Context, userID uint, username string, module, action, description string, startTime time.Time) error {
+func (s *OperationLogService) CreateSysUserLog(c *gin.Context, userID int64, username string, module, action, description string, startTime time.Time) error {
 	// 计算执行时间
 	executeTime := time.Since(startTime).Milliseconds()
 
@@ -70,7 +70,7 @@ func (s *OperationLogService) CreateSysUserLog(c *gin.Context, userID uint, user
 }
 
 // CreateUserLog 创建普通用户操作日志
-func (s *OperationLogService) CreateUserLog(c *gin.Context, userID uint, username string, module, action, description string, startTime time.Time) error {
+func (s *OperationLogService) CreateUserLog(c *gin.Context, userID int64, username string, module, action, description string, startTime time.Time) error {
 	// 计算执行时间
 	executeTime := time.Since(startTime).Milliseconds()
 
