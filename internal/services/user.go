@@ -27,7 +27,7 @@ func NewUserService() *UserService {
 }
 
 // GetUserByID 根据ID获取用户
-func (s *UserService) GetUserByID(id uint) (*model.User, error) {
+func (s *UserService) GetUserByID(id int64) (*model.User, error) {
 	var user model.User
 	err := sqldb.Instance().DB().First(&user, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -182,7 +182,7 @@ func (s *UserService) UpdateUser(id uint, data map[string]interface{}) error {
 }
 
 // ChangePassword 修改密码
-func (s *UserService) ChangePassword(id uint, oldPassword, newPassword string) error {
+func (s *UserService) ChangePassword(id int64, oldPassword, newPassword string) error {
 	// 获取用户
 	user, err := s.GetUserByID(id)
 	if err != nil {

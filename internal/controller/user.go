@@ -7,6 +7,7 @@ import (
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/spf13/cast"
 )
 
 func NewUserController() *UserController {
@@ -93,18 +94,14 @@ func (uc *UserController) UserChangePassword(c *gin.Context) {
 	// 获取用户ID
 	userID, _ := c.Get("user_id")
 
-	var req struct {
-		OldPassword string `json:"old_password" binding:"required"`
-		NewPassword string `json:"new_password" binding:"required"`
-	}
-
+	var req v1.UserChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	userService := services.NewUserService()
-	err := userService.ChangePassword(userID.(uint), req.OldPassword, req.NewPassword)
+	err := userService.ChangePassword(cast.ToInt64(userID), req.OldPassword, req.NewPassword)
 	if err != nil {
 		if errorx.IsAppErr(err) {
 			response.Error(c, err)
@@ -123,7 +120,7 @@ func (uc *UserController) UserInfo(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
 	userService := services.NewUserService()
-	user, err := userService.GetUserByID(userID.(uint))
+	user, err := userService.GetUserByID(cast.ToInt64(userID))
 	if err != nil {
 		if errorx.IsAppErr(err) {
 			response.Error(c, err)

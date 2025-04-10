@@ -66,7 +66,7 @@ func NewRouter() *gin.Engine {
 	MenuControllerInstance := controller.NewMenuController()
 	RoleControllerInstance := controller.NewRoleController()
 	SystemControllerInstance := controller.NewSystemController()
-
+	AdminControllerInstance := controller.NewAdminController()
 	// 设置API路由组
 	apiV1 := r.Group("/api/v1")
 
@@ -77,7 +77,7 @@ func NewRouter() *gin.Engine {
 		// 认证相关
 		auth := apiV1.Group("/auth")
 		{
-			auth.POST("/admin/login", controller.AdminControllerInstance.AdminLogin)
+			auth.POST("/admin/login", AdminControllerInstance.AdminLogin)
 			auth.POST("/tokens/refresh", UserControllerInstance.RefreshToken) // 改为更RESTful的路径
 
 			// 普通用户认证
