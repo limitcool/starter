@@ -4,6 +4,8 @@ APP:
 JwtAuth:
   AccessSecret: uOvKLmVfztaXGpNYd4Z0I1SiT7MweJhl
   AccessExpire: 2592000
+  RefreshSecret: uOvKLmVfztaXGpNYd4Z0I1SiT7MweJhl
+  RefreshExpire: 2592000
 Driver: sqlite3
 Database:
   Enabled: true
@@ -50,6 +52,12 @@ Log:
   StackTraceEnabled: true
   StackTraceLevel: error
   MaxStackFrames: 10
+Storage:
+  Enabled: true
+  Type: local
+  Local:
+    Path: storage
+    URL: http://localhost:8080/storage
 Admin:
   Username: admin
   Password: admin123

@@ -67,16 +67,16 @@ func (s *SysUserService) GetUserByUsername(username string) (*model.SysUser, err
 		return nil, err
 	}
 
-	// 获取用户的角色
-	if err := sqldb.Instance().DB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
-		// 直接返回错误，错误会自动捕获堆栈
-		return nil, err
-	}
+	// // 获取用户的角色
+	// if err := sqldb.Instance().DB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+	// 	// 直接返回错误，错误会自动捕获堆栈
+	// 	return nil, err
+	// }
 
-	// 提取角色编码
-	for _, role := range user.Roles {
-		user.RoleCodes = append(user.RoleCodes, role.Code)
-	}
+	// // 提取角色编码
+	// for _, role := range user.Roles {
+	// 	user.RoleCodes = append(user.RoleCodes, role.Code)
+	// }
 
 	return &user, nil
 }
@@ -88,9 +88,12 @@ func (s *SysUserService) VerifyPassword(password, hashedPassword string) bool {
 
 // LoginResponse 登录响应结构
 type LoginResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int64  `json:"expires_in"`
+	AccessToken       string `json:"access_token"`
+	RefreshToken      string `json:"refresh_token"`
+	ExpiresIn         int64  `json:"expires_in"`          // 访问令牌有效期（秒）
+	ExpireTime        int64  `json:"expire_time"`         // 访问令牌过期时间戳
+	RefreshExpiresIn  int64  `json:"refresh_expires_in"`  // 刷新令牌有效期（秒）
+	RefreshExpireTime int64  `json:"refresh_expire_time"` // 刷新令牌过期时间戳
 }
 
 // Login 用户登录
@@ -129,7 +132,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 		UserID:    user.ID,
 		Username:  user.Username,
 		UserType:  enum.UserTypeSysUser.String(), // 系统用户
-		TokenType: "access_token",                // 访问令牌
+		TokenType: enum.TokenTypeAccess.String(), // 访问令牌
 		Roles:     user.RoleCodes,                // 角色编码
 	}
 
@@ -137,8 +140,8 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	refreshClaims := &jwtpkg.CustomClaims{
 		UserID:    user.ID,
 		Username:  user.Username,
-		UserType:  enum.UserTypeSysUser.String(), // 系统用户
-		TokenType: "refresh_token",               // 刷新令牌
+		UserType:  enum.UserTypeSysUser.String(),  // 系统用户
+		TokenType: enum.TokenTypeRefresh.String(), // 刷新令牌
 	}
 
 	accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
@@ -154,9 +157,12 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	}
 
 	return &LoginResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    cfg.JwtAuth.AccessExpire,
+		AccessToken:       accessToken,
+		RefreshToken:      refreshToken,
+		ExpiresIn:         cfg.JwtAuth.AccessExpire,
+		ExpireTime:        time.Now().Add(time.Duration(cfg.JwtAuth.AccessExpire) * time.Second).Unix(),
+		RefreshExpiresIn:  cfg.JwtAuth.RefreshExpire,
+		RefreshExpireTime: time.Now().Add(time.Duration(cfg.JwtAuth.RefreshExpire) * time.Second).Unix(),
 	}, nil
 }
 
@@ -208,8 +214,11 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, erro
 	}
 
 	return &LoginResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken, // 保持原有的刷新令牌
-		ExpiresIn:    cfg.JwtAuth.AccessExpire,
+		AccessToken:       accessToken,
+		RefreshToken:      refreshToken, // 保持原有的刷新令牌
+		ExpiresIn:         cfg.JwtAuth.AccessExpire,
+		ExpireTime:        time.Now().Add(time.Duration(cfg.JwtAuth.AccessExpire) * time.Second).Unix(),
+		RefreshExpiresIn:  cfg.JwtAuth.RefreshExpire,
+		RefreshExpireTime: time.Now().Add(time.Duration(cfg.JwtAuth.RefreshExpire) * time.Second).Unix(),
 	}, nil
 }
