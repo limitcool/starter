@@ -2,7 +2,6 @@ package migration
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
@@ -338,56 +337,42 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 				return fmt.Errorf("密码加密失败: %w", err)
 			}
 
-			// 使用原始SQL插入管理员用户，避免GORM的复杂关联处理
-			sql := `
-			INSERT INTO sys_user
-			(username, password, nickname, enabled, remark, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?)`
+			// 使用GORM模型创建管理员用户，确保触发雪花ID生成
+			sysUser := &model.SysUser{
+				Username:     username,
+				Password:     hashedPassword,
+				Nickname:     nickname,
+				Enabled:      true,
+				Remark:       "系统初始化创建",
+				AvatarFileID: 0,
+				Email:        "",
+				Mobile:       "",
+				LastLogin:    nil, // 使用nil
+				LastIP:       "",
+			}
 
-			if err := tx.Exec(
-				sql,
-				username,
-				hashedPassword,
-				nickname,
-				true,
-				"系统初始化创建",
-				time.Now(),
-				time.Now(),
-			).Error; err != nil {
+			log.Info("准备创建管理员用户",
+				"username", sysUser.Username,
+				"nickname", sysUser.Nickname)
+
+			if err := tx.Create(sysUser).Error; err != nil {
 				return fmt.Errorf("创建管理员账号失败: %w", err)
 			}
 
-			// 查询新创建的用户ID
-			var user struct {
-				ID uint
-			}
-			if err := tx.Raw("SELECT id FROM sys_user WHERE username = ?", username).Scan(&user).Error; err != nil {
-				log.Warn("获取新创建用户失败，跳过角色分配", "error", err)
-				return nil
-			}
-
 			// 获取管理员角色ID
-			var role struct {
-				ID uint
-			}
-			if err := tx.Raw("SELECT id FROM sys_role WHERE code = ?", "admin").Scan(&role).Error; err != nil {
+			var role model.Role
+			if err := tx.Where("code = ?", "admin").First(&role).Error; err != nil {
 				log.Warn("获取管理员角色失败，跳过角色分配", "error", err)
 				return nil
 			}
 
-			// 直接创建用户角色关联
-			sql = `
-			INSERT INTO sys_user_role
-			(user_id, role_id, created_at, updated_at)
-			VALUES (?, ?, ?, ?)`
+			// 创建用户角色关联
+			userRole := &model.UserRole{
+				UserID: sysUser.ID,
+				RoleID: role.ID,
+			}
 
-			if err := tx.Exec(
-				sql,
-				user.ID,
-				role.ID,
-				time.Now(),
-				time.Now(),
-			).Error; err != nil {
+			if err := tx.Create(userRole).Error; err != nil {
 				log.Warn("分配管理员角色失败", "error", err)
 				return nil
 			}
@@ -395,7 +380,7 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 			log.Info("管理员用户创建成功",
 				"username", username,
 				"nickname", nickname,
-				"id", user.ID)
+				"id", sysUser.ID)
 			return nil
 		},
 		Down: func(tx *gorm.DB) error {
@@ -405,7 +390,7 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 				username = migrator.config.Admin.Username
 			}
 
-			return tx.Exec("DELETE FROM sys_user WHERE username = ?", username).Error
+			return tx.Where("username = ?", username).Delete(&model.SysUser{}).Error
 		},
 	})
 }

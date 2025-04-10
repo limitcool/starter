@@ -30,13 +30,8 @@ func GenerateSnowflakeID() int64 {
 }
 
 // GenerateUUID 生成UUID
-func GenerateUUID() uuid.UUID {
-	id, err := uuid.NewV7()
-	if err != nil {
-		log.Error("生成UUID失败", "error", err)
-		panic(err)
-	}
-	return id
+func GenerateUUID() string {
+	return uuid.New().String()
 }
 
 // DB 获取SQL数据库连接
@@ -78,7 +73,7 @@ type BaseModel struct {
 
 // SnowflakeModel 使用雪花ID的基础模型结构 - 适用于需要分布式ID的模型（如User和SysUser）
 type SnowflakeModel struct {
-	ID        int64          `gorm:"primarykey;type:bigint" json:"id"`
+	ID        int64          `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
@@ -86,7 +81,7 @@ type SnowflakeModel struct {
 
 // UUIDModel 使用UUID的基础模型结构 - 适用于需要全局唯一ID且无序的场景
 type UUIDModel struct {
-	ID        uuid.UUID      `gorm:"primarykey;type:varchar(36)" json:"id"`
+	ID        string         `gorm:"primarykey;type:varchar(36)" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
@@ -96,13 +91,14 @@ type UUIDModel struct {
 func (m *SnowflakeModel) BeforeCreate(tx *gorm.DB) error {
 	if m.ID == 0 {
 		m.ID = GenerateSnowflakeID()
+		log.Info("生成雪花ID", "id", m.ID)
 	}
 	return nil
 }
 
 // BeforeCreate 在创建记录前自动生成UUID
 func (m *UUIDModel) BeforeCreate(tx *gorm.DB) error {
-	if m.ID == uuid.Nil {
+	if m.ID == "" {
 		m.ID = GenerateUUID()
 	}
 	return nil

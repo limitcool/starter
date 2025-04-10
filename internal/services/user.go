@@ -96,7 +96,7 @@ func (s *UserService) Register(req RegisterRequest) (*model.User, error) {
 		Mobile:     req.Mobile,
 		Enabled:    true,
 		Gender:     req.Gender,
-		Birthday:   req.Birthday,
+		Birthday:   &req.Birthday,
 		Address:    req.Address,
 		RegisterIP: req.RegisterIP,
 	}
@@ -218,9 +218,9 @@ func GetUserInfo(ctx *gin.Context) {
 	}
 
 	// 加载头像文件信息
-	if user.Avatar != "" {
+	if user.AvatarFileID != 0 {
 		var avatarFile model.File
-		if err := sqldb.Instance().DB().First(&avatarFile, user.Avatar).Error; err == nil {
+		if err := sqldb.Instance().DB().First(&avatarFile, user.AvatarFileID).Error; err == nil {
 			user.AvatarURL = avatarFile.URL
 		}
 	}
@@ -325,7 +325,8 @@ func UserLogin(ctx *gin.Context) {
 	}
 
 	// 4. 更新登录信息
-	user.LastLogin = time.Now()
+	now := time.Now()
+	user.LastLogin = &now
 	user.LastIP = ctx.ClientIP()
 	if err := sqldb.Instance().DB().Save(&user).Error; err != nil {
 		response.Error(ctx, errorx.ErrDatabaseQueryError)
@@ -337,9 +338,9 @@ func UserLogin(ctx *gin.Context) {
 	token := "mock_token_" + req.Username
 
 	// 加载头像文件信息
-	if user.Avatar != "" {
+	if user.AvatarFileID != 0 {
 		var avatarFile model.File
-		if err := sqldb.Instance().DB().First(&avatarFile, user.Avatar).Error; err == nil {
+		if err := sqldb.Instance().DB().First(&avatarFile, user.AvatarFileID).Error; err == nil {
 			user.AvatarURL = avatarFile.URL
 		}
 	}
@@ -444,9 +445,9 @@ func GetUserList(ctx *gin.Context) {
 
 	// 获取用户头像URL
 	for i := range users {
-		if users[i].Avatar != "" {
+		if users[i].AvatarFileID != 0 {
 			var avatarFile model.File
-			if err := sqldb.Instance().DB().First(&avatarFile, users[i].Avatar).Error; err == nil {
+			if err := sqldb.Instance().DB().First(&avatarFile, users[i].AvatarFileID).Error; err == nil {
 				users[i].AvatarURL = avatarFile.URL
 			}
 		}

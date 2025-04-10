@@ -163,7 +163,7 @@ func (s *FileService) UpdateUserAvatar(userID string, fileHeader *multipart.File
 	}
 
 	// 更新用户头像
-	user.Avatar = fmt.Sprintf("%d", file.ID)
+	user.AvatarFileID = file.ID
 	if err := sqldb.Instance().DB().Save(&user).Error; err != nil {
 		return "", errorx.ErrDatabase.WithError(err)
 	}
@@ -186,7 +186,7 @@ func (s *FileService) UpdateSysUserAvatar(userID string, fileHeader *multipart.F
 	}
 
 	// 更新用户头像
-	sysUser.Avatar = fmt.Sprintf("%d", file.ID)
+	sysUser.AvatarFileID = file.ID
 	if err := sqldb.Instance().DB().Save(&sysUser).Error; err != nil {
 		return "", errorx.ErrDatabase.WithError(err)
 	}
