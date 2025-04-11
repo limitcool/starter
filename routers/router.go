@@ -59,167 +59,170 @@ func NewRouter() *gin.Engine {
 			log.Error("初始化存储服务失败", "err", err)
 		} else {
 			log.Info("存储服务初始化成功", "type", config.Storage.Type)
-
 		}
 	}
-	UserControllerInstance := controller.NewUserController()
-	PermissionControllerInstance := controller.NewPermissionController()
-	OperationLogControllerInstance := controller.NewOperationLogController()
-	MenuControllerInstance := controller.NewMenuController()
-	RoleControllerInstance := controller.NewRoleController()
-	SystemControllerInstance := controller.NewSystemController()
-	AdminControllerInstance := controller.NewAdminController()
+
+	// 配置静态文件服务
+	if stg != nil && config.Storage.Type == storage.StorageTypeLocal {
+		// 从URL提取路径前缀
+		urlPath := "/static" // 默认路径
+		if config.Storage.Local.URL != "" {
+			u := config.Storage.Local.URL
+			// 如果URL包含http://或https://，则提取路径部分
+			if strings.Contains(u, "://") {
+				parts := strings.Split(u, "://")
+				if len(parts) > 1 {
+					hostPath := strings.Split(parts[1], "/")
+					if len(hostPath) > 1 {
+						urlPath = "/" + strings.Join(hostPath[1:], "/")
+					}
+				}
+			} else if strings.HasPrefix(u, "/") {
+				// 如果URL直接以/开头，则直接使用
+				urlPath = u
+			}
+		}
+
+		log.Info("配置本地静态文件服务", "path", config.Storage.Local.Path, "url_path", urlPath)
+		// 使用StaticFS提供静态文件服务
+		r.StaticFS(urlPath, http.Dir(config.Storage.Local.Path))
+	}
+
+	// 初始化控制器
+	userController := controller.NewUserController()
+	adminController := controller.NewAdminController()
+	roleController := controller.NewRoleController()
+	menuController := controller.NewMenuController()
+	permissionController := controller.NewPermissionController()
+	operationLogController := controller.NewOperationLogController()
+	systemController := controller.NewSystemController()
+
+	var fileController *controller.FileController
+	if stg != nil {
+		fileController = controller.NewFileController(stg)
+	}
+
 	// 设置API路由组
 	apiV1 := r.Group("/api/v1")
 
-	// 公共路由
-	{
-		apiV1.GET("/ping", controller.Ping)
+	// 健康检查路由
+	apiV1.GET("/ping", controller.Ping)
 
-		// 认证相关
-		auth := apiV1.Group("/auth")
-		{
-			auth.POST("/admin/login", AdminControllerInstance.AdminLogin)
-			auth.POST("/tokens/refresh", UserControllerInstance.RefreshToken)
-			// 普通用户认证
-			auth.POST("/users/register", UserControllerInstance.UserRegister)
-			auth.POST("/users/login", UserControllerInstance.UserLogin)
+	// 令牌刷新（公共API）
+	apiV1.POST("/auth/tokens/refresh", userController.RefreshToken)
+
+	// 用户相关 - 公开路由
+	publicUser := apiV1.Group("/user")
+	{
+		publicUser.POST("/register", userController.UserRegister)
+		publicUser.POST("/login", userController.UserLogin)
+	}
+
+	// 管理员相关 - 公开路由
+	publicAdmin := apiV1.Group("/admin")
+	{
+		publicAdmin.POST("/login", adminController.AdminLogin)
+	}
+
+	// ======= 文件下载API（无需认证）=======
+	if fileController != nil {
+		apiV1.GET("/files/download/:id", fileController.DownloadFile)
+	}
+
+	// ======= 需要认证的路由 =======
+	auth := apiV1.Group("")
+	auth.Use(middleware.JWTAuth())
+
+	// 用户相关 - 需要认证
+	authUser := auth.Group("/user")
+	authUser.Use(middleware.AuthNormalUser())
+	{
+		authUser.GET("", userController.UserInfo)
+		authUser.PUT("/password", userController.UserChangePassword)
+		authUser.GET("/menus", menuController.GetUserMenus)
+		authUser.GET("/permissions", menuController.GetUserMenuPerms)
+
+		// 用户头像上传
+		if fileController != nil {
+			authUser.PUT("/avatar", fileController.UpdateUserAvatar)
 		}
 	}
 
-	// 需要认证的路由
-	authRequired := apiV1.Group("")
-	authRequired.Use(middleware.JWTAuth())
-	{
-		// 用户相关
-		users := authRequired.Group("/users")
+	// 文件相关 - 需要认证
+	if fileController != nil {
+		authFiles := auth.Group("/files")
 		{
-			users.GET("/menus", MenuControllerInstance.GetUserMenus)
-			users.GET("/permissions", MenuControllerInstance.GetUserMenuPerms)                                     // 更改为复数形式
-			users.GET("/current", middleware.AuthNormalUser(), UserControllerInstance.UserInfo)                    // 使用/current表示当前用户
-			users.PUT("/current/password", middleware.AuthNormalUser(), UserControllerInstance.UserChangePassword) // 更改为更符合RESTful的形式
+			authFiles.POST("/upload", fileController.UploadFile)
+			authFiles.GET("/:id", fileController.GetFile)
+			authFiles.DELETE("/:id", fileController.DeleteFile)
 		}
+	}
 
-		// 管理员权限路由（如果启用了权限系统）
-		if config.Permission.Enabled && casbinComponent != nil {
-			admin := authRequired.Group("")
-			admin.Use(middleware.CasbinComponentMiddleware())
+	// 管理员路由 - 需要权限验证
+	if config.Permission.Enabled && casbinComponent != nil {
+		adminGroup := auth.Group("/admin")
+		adminGroup.Use(middleware.CasbinComponentMiddleware())
+		{
+			// 系统管理
+			adminSystem := adminGroup.Group("/system")
 			{
-				// 系统设置
-				systems := admin.Group("/systems")
-				{
-					systems.GET("", SystemControllerInstance.GetSystemSettings)
-					systems.PUT("/permissions", PermissionControllerInstance.UpdatePermissionSettings)
-				}
+				adminSystem.GET("", systemController.GetSystemSettings)
+				adminSystem.PUT("/permissions", permissionController.UpdatePermissionSettings)
+			}
 
-				// 菜单管理
-				menus := admin.Group("/menus")
-				{
-					menus.POST("", MenuControllerInstance.CreateMenu)
-					menus.PUT("/:id", MenuControllerInstance.UpdateMenu)
-					menus.DELETE("/:id", MenuControllerInstance.DeleteMenu)
-					menus.GET("/:id", MenuControllerInstance.GetMenu)
-					menus.GET("", MenuControllerInstance.GetMenuTree)
-				}
+			// 菜单管理
+			adminMenu := adminGroup.Group("/menu")
+			{
+				adminMenu.GET("", menuController.GetMenuTree)
+				adminMenu.GET("/:id", menuController.GetMenu)
+				adminMenu.POST("", menuController.CreateMenu)
+				adminMenu.PUT("/:id", menuController.UpdateMenu)
+				adminMenu.DELETE("/:id", menuController.DeleteMenu)
+			}
 
-				// 角色管理
-				roles := admin.Group("/roles")
-				{
-					roles.POST("", RoleControllerInstance.CreateRole)
-					roles.PUT("/:id", RoleControllerInstance.UpdateRole)
-					roles.DELETE("/:id", RoleControllerInstance.DeleteRole)
-					roles.GET("/:id", RoleControllerInstance.GetRole)
-					roles.GET("", RoleControllerInstance.GetRoles)
-					roles.POST("/:id/menus", RoleControllerInstance.AssignMenuToRole)             // 使用子资源路径
-					roles.POST("/:id/permissions", RoleControllerInstance.SetRolePermission)      // 使用子资源路径
-					roles.DELETE("/:id/permissions", RoleControllerInstance.DeleteRolePermission) // 使用子资源路径
-				}
+			// 角色管理
+			adminRole := adminGroup.Group("/role")
+			{
+				adminRole.GET("", roleController.GetRoles)
+				adminRole.GET("/:id", roleController.GetRole)
+				adminRole.POST("", roleController.CreateRole)
+				adminRole.PUT("/:id", roleController.UpdateRole)
+				adminRole.DELETE("/:id", roleController.DeleteRole)
+				adminRole.POST("/:id/menus", roleController.AssignMenuToRole)
+				adminRole.POST("/:id/permissions", roleController.SetRolePermission)
+				adminRole.DELETE("/:id/permissions", roleController.DeleteRolePermission)
+			}
 
-				// 权限管理
-				permissions := admin.Group("/permissions")
-				{
-					permissions.GET("", PermissionControllerInstance.GetPermissions)
-					permissions.GET("/:id", PermissionControllerInstance.GetPermission)
-					permissions.POST("", PermissionControllerInstance.CreatePermission)
-					permissions.PUT("/:id", PermissionControllerInstance.UpdatePermission)
-					permissions.DELETE("/:id", PermissionControllerInstance.DeletePermission)
-				}
+			// 权限管理
+			adminPermission := adminGroup.Group("/permission")
+			{
+				adminPermission.GET("", permissionController.GetPermissions)
+				adminPermission.GET("/:id", permissionController.GetPermission)
+				adminPermission.POST("", permissionController.CreatePermission)
+				adminPermission.PUT("/:id", permissionController.UpdatePermission)
+				adminPermission.DELETE("/:id", permissionController.DeletePermission)
+			}
 
-				// 操作日志管理 - 更改为复数形式
-				operationLogs := admin.Group("/operation-logs")
+			// 操作日志管理
+			adminLog := adminGroup.Group("/log")
+			{
+				adminLog.GET("", operationLogController.GetOperationLogs)
+				adminLog.DELETE("/:id", operationLogController.DeleteOperationLog)
+				adminLog.POST("/batch-delete", operationLogController.ClearOperationLogs)
+			}
+
+			// 系统用户头像管理
+			if fileController != nil {
+				adminUser := adminGroup.Group("/user")
 				{
-					operationLogs.GET("", OperationLogControllerInstance.GetOperationLogs)
-					operationLogs.DELETE("/:id", OperationLogControllerInstance.DeleteOperationLog)
-					// 使用POST方法进行批量删除，更符合请求体传递ID列表的设计
-					operationLogs.POST("/batch-delete", OperationLogControllerInstance.ClearOperationLogs)
+					adminUser.PUT("/avatar", fileController.UpdateSysUserAvatar)
+					adminUser.PUT("/avatar/:id", fileController.UpdateSysUserAvatar)
 				}
 			}
 		}
-	}
-
-	// 如果存储服务可用，设置文件相关路由
-	if stg != nil {
-		fileController := controller.NewFileController(stg)
-
-		// 配置静态文件服务
-		if config.Storage.Type == storage.StorageTypeLocal {
-			// 从URL提取路径前缀
-			urlPath := "/static" // 默认路径
-			if config.Storage.Local.URL != "" {
-				u := config.Storage.Local.URL
-				// 如果URL包含http://或https://，则提取路径部分
-				if strings.Contains(u, "://") {
-					parts := strings.Split(u, "://")
-					if len(parts) > 1 {
-						hostPath := strings.Split(parts[1], "/")
-						if len(hostPath) > 1 {
-							urlPath = "/" + strings.Join(hostPath[1:], "/")
-						}
-					}
-				} else if strings.HasPrefix(u, "/") {
-					// 如果URL直接以/开头，则直接使用
-					urlPath = u
-				}
-			}
-
-			log.Info("配置本地静态文件服务", "path", config.Storage.Local.Path, "url_path", urlPath)
-			// 使用StaticFS提供静态文件服务
-			r.StaticFS(urlPath, http.Dir(config.Storage.Local.Path))
-		}
-
-		// 文件资源
-		files := apiV1.Group("/files")
-		{
-			// 上传文件需要登录
-			files.POST("upload", middleware.JWTAuth(), fileController.UploadFile)
-
-			// 获取文件信息（需要登录）
-			files.GET("/:id", middleware.JWTAuth(), fileController.GetFile)
-
-			// 下载文件（无需登录，在控制器中处理权限）
-			files.GET("/:id/download", fileController.DownloadFile)
-
-			// 删除文件（需要登录）
-			files.DELETE("/:id", middleware.JWTAuth(), fileController.DeleteFile)
-		}
-
-		// 用户头像
-		apiV1.PUT("/users/:id/avatar", middleware.JWTAuth(), fileController.UpdateUserAvatar)
-		apiV1.PUT("/users/current/avatar", middleware.JWTAuth(), fileController.UpdateUserAvatar)
-
-		// 系统用户头像
-		apiV1.PUT("/system-users/:id/avatar", middleware.JWTAuth(), fileController.UpdateSysUserAvatar)
-		apiV1.PUT("/system-users/current/avatar", middleware.JWTAuth(), fileController.UpdateSysUserAvatar)
 	}
 
 	// 打印所有注册的路由
-	printRegisteredRoutes(r)
-
-	return r
-}
-
-// printRegisteredRoutes 打印所有注册的路由
-func printRegisteredRoutes(r *gin.Engine) {
 	routes := r.Routes()
 	log.Info("Registered routes:")
 	for _, route := range routes {
@@ -233,4 +236,6 @@ func printRegisteredRoutes(r *gin.Engine) {
 		}
 		log.Info("Route", "method", route.Method, "path", route.Path, "handler", handlerName)
 	}
+
+	return r
 }
