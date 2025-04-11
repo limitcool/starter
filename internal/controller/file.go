@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/storage"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/spf13/cast"
 )
 
 // FileController 文件控制器
@@ -29,14 +30,16 @@ func NewFileController(storage *storage.Storage) *FileController {
 // UploadFile 上传文件
 func (ctrl *FileController) UploadFile(c *gin.Context) {
 	// 获取当前用户ID
-	var userID string
-	user, exists := c.Get("user")
-	if exists {
-		if u, ok := user.(*model.User); ok {
-			userID = fmt.Sprintf("%d", u.ID)
-		} else if su, ok := user.(*model.SysUser); ok {
-			userID = fmt.Sprintf("%d", su.ID)
-		}
+	userID, ok := c.Get("user_id")
+	if !ok {
+		response.Error(c, errorx.ErrUserNoLogin)
+		return
+	}
+
+	// 获取用户类型
+	userType, ok := c.Get("user_type")
+	if !ok {
+		userType = enum.UserTypeSysUser // 默认为系统用户
 	}
 
 	// 获取文件
@@ -49,8 +52,8 @@ func (ctrl *FileController) UploadFile(c *gin.Context) {
 	// 获取文件类型参数
 	fileType := c.DefaultPostForm("type", model.FileTypeOther)
 
-	// 上传文件
-	fileModel, err := ctrl.fileService.UploadFile(c, file, fileType, userID)
+	// 上传文件，传入用户类型
+	fileModel, err := ctrl.fileService.UploadFile(c, file, fileType, cast.ToInt64(userID), enum.UserType(cast.ToInt8(userType)))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -67,7 +70,19 @@ func (ctrl *FileController) GetFile(c *gin.Context) {
 		return
 	}
 
-	file, err := ctrl.fileService.GetFile(id)
+	// 获取当前用户ID和类型
+	userID, ok := c.Get("user_id")
+	if !ok {
+		response.Error(c, errorx.ErrUserNoLogin)
+		return
+	}
+
+	userType, ok := c.Get("user_type")
+	if !ok {
+		userType = enum.UserTypeSysUser // 默认为系统用户
+	}
+
+	file, err := ctrl.fileService.GetFile(id, cast.ToInt64(userID), enum.UserType(cast.ToUint8(userType)))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -84,7 +99,19 @@ func (ctrl *FileController) DeleteFile(c *gin.Context) {
 		return
 	}
 
-	err := ctrl.fileService.DeleteFile(id)
+	// 获取当前用户ID和类型
+	userID, ok := c.Get("user_id")
+	if !ok {
+		response.Error(c, errorx.ErrUserNoLogin)
+		return
+	}
+
+	userType, ok := c.Get("user_type")
+	if !ok {
+		userType = "sys_user" // 默认为系统用户
+	}
+
+	err := ctrl.fileService.DeleteFile(id, cast.ToInt64(userID), enum.UserType(cast.ToUint8(userType)))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -101,8 +128,20 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 		return
 	}
 
+	// 获取当前用户ID和类型
+	userID, ok := c.Get("user_id")
+	if !ok {
+		response.Error(c, errorx.ErrUserNoLogin)
+		return
+	}
+
+	userType, ok := c.Get("user_type")
+	if !ok {
+		userType = enum.UserTypeSysUser // 默认为系统用户
+	}
+
 	// 获取文件内容
-	fileStream, contentType, err := ctrl.fileService.GetFileContent(id)
+	fileStream, contentType, err := ctrl.fileService.GetFileContent(id, cast.ToInt64(userID), enum.UserType(cast.ToUint8(userType)))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -110,7 +149,7 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 	defer fileStream.Close()
 
 	// 获取文件信息以设置文件名
-	file, err := ctrl.fileService.GetFile(id)
+	file, err := ctrl.fileService.GetFile(id, cast.ToInt64(userID), enum.UserType(cast.ToUint8(userType)))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -131,19 +170,9 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 
 // UpdateUserAvatar 更新用户头像
 func (ctrl *FileController) UpdateUserAvatar(c *gin.Context) {
-	// 获取当前用户
-	user, exists := c.Get("user")
-	if !exists {
+	userID, ok := c.Get("user_id")
+	if !ok {
 		response.Error(c, errorx.ErrUserNoLogin)
-		return
-	}
-
-	// 获取用户ID
-	var userID string
-	if u, ok := user.(*model.User); ok {
-		userID = strconv.FormatUint(uint64(u.ID), 10)
-	} else {
-		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
@@ -155,7 +184,7 @@ func (ctrl *FileController) UpdateUserAvatar(c *gin.Context) {
 	}
 
 	// 更新头像
-	avatarURL, err := ctrl.fileService.UpdateUserAvatar(userID, avatar)
+	avatarURL, err := ctrl.fileService.UpdateUserAvatar(cast.ToInt64(userID), avatar)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -166,19 +195,9 @@ func (ctrl *FileController) UpdateUserAvatar(c *gin.Context) {
 
 // UpdateSysUserAvatar 更新系统用户头像
 func (ctrl *FileController) UpdateSysUserAvatar(c *gin.Context) {
-	// 获取当前用户
-	user, exists := c.Get("user")
-	if !exists {
+	userID, ok := c.Get("user_id")
+	if !ok {
 		response.Error(c, errorx.ErrUserNoLogin)
-		return
-	}
-
-	// 获取用户ID
-	var userID string
-	if su, ok := user.(*model.SysUser); ok {
-		userID = strconv.FormatUint(uint64(su.ID), 10)
-	} else {
-		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
@@ -190,7 +209,7 @@ func (ctrl *FileController) UpdateSysUserAvatar(c *gin.Context) {
 	}
 
 	// 更新头像
-	avatarURL, err := ctrl.fileService.UpdateSysUserAvatar(userID, avatar)
+	avatarURL, err := ctrl.fileService.UpdateSysUserAvatar(cast.ToInt64(userID), avatar)
 	if err != nil {
 		response.Error(c, err)
 		return

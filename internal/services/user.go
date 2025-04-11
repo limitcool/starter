@@ -139,7 +139,7 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 	accessClaims := &jwtpkg.CustomClaims{
 		UserID:    user.ID,
 		Username:  user.Username,
-		UserType:  enum.UserTypeUser.String(),    // 普通用户
+		UserType:  enum.UserTypeUser,             // 普通用户
 		TokenType: enum.TokenTypeAccess.String(), // 访问令牌
 	}
 
@@ -147,7 +147,7 @@ func (s *UserService) Login(username, password string, ip string) (*LoginRespons
 	refreshClaims := &jwtpkg.CustomClaims{
 		UserID:    user.ID,
 		Username:  user.Username,
-		UserType:  enum.UserTypeUser.String(),     // 普通用户
+		UserType:  enum.UserTypeUser,              // 普通用户
 		TokenType: enum.TokenTypeRefresh.String(), // 刷新令牌
 	}
 

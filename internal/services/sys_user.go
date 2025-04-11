@@ -131,7 +131,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	accessClaims := &jwtpkg.CustomClaims{
 		UserID:    user.ID,
 		Username:  user.Username,
-		UserType:  enum.UserTypeSysUser.String(), // 系统用户
+		UserType:  enum.UserTypeSysUser,          // 系统用户
 		TokenType: enum.TokenTypeAccess.String(), // 访问令牌
 		Roles:     user.RoleCodes,                // 角色编码
 	}
@@ -140,7 +140,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*LoginResp
 	refreshClaims := &jwtpkg.CustomClaims{
 		UserID:    user.ID,
 		Username:  user.Username,
-		UserType:  enum.UserTypeSysUser.String(),  // 系统用户
+		UserType:  enum.UserTypeSysUser,           // 系统用户
 		TokenType: enum.TokenTypeRefresh.String(), // 刷新令牌
 	}
 
@@ -202,7 +202,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*LoginResponse, erro
 	accessClaims := &jwtpkg.CustomClaims{
 		UserID:    user.ID,
 		Username:  user.Username,
-		UserType:  enum.UserTypeSysUser.String(), // 系统用户
+		UserType:  enum.UserTypeSysUser, // 系统用户
 		TokenType: enum.TokenTypeAccess.String(), // 访问令牌
 		Roles:     user.RoleCodes,                // 角色编码
 	}

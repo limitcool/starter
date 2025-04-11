@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/storage"
 	"github.com/limitcool/starter/internal/storage/sqldb"
@@ -28,7 +29,7 @@ func NewFileService(storage *storage.Storage) *FileService {
 }
 
 // UploadFile 上传文件
-func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeader, fileType, uploader string) (*model.File, error) {
+func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeader, fileType string, uploaderID int64, userType enum.UserType) (*model.File, error) {
 	if fileHeader == nil {
 		return nil, errorx.ErrInvalidParams
 	}
@@ -72,28 +73,26 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 		return nil, errorx.ErrFileStroage.WithError(err)
 	}
 
-	// 记录到数据库
-	fileModel := &model.File{
-		Name:         fileName,
-		OriginalName: originalName,
-		Path:         storagePath,
-		URL:          fileURL,
-		Type:         fileType,
-		Size:         size,
-		MimeType:     mimeType,
-		Extension:    ext,
-		StorageType:  string(s.storage.Config.Type),
-		UploadedAt:   time.Now(),
-		Status:       1, // 状态正常
+	// 如果未指定用户类型，默认为系统用户
+	if userType == 0 {
+		userType = enum.UserTypeSysUser
 	}
 
-	// 如果有上传者ID，转换并设置
-	if uploader != "" {
-		var uploaderID int64
-		fmt.Sscanf(uploader, "%d", &uploaderID)
-		if uploaderID > 0 {
-			fileModel.UploadedBy = uploaderID
-		}
+	// 记录到数据库
+	fileModel := &model.File{
+		Name:           fileName,
+		OriginalName:   originalName,
+		Path:           storagePath,
+		URL:            fileURL,
+		Type:           fileType,
+		Size:           size,
+		MimeType:       mimeType,
+		Extension:      ext,
+		StorageType:    string(s.storage.Config.Type),
+		UploadedBy:     uploaderID,
+		UploadedByType: userType,
+		UploadedAt:     time.Now(),
+		Status:         1, // 状态正常
 	}
 
 	if err := sqldb.Instance().DB().Create(fileModel).Error; err != nil {
@@ -104,19 +103,46 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 }
 
 // GetFile 获取文件信息
-func (s *FileService) GetFile(id string) (*model.File, error) {
+func (s *FileService) GetFile(id string, currentUserID int64, currentUserType enum.UserType) (*model.File, error) {
 	var file model.File
 	if err := sqldb.Instance().DB().First(&file, id).Error; err != nil {
 		return nil, errorx.ErrNotFound.WithError(err)
 	}
-	return &file, nil
+
+	// 系统用户可以访问所有文件
+	if currentUserType == enum.UserTypeSysUser {
+		return &file, nil
+	}
+
+	// 公共文件任何人都可以访问
+	if file.Type == model.FileTypePublic {
+		return &file, nil
+	}
+
+	// 普通用户可以访问自己上传的文件
+	if currentUserType == enum.UserTypeUser && file.UploadedByType == enum.UserTypeUser && file.UploadedBy == currentUserID {
+		return &file, nil
+	}
+
+	// 普通用户可以访问特定类型的公共文件（如图片和文档）
+	if currentUserType == enum.UserTypeUser && (file.Type == model.FileTypeImage || file.Type == model.FileTypeDocument) {
+		// 这里可以添加额外的权限逻辑
+		return &file, nil
+	}
+
+	return nil, errorx.ErrAccessDenied.WithMsg("您无权访问此文件")
 }
 
 // DeleteFile 删除文件
-func (s *FileService) DeleteFile(id string) error {
+func (s *FileService) DeleteFile(id string, currentUserID int64, currentUserType enum.UserType) error {
 	var file model.File
 	if err := sqldb.Instance().DB().First(&file, id).Error; err != nil {
 		return errorx.ErrNotFound.WithError(err)
+	}
+
+	// 权限检查：系统用户可以删除所有文件，普通用户只能删除自己上传的文件
+	if currentUserType == enum.UserTypeUser && (file.UploadedByType != enum.UserTypeUser || file.UploadedBy != currentUserID) {
+		return errorx.ErrAccessDenied.WithMsg("您无权删除此文件")
 	}
 
 	// 删除存储中的文件
@@ -133,10 +159,11 @@ func (s *FileService) DeleteFile(id string) error {
 }
 
 // 获取文件内容
-func (s *FileService) GetFileContent(id string) (io.ReadCloser, string, error) {
-	var file model.File
-	if err := sqldb.Instance().DB().First(&file, id).Error; err != nil {
-		return nil, "", errorx.ErrNotFound.WithError(err)
+func (s *FileService) GetFileContent(id string, currentUserID int64, currentUserType enum.UserType) (io.ReadCloser, string, error) {
+	// 先验证权限
+	file, err := s.GetFile(id, currentUserID, currentUserType)
+	if err != nil {
+		return nil, "", err
 	}
 
 	// 获取文件流
@@ -149,9 +176,9 @@ func (s *FileService) GetFileContent(id string) (io.ReadCloser, string, error) {
 }
 
 // UpdateUserAvatar 更新用户头像
-func (s *FileService) UpdateUserAvatar(userID string, fileHeader *multipart.FileHeader) (string, error) {
+func (s *FileService) UpdateUserAvatar(userID int64, fileHeader *multipart.FileHeader) (string, error) {
 	// 上传头像文件
-	file, err := s.UploadFile(nil, fileHeader, model.FileTypeAvatar, userID)
+	file, err := s.UploadFile(nil, fileHeader, model.FileTypeAvatar, userID, enum.UserTypeUser)
 	if err != nil {
 		return "", err
 	}
@@ -172,9 +199,9 @@ func (s *FileService) UpdateUserAvatar(userID string, fileHeader *multipart.File
 }
 
 // UpdateSysUserAvatar 更新系统用户头像
-func (s *FileService) UpdateSysUserAvatar(userID string, fileHeader *multipart.FileHeader) (string, error) {
+func (s *FileService) UpdateSysUserAvatar(userID int64, fileHeader *multipart.FileHeader) (string, error) {
 	// 上传头像文件
-	file, err := s.UploadFile(nil, fileHeader, model.FileTypeAvatar, userID)
+	file, err := s.UploadFile(nil, fileHeader, model.FileTypeAvatar, userID, enum.UserTypeSysUser)
 	if err != nil {
 		return "", err
 	}
