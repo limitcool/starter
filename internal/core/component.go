@@ -45,28 +45,28 @@ func (m *ComponentManager) Initialize() error {
 
 	// 初始化国际化组件
 	if m.config.I18n.Enabled {
-		log.Info("正在初始化国际化组件...")
+		log.Info("Initializing internationalization component...")
 		err := initI18n(m.config.I18n)
 		if err != nil {
-			log.Error("国际化组件初始化失败", "err", err)
+			log.Error("Failed to initialize i18n component", "err", err)
 			return err
 		}
-		log.Info("国际化组件初始化成功")
+		log.Info("Internationalization component initialized successfully")
 	}
 
 	// 初始化其他组件
 	for _, c := range m.components {
-		log.Info("正在初始化组件", "component", c.Name())
+		log.Info("Initializing component", "component", c.Name())
 		if err := c.Initialize(); err != nil {
-			log.Error("组件初始化失败", "component", c.Name(), "err", err)
+			log.Error("Failed to initialize component", "component", c.Name(), "err", err)
 			return err
 		}
-		log.Info("组件初始化成功", "component", c.Name())
+		log.Info("Component initialized successfully", "component", c.Name())
 	}
 
 	// 记录初始化耗时
 	elapsedTime := time.Since(startTime)
-	log.Info("所有组件初始化完成", "耗时", elapsedTime)
+	log.Info("All components initialized", "duration", elapsedTime)
 
 	return nil
 }

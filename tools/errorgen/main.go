@@ -22,18 +22,19 @@ type ErrorDef struct {
 
 // 错误组定义
 type ErrorGroup struct {
-	Name        string
-	Description string
-	BaseCode    int
-	Range       string
-	Errors      []ErrorDef
+	Name           string
+	Description    string
+	BaseCode       int
+	Range          string
+	Errors         []ErrorDef
+	GroupConstName string // 添加这个字段
 }
 
 // 解析Markdown表格行
 func parseTableRow(line string) (*ErrorDef, error) {
 	parts := strings.Split(line, "|")
 	if len(parts) < 5 {
-		return nil, fmt.Errorf("无效的表格行: %s", line)
+		return nil, fmt.Errorf("Invalid table row: %s", line)
 	}
 
 	// 清理每个字段的空白
@@ -44,13 +45,13 @@ func parseTableRow(line string) (*ErrorDef, error) {
 	// 解析错误码
 	code, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return nil, fmt.Errorf("错误码解析失败: %s", parts[1])
+		return nil, fmt.Errorf("Failed to parse error code: %s", parts[1])
 	}
 
 	// 解析HTTP状态码
 	httpStatus, err := strconv.Atoi(parts[4])
 	if err != nil {
-		return nil, fmt.Errorf("HTTP状态码解析失败: %s", parts[4])
+		return nil, fmt.Errorf("Failed to parse HTTP status code: %s", parts[4])
 	}
 
 	return &ErrorDef{
@@ -347,8 +348,9 @@ func generateI18nKeyName(errorName string) string {
 }
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Println("用法: go run main.go <markdown文件路径> <输出Go文件路径>")
+	// 检查参数
+	if len(os.Args) != 3 {
+		fmt.Println("Usage: go run main.go <markdown_file_path> <output_go_file_path>")
 		os.Exit(1)
 	}
 
@@ -358,7 +360,7 @@ func main() {
 	// 解析Markdown文件
 	errorGroups, err := parseMarkdownFile(markdownFile)
 	if err != nil {
-		fmt.Printf("解析Markdown文件失败: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error parsing Markdown file: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -399,21 +401,21 @@ func main() {
 	// 执行模板
 	tmpl, err := template.New("codeTemplate").Funcs(funcMap).Parse(codeTemplate)
 	if err != nil {
-		fmt.Printf("模板解析失败: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error parsing template: %v\n", err)
 		os.Exit(1)
 	}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, templateData); err != nil {
-		fmt.Printf("模板执行失败: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error executing template: %v\n", err)
 		os.Exit(1)
 	}
 
 	// 写入输出文件
 	if err := os.WriteFile(outputFile, buf.Bytes(), 0644); err != nil {
-		fmt.Printf("写入输出文件失败: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error writing output file: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("成功生成错误码文件: %s\n", outputFile)
+	fmt.Printf("Successfully generated error code file: %s\n", outputFile)
 }

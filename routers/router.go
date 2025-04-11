@@ -57,9 +57,9 @@ func NewRouter() *gin.Engine {
 		var err error
 		stg, err = storage.New(storageConfig)
 		if err != nil {
-			log.Error("初始化存储服务失败", "err", err)
+			log.Error("Failed to initialize storage service", "err", err)
 		} else {
-			log.Info("存储服务初始化成功", "type", config.Storage.Type)
+			log.Info("Storage service initialized successfully", "type", config.Storage.Type)
 		}
 	}
 
@@ -84,7 +84,7 @@ func NewRouter() *gin.Engine {
 			}
 		}
 
-		log.Info("配置本地静态文件服务", "path", config.Storage.Local.Path, "url_path", urlPath)
+		log.Info("Configuring local static file service", "path", config.Storage.Local.Path, "url_path", urlPath)
 		// 使用StaticFS提供静态文件服务
 		r.StaticFS(urlPath, http.Dir(config.Storage.Local.Path))
 	}

@@ -10,8 +10,8 @@ import (
 // versionCmd 表示version子命令
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "显示版本信息",
-	Long:  `显示应用程序的版本信息，包括版本号、构建时间和Git提交信息`,
+	Short: "Display version information",
+	Long:  `Display application version information, including version number, build time, and Git commit information`,
 	Run: func(cmd *cobra.Command, args []string) {
 		vInfo := version.GetVersion()
 		fmt.Printf("Version:      %s\n", vInfo.Version)

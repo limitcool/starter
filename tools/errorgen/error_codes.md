@@ -6,67 +6,67 @@
 
 | 错误码 | 名称 | 错误消息 | HTTP状态码 |
 |------|------|--------|----------|
-| 0 | SuccessCode | 成功 | 200 |
+| 0 | SuccessCode | Success | 200 |
 
 ## 通用错误码 (10000-19999)
 
 | 错误码 | 名称 | 错误消息 | HTTP状态码 |
 |------|------|--------|----------|
-| 10000 | InvalidParamsCode | 请求参数错误 | 400 |
-| 10001 | ErrorUnknownCode | 服务器开小差啦，稍后再来试一试 | 500 |
-| 10002 | ErrorNotExistCertCode | 不存在的认证类型 | 400 |
-| 10003 | ErrorNotFoundCode | 资源不存在 | 404 |
-| 10004 | ErrorDatabaseCode | 数据库操作失败 | 500 |
-| 10005 | ErrorInternalCode | 服务器内部错误 | 500 |
-| 10006 | ErrorCode | 错误 | 500 |
-| 10007 | ErrorParamCode | 参数错误 | 400 |
+| 10000 | InvalidParamsCode | Invalid request parameters | 400 |
+| 10001 | ErrorUnknownCode | Server is busy, please try again later | 500 |
+| 10002 | ErrorNotExistCertCode | Authentication type does not exist | 400 |
+| 10003 | ErrorNotFoundCode | Resource not found | 404 |
+| 10004 | ErrorDatabaseCode | Database operation failed | 500 |
+| 10005 | ErrorInternalCode | Internal server error | 500 |
+| 10006 | ErrorCode | Error | 500 |
+| 10007 | ErrorParamCode | Parameter error | 400 |
 
 ## 数据库错误码 (20000-29999)
 
 | 错误码 | 名称 | 错误消息 | HTTP状态码 |
 |------|------|--------|----------|
-| 20000 | DatabaseInsertErrorCode | 数据库插入失败 | 500 |
-| 20001 | DatabaseDeleteErrorCode | 数据库删除失败 | 500 |
-| 20002 | DatabaseQueryErrorCode | 数据库查询失败 | 500 |
+| 20000 | DatabaseInsertErrorCode | Database insert failed | 500 |
+| 20001 | DatabaseDeleteErrorCode | Database delete failed | 500 |
+| 20002 | DatabaseQueryErrorCode | Database query failed | 500 |
 
 ## 用户相关错误码 (30000-39999)
 
 | 错误码 | 名称 | 错误消息 | HTTP状态码 |
 |------|------|--------|----------|
-| 30000 | UserNoLoginCode | 用户未登录 | 401 |
-| 30001 | UserNotFoundCode | 用户不存在 | 404 |
-| 30002 | UserPasswordErrorCode | 密码错误 | 401 |
-| 30003 | UserNotVerifyCode | 用户未验证 | 401 |
-| 30004 | UserLockedCode | 用户已锁定 | 401 |
-| 30005 | UserDisabledCode | 用户已禁用 | 401 |
-| 30006 | UserExpiredCode | 用户已过期 | 401 |
-| 30007 | UserAlreadyExistsCode | 用户已存在 | 401 |
-| 30008 | UserNameOrPasswordErrorCode | 用户名或密码错误 | 401 |
-| 30009 | UserAuthFailedCode | 认证失败 | 401 |
-| 30010 | UserNoPermissionCode | 没有权限 | 401 |
-| 30011 | UserPasswordErrCode | 密码错误 | 401 |
-| 30012 | UserNotExistCode | 用户不存在 | 401 |
-| 30013 | UserTokenErrorCode | 登录凭证无效 | 401 |
-| 30014 | UserTokenExpiredCode | 登录已过期，请重新登录 | 401 |
+| 30000 | UserNoLoginCode | User not logged in | 401 |
+| 30001 | UserNotFoundCode | User not found | 404 |
+| 30002 | UserPasswordErrorCode | Incorrect password | 401 |
+| 30003 | UserNotVerifyCode | User not verified | 401 |
+| 30004 | UserLockedCode | User is locked | 401 |
+| 30005 | UserDisabledCode | User is disabled | 401 |
+| 30006 | UserExpiredCode | User account expired | 401 |
+| 30007 | UserAlreadyExistsCode | User already exists | 401 |
+| 30008 | UserNameOrPasswordErrorCode | Incorrect username or password | 401 |
+| 30009 | UserAuthFailedCode | Authentication failed | 401 |
+| 30010 | UserNoPermissionCode | No permission | 401 |
+| 30011 | UserPasswordErrCode | Password error | 401 |
+| 30012 | UserNotExistCode | User does not exist | 401 |
+| 30013 | UserTokenErrorCode | Invalid login credentials | 401 |
+| 30014 | UserTokenExpiredCode | Login expired, please login again | 401 |
 
 ## 权限相关错误码 (40000-49999)
 
 | 错误码 | 名称 | 错误消息 | HTTP状态码 |
 |------|------|--------|----------|
-| 40000 | AccessDeniedCode | 访问被拒绝 | 403 |
-| 40001 | CasbinServiceCode | Casbin服务错误 | 500 |
+| 40000 | AccessDeniedCode | Access denied | 403 |
+| 40001 | CasbinServiceCode | Casbin service error | 500 |
 
 ## 缓存相关错误码 (50000-59999)
 
 | 错误码 | 名称 | 错误消息 | HTTP状态码 |
 |------|------|--------|----------|
-| 50000 | ErrorCacheCode | 缓存操作失败 | 500 |
-| 50001 | ErrorCacheTimeoutCode | 缓存操作超时 | 500 |
-| 50002 | ErrorCacheKeyCode | 缓存键不存在 | 500 |
-| 50003 | ErrorCacheValueCode | 缓存值错误 | 500 |
+| 50000 | ErrorCacheCode | Cache operation failed | 500 |
+| 50001 | ErrorCacheTimeoutCode | Cache operation timeout | 500 |
+| 50002 | ErrorCacheKeyCode | Cache key does not exist | 500 |
+| 50003 | ErrorCacheValueCode | Cache value error | 500 |
 
 ## 文件相关错误码 (60000-69999)
 
 | 错误码 | 名称 | 错误消息 | HTTP状态码 |
 |------|------|--------|----------|
-| 60000 | FileStroageCode | 文件存储失败 | 500 |
+| 60000 | FileStroageCode | File storage failed | 500 |

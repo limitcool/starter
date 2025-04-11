@@ -89,10 +89,10 @@ func Error(c *gin.Context, err error, msg ...string) {
 		// 根据配置决定是否记录堆栈
 		if showStackTrace {
 			// 在开发环境中记录完整错误（包含堆栈）
-			log.Debug("API错误详情", "err", fmt.Sprintf("%+v", appErr))
+			log.Debug("API error details", "err", fmt.Sprintf("%+v", appErr))
 		} else {
 			// 不记录堆栈，只记录基本错误信息
-			log.Debug("API错误详情",
+			log.Debug("API error details",
 				"err_code", errorCode,
 				"err_msg", message,
 				"i18n_key", i18nKey)
@@ -116,7 +116,7 @@ func Error(c *gin.Context, err error, msg ...string) {
 			}
 		}
 
-		log.Debug("API错误详情", logFields...)
+		log.Debug("API error details", logFields...)
 	}
 
 	// 允许调用方覆盖原始错误消息

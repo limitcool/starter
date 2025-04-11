@@ -25,7 +25,7 @@ var (
 
 // Config 国际化配置
 type Config struct {
-	DefaultLanguage string   // 默认语言
+	DefaultLanguage  string   // 默认语言
 	SupportLanguages []string // 支持的语言列表
 }
 
@@ -62,15 +62,15 @@ func Setup(config Config, fsys fs.FS) error {
 		// 读取文件
 		data, err := fs.ReadFile(fsys, path)
 		if err != nil {
-			return fmt.Errorf("无法读取语言文件 %s: %v", path, err)
+			return fmt.Errorf("failed to read language file %s: %v", path, err)
 		}
 
 		// 加载到Bundle
 		if _, err := bundle.ParseMessageFileBytes(data, path); err != nil {
-			return fmt.Errorf("解析语言文件 %s 失败: %v", path, err)
+			return fmt.Errorf("failed to parse language file %s: %v", path, err)
 		}
 
-		log.Info("已加载语言文件", "path", path, "language", lang)
+		log.Info("Language file loaded", "path", path, "language", lang)
 
 		// 初始化语言对应的localizer
 		localizerMux.Lock()
@@ -85,7 +85,7 @@ func Setup(config Config, fsys fs.FS) error {
 func SetupWithEmbedFS(config Config, embedFS embed.FS, dir string) error {
 	subFS, err := fs.Sub(embedFS, dir)
 	if err != nil {
-		return fmt.Errorf("无法访问嵌入文件系统目录 %s: %v", dir, err)
+		return fmt.Errorf("failed to access embedded filesystem directory %s: %v", dir, err)
 	}
 	return Setup(config, subFS)
 }
@@ -123,7 +123,7 @@ func Translate(messageID string, lang string, args map[string]interface{}) strin
 	})
 
 	if err != nil {
-		log.Debug("翻译消息失败", "message_id", messageID, "lang", lang, "error", err)
+		log.Debug("Failed to translate message", "message_id", messageID, "lang", lang, "error", err)
 		return messageID
 	}
 

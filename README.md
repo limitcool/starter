@@ -3,6 +3,8 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/limitcool/starter.svg)](https://pkg.go.dev/github.com/limitcool/starter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/limitcool/starter)](https://goreportcard.com/report/github.com/limitcool/starter)
 
+[English](README_EN.md) | 中文
+
 ## 特征
 - 提供 gin 框架项目模版
 - 集成 GORM 进行 ORM 映射和数据库操作
@@ -14,6 +16,11 @@
 - 提供常用 gin 中间件和工具
   - 跨域中间件:处理 API 跨域请求,实现 CORS 支持
   - jwt 解析中间件:从请求中解析并验证 JWT Token,用于 API 身份认证
+- 国际化 (i18n) 支持
+  - 基于请求 Accept-Language 头自动选择语言
+  - 错误消息多语言支持
+  - 内置英语 (en-US) 和中文 (zh-CN) 翻译
+  - 可轻松扩展支持更多语言
 - 使用 Cobra 命令行框架，提供清晰的子命令结构
 - 支持数据库迁移与服务器启动分离，提高启动速度
 - 完善的数据库迁移系统，支持版本控制和回滚
@@ -211,6 +218,72 @@ cp example.yaml configs/prod.yaml
 2. `./configs/dev.yaml`（configs目录）
 
 如果找不到对应的配置文件，应用程序将无法启动。
+
+## 国际化 (i18n) 支持
+
+系统内置了国际化支持，可以根据客户端请求自动切换语言。
+
+### 配置国际化
+
+在配置文件中设置国际化选项：
+
+```yaml
+I18n:
+  Enabled: true                # 是否启用国际化
+  DefaultLanguage: en-US       # 默认语言
+  SupportLanguages:            # 支持的语言列表
+    - zh-CN
+    - en-US
+  ResourcesPath: locales       # 语言资源文件路径
+```
+
+### 语言资源文件
+
+语言资源文件位于 `locales` 目录下，采用 JSON 格式：
+
+- `locales/en-US.json` - 英文资源
+- `locales/zh-CN.json` - 中文资源
+
+示例语言文件内容：
+
+```json
+{
+  "error.success": "Success",
+  "error.common.invalid_params": "Invalid request parameters",
+  "error.user.user_not_found": "User not found"
+}
+```
+
+### 使用方法
+
+1. **API响应自动翻译**：
+   - 系统会自动根据请求头 `Accept-Language` 选择语言
+   - API错误响应会根据设置的语言返回对应的翻译文本
+
+2. **客户端请求示例**：
+   ```bash
+   # 请求英文响应
+   curl -X POST "http://localhost:8080/api/v1/user/login" \
+        -H "Accept-Language: en-US" \
+        -H "Content-Type: application/json" \
+        -d '{"username": "test", "password": "wrong"}'
+
+   # 请求中文响应
+   curl -X POST "http://localhost:8080/api/v1/user/login" \
+        -H "Accept-Language: zh-CN" \
+        -H "Content-Type: application/json" \
+        -d '{"username": "test", "password": "wrong"}'
+   ```
+
+3. **添加新的错误码翻译**：
+   - 在 `tools/errorgen/error_codes.md` 中定义错误
+   - 运行错误代码生成器: `go run tools/errorgen/main.go tools/errorgen/error_codes.md internal/pkg/errorx/code_gen.go`
+   - 在语言文件 (`locales/en-US.json` 和 `locales/zh-CN.json`) 中添加对应的翻译
+
+4. **添加新的语言支持**：
+   - 创建新的语言文件，如 `locales/fr-FR.json`
+   - 在配置中的 `SupportLanguages` 列表中添加该语言
+   - 重启应用使配置生效
 
 ## 日志配置
 

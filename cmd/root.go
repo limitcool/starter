@@ -9,12 +9,12 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "starter",
-	Short: "Starter是一个Go Web应用程序框架",
-	Long: `Starter是一个Go Web应用程序框架，提供了完整的Web应用骨架，
-包括配置管理、数据库集成、日志系统等。
+	Short: "Starter is a Go Web application framework",
+	Long: `Starter is a Go Web application framework that provides a complete Web application skeleton,
+including configuration management, database integration, logging system, etc.
 
-使用Starter可以快速构建高质量的Web应用，专注于业务逻辑而非基础设施。
-详情请访问: https://github.com/limitcool/starter`,
+With Starter, you can quickly build high-quality Web applications, focusing on business logic rather than infrastructure.
+For details, please visit: https://github.com/limitcool/starter`,
 }
 
 // ExecuteCmd 执行rootCmd
@@ -27,7 +27,7 @@ func ExecuteCmd() {
 
 func init() {
 	// 在这里可以设置全局标志（flags）
-	rootCmd.PersistentFlags().StringP("config", "c", "", "配置文件路径")
+	rootCmd.PersistentFlags().StringP("config", "c", "", "Configuration file path")
 
 	// 设置版本信息
 	rootCmd.Version = "1.0.0"

@@ -20,11 +20,11 @@ import (
 // serverCmd 表示server子命令
 var serverCmd = &cobra.Command{
 	Use:   "server",
-	Short: "启动HTTP服务器",
-	Long: `启动HTTP服务器并提供Web API服务。
+	Short: "Start HTTP server",
+	Long: `Start HTTP server and provide Web API services.
 
-服务器会加载配置文件并初始化所有必要的组件，包括数据库连接、日志系统等。
-服务器会优雅地处理关闭信号，确保所有请求都能得到处理并安全地关闭资源。`,
+The server will load the configuration file and initialize all necessary components, including database connections, logging systems, etc.
+The server gracefully handles shutdown signals, ensuring all requests are processed and resources are safely closed.`,
 	Run: runServer,
 }
 
@@ -32,7 +32,7 @@ func init() {
 	rootCmd.AddCommand(serverCmd)
 
 	// 添加服务器特定的标志
-	serverCmd.Flags().IntP("port", "p", 0, "HTTP服务器端口号，会覆盖配置文件中的设置")
+	serverCmd.Flags().IntP("port", "p", 0, "HTTP server port number, overrides the setting in the configuration file")
 }
 
 // runServer 运行HTTP服务器
