@@ -128,7 +128,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 
 	// 根据用户类型不同，查询不同的表
 	switch userType {
-	case enum.UserTypeSysUser.String():
+	case enum.UserTypeSysUser:
 		// 系统用户 - 查询系统用户表
 		user, err := model.NewSysUser().GetUserByID(claims.UserID)
 		if err != nil {
@@ -144,14 +144,14 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 			return nil, errorx.ErrUserDisabled
 		}
 
-	// 生成新的访问令牌
-	accessClaims := &jwtpkg.CustomClaims{
-		UserID:    user.ID,
-		Username:  user.Username,
-		UserType:  enum.UserTypeSysUser, // 系统用户
-		TokenType: enum.TokenTypeAccess.String(), // 访问令牌
-		Roles:     user.RoleCodes,                // 角色编码
-	}
+		// 生成新的访问令牌
+		accessClaims := &jwtpkg.CustomClaims{
+			UserID:    user.ID,
+			Username:  user.Username,
+			UserType:  enum.UserTypeSysUser,          // 系统用户
+			TokenType: enum.TokenTypeAccess.String(), // 访问令牌
+			Roles:     user.RoleCodes,                // 角色编码
+		}
 
 		accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 		if err != nil {
@@ -168,7 +168,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 			RefreshExpireTime: time.Now().Add(time.Duration(cfg.JwtAuth.RefreshExpire) * time.Second).Unix(),
 		}
 
-	case enum.UserTypeUser.String():
+	case enum.UserTypeUser:
 		// 普通用户 - 查询普通用户表
 		user, err := model.NewUser().GetUserByID(claims.UserID)
 		if err != nil {
@@ -187,7 +187,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 		accessClaims := &jwtpkg.CustomClaims{
 			UserID:    user.ID,
 			Username:  user.Username,
-			UserType:  enum.UserTypeUser.String(),    // 普通用户
+			UserType:  enum.UserTypeUser,             // 普通用户
 			TokenType: enum.TokenTypeAccess.String(), // 访问令牌
 			Roles:     []string{"user"},              // 普通用户默认角色
 		}

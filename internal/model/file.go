@@ -3,10 +3,8 @@ package model
 import (
 	"time"
 
+	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
-	"github.com/limitcool/starter/internal/storage/mongodb"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // 文件类型枚举
@@ -89,14 +87,4 @@ func (f *File) UpdateSysUserAvatar(userID int64, fileID uint) error {
 	// 更新用户头像
 	sysUser.AvatarFileID = fileID
 	return DB().Save(&sysUser).Error
-}
-
-func (File) Registry() {
-	var ctx = context.Background()
-	coll := getFileCollection()
-	if coll == nil {
-		return
-	}
-	coll.FindOne(ctx, bson.M{"name": "file"})
-	coll.InsertOne(ctx, bson.M{"name": "file"})
 }
