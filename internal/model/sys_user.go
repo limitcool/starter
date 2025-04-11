@@ -1,18 +1,13 @@
 package model
 
 import (
-	"context"
+	"errors"
 	"time"
 
-	"github.com/limitcool/starter/internal/storage/mongodb"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/storage/sqldb"
+	"gorm.io/gorm"
 )
-
-// 使用辅助方法获取集合
-func getSysUserCollection() *mongo.Collection {
-	return mongodb.Collection("sys_user")
-}
 
 // SysUser 系统用户
 type SysUser struct {
@@ -41,12 +36,60 @@ func (SysUser) TableName() string {
 	return "sys_user"
 }
 
-func (SysUser) Registry() {
-	var ctx = context.Background()
-	coll := getSysUserCollection()
-	if coll == nil {
-		return
+func NewSysUser() *SysUser {
+	return &SysUser{}
+}
+
+// GetUserByUsername 根据用户名获取用户
+func (s *SysUser) GetUserByUsername(username string) (*SysUser, error) {
+	var user SysUser
+	db := sqldb.Instance().DB()
+	err := db.Where("username = ?", username).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errorx.ErrUserNotFound
 	}
-	coll.FindOne(ctx, bson.M{"name": "cool"})
-	coll.InsertOne(ctx, bson.M{"name": "cool"})
+	if err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
+		return nil, err
+	}
+
+	// // 获取用户的角色
+	// if err := sqldb.Instance().DB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+	// 	// 直接返回错误，错误会自动捕获堆栈
+	// 	return nil, err
+	// }
+
+	// // 提取角色编码
+	// for _, role := range user.Roles {
+	// 	user.RoleCodes = append(user.RoleCodes, role.Code)
+	// }
+
+	return &user, nil
+}
+
+// GetUserByID 根据ID获取用户
+func (s *SysUser) GetUserByID(id int64) (*SysUser, error) {
+	var user SysUser
+	db := sqldb.Instance().DB()
+	err := db.First(&user, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errorx.ErrUserNotFound
+	}
+	if err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
+		return nil, err
+	}
+
+	// 获取用户的角色
+	if err := db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
+		return nil, err
+	}
+
+	// 提取角色编码
+	for _, role := range user.Roles {
+		user.RoleCodes = append(user.RoleCodes, role.Code)
+	}
+
+	return &user, nil
 }

@@ -5,8 +5,6 @@ import (
 	"strconv"
 
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/internal/storage/sqldb"
-	"gorm.io/gorm"
 )
 
 // RoleService 角色服务
@@ -24,154 +22,131 @@ func NewRoleService() *RoleService {
 
 // CreateRole 创建角色
 func (s *RoleService) CreateRole(role *model.Role) error {
-	return sqldb.Instance().DB().Create(role).Error
+	return role.Create()
 }
 
 // UpdateRole 更新角色
 func (s *RoleService) UpdateRole(role *model.Role) error {
-	return sqldb.Instance().DB().Model(&model.Role{}).Where("id = ?", role.ID).Updates(role).Error
+	return role.Update()
 }
 
 // DeleteRole 删除角色
 func (s *RoleService) DeleteRole(id uint) error {
-	// 开启事务
-	return sqldb.Instance().DB().Transaction(func(tx *gorm.DB) error {
-		// 检查角色是否已分配给用户
-		var count int64
-		if err := tx.Model(&model.UserRole{}).Where("role_id = ?", id).Count(&count).Error; err != nil {
-			return err
-		}
-		if count > 0 {
-			return errors.New("该角色已分配给用户，不能删除")
-		}
+	role := &model.Role{}
 
-		// 删除角色菜单关联
-		if err := tx.Where("role_id = ?", id).Delete(&model.RoleMenu{}).Error; err != nil {
-			return err
-		}
+	// 检查角色是否已分配给用户
+	isAssigned, err := role.IsAssignedToUser(id)
+	if err != nil {
+		return err
+	}
+	if isAssigned {
+		return errors.New("该角色已分配给用户，不能删除")
+	}
 
-		// 查询角色信息
-		var role model.Role
-		if err := tx.Where("id = ?", id).First(&role).Error; err != nil {
-			return err
-		}
+	// 删除角色菜单关联
+	if err := role.DeleteRoleMenus(id); err != nil {
+		return err
+	}
 
-		// 删除Casbin中的角色策略
-		_, err := s.casbinService.DeleteRole(role.Code)
-		if err != nil {
-			return err
-		}
+	// 查询角色信息
+	role, err = role.GetByID(id)
+	if err != nil {
+		return err
+	}
 
-		// 删除角色
-		return tx.Delete(&model.Role{}, id).Error
-	})
+	// 删除Casbin中的角色策略
+	_, err = s.casbinService.DeleteRole(role.Code)
+	if err != nil {
+		return err
+	}
+
+	// 删除角色
+	return role.Delete()
 }
 
 // GetRoleByID 根据ID获取角色
 func (s *RoleService) GetRoleByID(id uint) (*model.Role, error) {
-	var role model.Role
-	err := sqldb.Instance().DB().Where("id = ?", id).First(&role).Error
-	return &role, err
+	role := &model.Role{}
+	return role.GetByID(id)
 }
 
 // GetRoles 获取角色列表
 func (s *RoleService) GetRoles() ([]model.Role, error) {
-	var roles []model.Role
-	err := sqldb.Instance().DB().Order("sort").Find(&roles).Error
-	return roles, err
+	role := &model.Role{}
+	return role.GetAll()
 }
 
 // AssignRolesToUser 为用户分配角色
 func (s *RoleService) AssignRolesToUser(userID int64, roleIDs []uint) error {
-	// 开启事务
-	return sqldb.Instance().DB().Transaction(func(tx *gorm.DB) error {
-		// 删除原有的用户角色关联
-		if err := tx.Where("user_id = ?", userID).Delete(&model.UserRole{}).Error; err != nil {
+	userRole := &model.UserRole{}
+
+	// 删除原有的用户角色关联
+	if err := userRole.DeleteByUserID(userID); err != nil {
+		return err
+	}
+
+	// 添加新的用户角色关联
+	if len(roleIDs) > 0 {
+		var userRoles []model.UserRole
+		for _, roleID := range roleIDs {
+			userRoles = append(userRoles, model.UserRole{
+				UserID: userID,
+				RoleID: roleID,
+			})
+		}
+		if err := userRole.BatchCreate(userRoles); err != nil {
 			return err
 		}
+	}
 
-		// 添加新的用户角色关联
-		if len(roleIDs) > 0 {
-			var userRoles []model.UserRole
-			for _, roleID := range roleIDs {
-				userRoles = append(userRoles, model.UserRole{
-					UserID: userID,
-					RoleID: roleID,
-				})
-			}
-			if err := tx.Create(&userRoles).Error; err != nil {
-				return err
-			}
-		}
+	// 更新Casbin中的用户角色
+	userIDStr := strconv.FormatUint(uint64(userID), 10)
 
-		// 更新Casbin中的用户角色
-		userIDStr := strconv.FormatUint(uint64(userID), 10)
+	// 获取用户当前角色
+	roles, err := s.casbinService.GetRolesForUser(userIDStr)
+	if err != nil {
+		return err
+	}
 
-		// 获取用户当前角色
-		roles, err := s.casbinService.GetRolesForUser(userIDStr)
+	// 移除所有角色
+	for _, role := range roles {
+		_, err = s.casbinService.DeleteRoleForUser(userIDStr, role)
 		if err != nil {
 			return err
 		}
+	}
 
-		// 移除所有角色
-		for _, role := range roles {
-			_, err = s.casbinService.DeleteRoleForUser(userIDStr, role)
+	// 添加新角色
+	if len(roleIDs) > 0 {
+		role := &model.Role{}
+		for _, roleID := range roleIDs {
+			// 查询角色编码
+			roleObj, err := role.GetByID(roleID)
+			if err != nil {
+				return err
+			}
+
+			// 添加用户角色关联
+			_, err = s.casbinService.AddRoleForUser(userIDStr, roleObj.Code)
 			if err != nil {
 				return err
 			}
 		}
+	}
 
-		// 添加新角色
-		if len(roleIDs) > 0 {
-			for _, roleID := range roleIDs {
-				// 查询角色编码
-				var role model.Role
-				if err := tx.Where("id = ?", roleID).First(&role).Error; err != nil {
-					return err
-				}
-
-				// 添加用户角色关联
-				_, err = s.casbinService.AddRoleForUser(userIDStr, role.Code)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
-		return nil
-	})
+	return nil
 }
 
 // GetUserRoleIDs 获取用户角色ID列表
 func (s *RoleService) GetUserRoleIDs(userID uint) ([]uint, error) {
-	var userRoles []model.UserRole
-	err := sqldb.Instance().DB().Where("user_id = ?", userID).Find(&userRoles).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var roleIDs []uint
-	for _, ur := range userRoles {
-		roleIDs = append(roleIDs, ur.RoleID)
-	}
-
-	return roleIDs, nil
+	userRole := &model.UserRole{}
+	return userRole.GetRoleIDsByUserID(userID)
 }
 
 // GetRoleMenuIDs 获取角色菜单ID列表
 func (s *RoleService) GetRoleMenuIDs(roleID uint) ([]uint, error) {
-	var roleMenus []model.RoleMenu
-	err := sqldb.Instance().DB().Where("role_id = ?", roleID).Find(&roleMenus).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var menuIDs []uint
-	for _, rm := range roleMenus {
-		menuIDs = append(menuIDs, rm.MenuID)
-	}
-
-	return menuIDs, nil
+	roleMenu := &model.RoleMenu{}
+	return roleMenu.GetMenuIDsByRoleID(roleID)
 }
 
 // 为角色设置权限策略

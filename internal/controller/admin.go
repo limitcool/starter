@@ -9,9 +9,11 @@ import (
 	"github.com/limitcool/starter/internal/services"
 )
 
-var AdminControllerInstance AdminController = AdminController{}
-
 type AdminController struct {
+}
+
+func NewAdminController() *AdminController {
+	return &AdminController{}
 }
 
 // AdminLogin 管理员登录

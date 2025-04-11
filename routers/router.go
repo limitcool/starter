@@ -66,7 +66,7 @@ func NewRouter() *gin.Engine {
 	MenuControllerInstance := controller.NewMenuController()
 	RoleControllerInstance := controller.NewRoleController()
 	SystemControllerInstance := controller.NewSystemController()
-
+	AdminControllerInstance := controller.NewAdminController()
 	// 设置API路由组
 	apiV1 := r.Group("/api/v1")
 
@@ -77,9 +77,8 @@ func NewRouter() *gin.Engine {
 		// 认证相关
 		auth := apiV1.Group("/auth")
 		{
-			auth.POST("/admin/login", controller.AdminControllerInstance.AdminLogin)
-			auth.POST("/tokens/refresh", UserControllerInstance.RefreshToken) // 改为更RESTful的路径
-
+			auth.POST("/admin/login", AdminControllerInstance.AdminLogin)
+			auth.POST("/tokens/refresh", UserControllerInstance.RefreshToken)
 			// 普通用户认证
 			auth.POST("/users/register", UserControllerInstance.UserRegister)
 			auth.POST("/users/login", UserControllerInstance.UserLogin)
@@ -164,7 +163,7 @@ func NewRouter() *gin.Engine {
 		files := apiV1.Group("/files")
 		{
 			// 上传文件需要登录
-			files.POST("", middleware.JWTAuth(), fileController.UploadFile)
+			files.POST("upload", middleware.JWTAuth(), fileController.UploadFile)
 
 			// 获取文件信息
 			files.GET("/:id", fileController.GetFile)

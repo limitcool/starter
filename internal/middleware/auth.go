@@ -49,14 +49,9 @@ func JWTAuth() gin.HandlerFunc {
 		if userId, exists := (*claims)["user_id"]; exists {
 			c.Set("user_id", userId)
 		}
-
-		// 将用户类型存入请求上下文
 		if userType, exists := (*claims)["user_type"]; exists {
 			c.Set("user_type", userType)
-		} else {
-			c.Set("user_type", "sys_user") // 默认为系统用户
 		}
-
 		// 将token存入请求上下文
 		c.Set("token", token)
 

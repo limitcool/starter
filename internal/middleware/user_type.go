@@ -30,7 +30,7 @@ func AuthSystemUser() gin.HandlerFunc {
 // AuthNormalUser 验证是否普通用户中间件
 func AuthNormalUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userType, exists := c.Get("userType")
+		userType, exists := c.Get("user_type")
 		if !exists {
 			response.Error(c, errorx.ErrUserAuthFailed)
 			c.Abort()

@@ -1,18 +1,13 @@
 package model
 
 import (
-	"context"
+	"errors"
 	"time"
 
-	"github.com/limitcool/starter/internal/storage/mongodb"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/storage/sqldb"
+	"gorm.io/gorm"
 )
-
-// 使用辅助方法获取集合
-func getUserCollection() *mongo.Collection {
-	return mongodb.Collection("user")
-}
 
 // User 普通用户
 type User struct {
@@ -42,12 +37,36 @@ func (User) TableName() string {
 	return "user"
 }
 
-func (User) Registry() {
-	var ctx = context.Background()
-	coll := getUserCollection()
-	if coll == nil {
-		return
+func NewUser() *User {
+	return &User{}
+}
+
+// IsExist 判断用户是否存在
+func (u *User) IsExist() (bool, error) {
+	db := sqldb.Instance().DB()
+	return db.Model(&User{}).Where("username = ?", u.Username).First(&User{}).RowsAffected > 0, nil
+}
+
+// Create 创建用户
+func (u *User) Create() error {
+	db := sqldb.Instance().DB()
+	return db.Create(u).Error
+}
+
+// GetUserByUsername 根据用户名获取用户
+func (u *User) GetUserByUsername(username string) (*User, error) {
+	db := sqldb.Instance().DB()
+	var user User
+	err := db.Model(&User{}).Where("username = ?", username).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errorx.ErrUserNotFound.WithError(err)
 	}
-	coll.FindOne(ctx, bson.M{"name": "cool"})
-	coll.InsertOne(ctx, bson.M{"name": "cool"})
+	return &user, err
+}
+
+func (u *User) GetUserByID(id int64) (*User, error) {
+	db := sqldb.Instance().DB()
+	var user User
+	err := db.Model(&User{}).Where("id = ?", id).First(&user).Error
+	return &user, err
 }
