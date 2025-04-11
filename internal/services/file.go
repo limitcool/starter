@@ -29,7 +29,7 @@ func NewFileService(storage *storage.Storage) *FileService {
 }
 
 // UploadFile 上传文件
-func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeader, fileType string, uploaderID int64, userType enum.UserType) (*model.File, error) {
+func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeader, fileType string, uploaderID int64, userType enum.UserType, isPublic bool) (*model.File, error) {
 	if fileHeader == nil {
 		return nil, errorx.ErrInvalidParams
 	}
@@ -85,14 +85,16 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 		Path:           storagePath,
 		URL:            fileURL,
 		Type:           fileType,
+		Usage:          model.FileUsageGeneral, // 默认用途为通用
 		Size:           size,
 		MimeType:       mimeType,
 		Extension:      ext,
 		StorageType:    string(s.storage.Config.Type),
 		UploadedBy:     uploaderID,
-		UploadedByType: userType,
+		UploadedByType: uint8(userType),
 		UploadedAt:     time.Now(),
-		Status:         1, // 状态正常
+		Status:         1,        // 状态正常
+		IsPublic:       isPublic, // 设置是否公开
 	}
 
 	if err := sqldb.Instance().DB().Create(fileModel).Error; err != nil {
@@ -109,22 +111,30 @@ func (s *FileService) GetFile(id string, currentUserID int64, currentUserType en
 		return nil, errorx.ErrNotFound.WithError(err)
 	}
 
+	// 特殊情况：未登录用户（ID=0）只能访问公开文件、图片和文档类型的文件
+	if currentUserID == 0 {
+		if file.IsPublic || file.Type == model.FileTypeImage || file.Type == model.FileTypeDocument {
+			return &file, nil
+		}
+		return nil, errorx.ErrAccessDenied.WithMsg("您无权访问此文件")
+	}
+
 	// 系统用户可以访问所有文件
 	if currentUserType == enum.UserTypeSysUser {
 		return &file, nil
 	}
 
-	// 公共文件任何人都可以访问
-	if file.Type == model.FileTypePublic {
+	// 公开文件任何人都可以访问
+	if file.IsPublic {
 		return &file, nil
 	}
 
 	// 普通用户可以访问自己上传的文件
-	if currentUserType == enum.UserTypeUser && file.UploadedByType == enum.UserTypeUser && file.UploadedBy == currentUserID {
+	if currentUserType == enum.UserTypeUser && uint8(enum.UserTypeUser) == file.UploadedByType && file.UploadedBy == currentUserID {
 		return &file, nil
 	}
 
-	// 普通用户可以访问特定类型的公共文件（如图片和文档）
+	// 普通用户可以访问特定类型的公开文件（如图片和文档）
 	if currentUserType == enum.UserTypeUser && (file.Type == model.FileTypeImage || file.Type == model.FileTypeDocument) {
 		// 这里可以添加额外的权限逻辑
 		return &file, nil
@@ -141,7 +151,7 @@ func (s *FileService) DeleteFile(id string, currentUserID int64, currentUserType
 	}
 
 	// 权限检查：系统用户可以删除所有文件，普通用户只能删除自己上传的文件
-	if currentUserType == enum.UserTypeUser && (file.UploadedByType != enum.UserTypeUser || file.UploadedBy != currentUserID) {
+	if currentUserType == enum.UserTypeUser && (file.UploadedByType != uint8(enum.UserTypeUser) || file.UploadedBy != currentUserID) {
 		return errorx.ErrAccessDenied.WithMsg("您无权删除此文件")
 	}
 
@@ -177,10 +187,16 @@ func (s *FileService) GetFileContent(id string, currentUserID int64, currentUser
 
 // UpdateUserAvatar 更新用户头像
 func (s *FileService) UpdateUserAvatar(userID int64, fileHeader *multipart.FileHeader) (string, error) {
-	// 上传头像文件
-	file, err := s.UploadFile(nil, fileHeader, model.FileTypeAvatar, userID, enum.UserTypeUser)
+	// 上传头像文件（图片类型，头像用途）
+	file, err := s.UploadFile(nil, fileHeader, model.FileTypeImage, userID, enum.UserTypeUser, false)
 	if err != nil {
 		return "", err
+	}
+
+	// 设置文件用途为头像
+	file.Usage = model.FileUsageAvatar
+	if err := sqldb.Instance().DB().Save(file).Error; err != nil {
+		return "", errorx.ErrDatabase.WithError(err)
 	}
 
 	// 查找用户
@@ -200,10 +216,16 @@ func (s *FileService) UpdateUserAvatar(userID int64, fileHeader *multipart.FileH
 
 // UpdateSysUserAvatar 更新系统用户头像
 func (s *FileService) UpdateSysUserAvatar(userID int64, fileHeader *multipart.FileHeader) (string, error) {
-	// 上传头像文件
-	file, err := s.UploadFile(nil, fileHeader, model.FileTypeAvatar, userID, enum.UserTypeSysUser)
+	// 上传头像文件（图片类型，头像用途）
+	file, err := s.UploadFile(nil, fileHeader, model.FileTypeImage, userID, enum.UserTypeSysUser, false)
 	if err != nil {
 		return "", err
+	}
+
+	// 设置文件用途为头像
+	file.Usage = model.FileUsageAvatar
+	if err := sqldb.Instance().DB().Save(file).Error; err != nil {
+		return "", errorx.ErrDatabase.WithError(err)
 	}
 
 	// 查找系统用户
@@ -243,12 +265,10 @@ func randString(n int) string {
 func (s *FileService) getStoragePath(fileType, fileName string) string {
 	var baseDir string
 	switch fileType {
-	case model.FileTypeAvatar:
-		baseDir = "avatars"
-	case model.FileTypeDocument:
-		baseDir = "documents"
 	case model.FileTypeImage:
 		baseDir = "images"
+	case model.FileTypeDocument:
+		baseDir = "documents"
 	case model.FileTypeVideo:
 		baseDir = "videos"
 	case model.FileTypeAudio:
@@ -259,14 +279,18 @@ func (s *FileService) getStoragePath(fileType, fileName string) string {
 
 	// 添加日期子目录
 	dateDir := time.Now().Format("2006/01/02")
-	return filepath.Join(baseDir, dateDir, fileName)
+
+	// 使用path包而不是filepath包，确保始终使用/作为分隔符
+	path := filepath.Join(baseDir, dateDir, fileName)
+	// 确保Windows上也使用正斜杠
+	return strings.ReplaceAll(path, "\\", "/")
 }
 
 // 检查文件类型是否允许
 func isAllowedFileType(ext string, fileType string) bool {
 	ext = strings.ToLower(ext)
 	switch fileType {
-	case model.FileTypeAvatar, model.FileTypeImage:
+	case model.FileTypeImage:
 		return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp" || ext == ".svg"
 	case model.FileTypeDocument:
 		return ext == ".pdf" || ext == ".doc" || ext == ".docx" || ext == ".xls" || ext == ".xlsx" || ext == ".txt"
@@ -286,8 +310,6 @@ func isAllowedFileSize(size int64, fileType string) bool {
 	)
 
 	switch fileType {
-	case model.FileTypeAvatar:
-		return size <= 2*MB // 头像最大2MB
 	case model.FileTypeImage:
 		return size <= 10*MB // 图片最大10MB
 	case model.FileTypeDocument:

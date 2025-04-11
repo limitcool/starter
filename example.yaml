@@ -57,7 +57,7 @@ Storage:
   Type: local
   Local:
     Path: storage
-    URL: http://localhost:8080/storage
+    URL: http://localhost:8080/static
 Admin:
   Username: admin
   Password: admin123

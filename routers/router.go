@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -58,6 +59,7 @@ func NewRouter() *gin.Engine {
 			log.Error("初始化存储服务失败", "err", err)
 		} else {
 			log.Info("存储服务初始化成功", "type", config.Storage.Type)
+
 		}
 	}
 	UserControllerInstance := controller.NewUserController()
@@ -159,19 +161,45 @@ func NewRouter() *gin.Engine {
 	if stg != nil {
 		fileController := controller.NewFileController(stg)
 
+		// 配置静态文件服务
+		if config.Storage.Type == storage.StorageTypeLocal {
+			// 从URL提取路径前缀
+			urlPath := "/static" // 默认路径
+			if config.Storage.Local.URL != "" {
+				u := config.Storage.Local.URL
+				// 如果URL包含http://或https://，则提取路径部分
+				if strings.Contains(u, "://") {
+					parts := strings.Split(u, "://")
+					if len(parts) > 1 {
+						hostPath := strings.Split(parts[1], "/")
+						if len(hostPath) > 1 {
+							urlPath = "/" + strings.Join(hostPath[1:], "/")
+						}
+					}
+				} else if strings.HasPrefix(u, "/") {
+					// 如果URL直接以/开头，则直接使用
+					urlPath = u
+				}
+			}
+
+			log.Info("配置本地静态文件服务", "path", config.Storage.Local.Path, "url_path", urlPath)
+			// 使用StaticFS提供静态文件服务
+			r.StaticFS(urlPath, http.Dir(config.Storage.Local.Path))
+		}
+
 		// 文件资源
 		files := apiV1.Group("/files")
 		{
 			// 上传文件需要登录
 			files.POST("upload", middleware.JWTAuth(), fileController.UploadFile)
 
-			// 获取文件信息
-			files.GET("/:id", fileController.GetFile)
+			// 获取文件信息（需要登录）
+			files.GET("/:id", middleware.JWTAuth(), fileController.GetFile)
 
-			// 下载文件
+			// 下载文件（无需登录，在控制器中处理权限）
 			files.GET("/:id/download", fileController.DownloadFile)
 
-			// 删除文件需要登录
+			// 删除文件（需要登录）
 			files.DELETE("/:id", middleware.JWTAuth(), fileController.DeleteFile)
 		}
 

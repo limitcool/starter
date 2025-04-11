@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
+	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
@@ -12,6 +15,7 @@ import (
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/storage"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/limitcool/starter/internal/storage/sqldb"
 	"github.com/spf13/cast"
 )
 
@@ -52,11 +56,36 @@ func (ctrl *FileController) UploadFile(c *gin.Context) {
 	// 获取文件类型参数
 	fileType := c.DefaultPostForm("type", model.FileTypeOther)
 
+	// 获取文件用途参数
+	fileUsage := c.DefaultPostForm("usage", "general")
+
+	// 获取是否公开参数
+	isPublic := cast.ToBool(c.DefaultPostForm("is_public", "false"))
+
+	// 验证文件类型和扩展名是否匹配
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	if fileType == model.FileTypeImage {
+		allowedExts := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true, ".svg": true}
+		if !allowedExts[ext] {
+			response.Error(c, errorx.ErrInvalidParams.WithMsg("该文件类型不是有效的图片格式"))
+			return
+		}
+	}
+
 	// 上传文件，传入用户类型
-	fileModel, err := ctrl.fileService.UploadFile(c, file, fileType, cast.ToInt64(userID), enum.UserType(cast.ToInt8(userType)))
+	fileModel, err := ctrl.fileService.UploadFile(c, file, fileType, cast.ToInt64(userID), enum.UserType(cast.ToInt8(userType)), isPublic)
 	if err != nil {
 		response.Error(c, err)
 		return
+	}
+
+	// 如果用户指定了文件用途，更新文件记录
+	if fileUsage != "general" {
+		fileModel.Usage = fileUsage
+		if err := sqldb.Instance().DB().Save(fileModel).Error; err != nil {
+			// 更新失败只记录日志，不影响上传结果
+			log.Error("更新文件用途失败", "err", err)
+		}
 	}
 
 	response.Success(c, fileModel)
@@ -128,20 +157,21 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID和类型
-	userID, ok := c.Get("user_id")
-	if !ok {
-		response.Error(c, errorx.ErrUserNoLogin)
-		return
-	}
+	// 获取当前用户ID和类型，如果未登录则设置为游客
+	var userID int64 = 0
+	var userType enum.UserType = enum.UserTypeUser // 默认为普通用户
 
-	userType, ok := c.Get("user_type")
-	if !ok {
-		userType = enum.UserTypeSysUser // 默认为系统用户
+	userIDInterface, ok := c.Get("user_id")
+	if ok {
+		userID = cast.ToInt64(userIDInterface)
+		userTypeInterface, ok := c.Get("user_type")
+		if ok {
+			userType = enum.UserType(cast.ToUint8(userTypeInterface))
+		}
 	}
 
 	// 获取文件内容
-	fileStream, contentType, err := ctrl.fileService.GetFileContent(id, cast.ToInt64(userID), enum.UserType(cast.ToUint8(userType)))
+	fileStream, contentType, err := ctrl.fileService.GetFileContent(id, userID, userType)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -149,7 +179,7 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 	defer fileStream.Close()
 
 	// 获取文件信息以设置文件名
-	file, err := ctrl.fileService.GetFile(id, cast.ToInt64(userID), enum.UserType(cast.ToUint8(userType)))
+	file, err := ctrl.fileService.GetFile(id, userID, userType)
 	if err != nil {
 		response.Error(c, err)
 		return

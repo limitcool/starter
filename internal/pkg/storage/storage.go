@@ -99,7 +99,7 @@ func (s *Storage) Get(path string) (*os.File, error) {
 func (s *Storage) GetStream(path string) (io.ReadCloser, error) {
 	stream, err := s.oss.GetStream(path)
 	if err != nil {
-			return nil, errorx.ErrFileStroage.WithMsg("获取流失败")
+		return nil, errorx.ErrFileStroage.WithMsg("获取流失败")
 
 	}
 	return stream, nil
@@ -125,16 +125,21 @@ func (s *Storage) List(path string) ([]*oss.Object, error) {
 
 // GetURL 获取文件URL
 func (s *Storage) GetURL(path string) (string, error) {
+	// 确保路径使用正斜杠
+	normalizedPath := strings.ReplaceAll(path, "\\", "/")
+
 	// 本地存储特殊处理
 	if s.Config.Type == StorageTypeLocal && s.Config.URL != "" {
-		return fmt.Sprintf("%s/%s", strings.TrimRight(s.Config.URL, "/"), path), nil
+		return fmt.Sprintf("%s/%s", strings.TrimRight(s.Config.URL, "/"), normalizedPath), nil
 	}
 
-	url, err := s.oss.GetURL(path)
+	url, err := s.oss.GetURL(normalizedPath)
 	if err != nil {
 		return "", errorx.ErrFileStroage.WithMsg("获取URL失败")
 	}
-	return url, nil
+
+	// 确保URL使用正斜杠
+	return strings.ReplaceAll(url, "\\", "/"), nil
 }
 
 // GetEndpoint 获取存储端点
