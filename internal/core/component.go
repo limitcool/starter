@@ -1,6 +1,13 @@
 package core
 
-import "github.com/limitcool/starter/configs"
+import (
+	"os"
+	"time"
+
+	"github.com/charmbracelet/log"
+	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/pkg/i18n"
+)
 
 // Component 定义应用组件接口
 type Component interface {
@@ -33,12 +40,50 @@ func (m *ComponentManager) AddComponent(c Component) {
 
 // Initialize 初始化所有组件
 func (m *ComponentManager) Initialize() error {
-	for _, c := range m.components {
-		if err := c.Initialize(); err != nil {
+	// 记录初始化开始时间
+	startTime := time.Now()
+
+	// 初始化国际化组件
+	if m.config.I18n.Enabled {
+		log.Info("正在初始化国际化组件...")
+		err := initI18n(m.config.I18n)
+		if err != nil {
+			log.Error("国际化组件初始化失败", "err", err)
 			return err
 		}
+		log.Info("国际化组件初始化成功")
 	}
+
+	// 初始化其他组件
+	for _, c := range m.components {
+		log.Info("正在初始化组件", "component", c.Name())
+		if err := c.Initialize(); err != nil {
+			log.Error("组件初始化失败", "component", c.Name(), "err", err)
+			return err
+		}
+		log.Info("组件初始化成功", "component", c.Name())
+	}
+
+	// 记录初始化耗时
+	elapsedTime := time.Since(startTime)
+	log.Info("所有组件初始化完成", "耗时", elapsedTime)
+
 	return nil
+}
+
+// 初始化国际化组件
+func initI18n(config configs.I18n) error {
+	// 打开本地资源目录
+	fsys := os.DirFS(config.ResourcesPath)
+
+	// 配置i18n
+	i18nConfig := i18n.Config{
+		DefaultLanguage:  config.DefaultLanguage,
+		SupportLanguages: config.SupportLanguages,
+	}
+
+	// 初始化i18n服务
+	return i18n.Setup(i18nConfig, fsys)
 }
 
 // Cleanup 清理所有组件资源

@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/i18n"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
@@ -72,6 +73,7 @@ func Error(c *gin.Context, err error, msg ...string) {
 		httpStatus int
 		errorCode  int
 		message    string
+		i18nKey    string
 	)
 
 	// 检查是否需要显示堆栈
@@ -82,6 +84,7 @@ func Error(c *gin.Context, err error, msg ...string) {
 		message = appErr.GetErrorMsg()
 		httpStatus = getHttpStatus(appErr)
 		errorCode = appErr.GetErrorCode()
+		i18nKey = appErr.GetI18nKey()
 
 		// 根据配置决定是否记录堆栈
 		if showStackTrace {
@@ -91,15 +94,17 @@ func Error(c *gin.Context, err error, msg ...string) {
 			// 不记录堆栈，只记录基本错误信息
 			log.Debug("API错误详情",
 				"err_code", errorCode,
-				"err_msg", message)
+				"err_msg", message,
+				"i18n_key", i18nKey)
 		}
 	} else {
 		message = err.Error()
 		httpStatus = http.StatusInternalServerError
 		errorCode = errorx.ErrorUnknownCode
+		i18nKey = "error.unknown"
 
 		// 记录原始错误，对于非AppError类型
-		logFields := []interface{}{"err_code", errorCode, "err_msg", message}
+		logFields := []interface{}{"err_code", errorCode, "err_msg", message, "i18n_key", i18nKey}
 
 		// 根据配置决定是否记录堆栈
 		if showStackTrace {
@@ -117,6 +122,17 @@ func Error(c *gin.Context, err error, msg ...string) {
 	// 允许调用方覆盖原始错误消息
 	if len(msg) > 0 {
 		message = msg[0]
+	} else {
+		// 尝试获取国际化的消息
+		lang, exists := c.Get("lang")
+		if exists && i18nKey != "" {
+			// 使用i18n翻译消息
+			langStr := lang.(string)
+			translatedMsg := i18n.T(i18nKey, langStr)
+			if translatedMsg != i18nKey { // 确保翻译成功
+				message = translatedMsg
+			}
+		}
 	}
 
 	// 统一响应结构

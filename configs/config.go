@@ -38,6 +38,7 @@ type Config struct {
 	Permission Permission // 权限系统配置
 	Storage    Storage    // 文件存储配置
 	Admin      Admin      // 管理员配置
+	I18n       I18n       // 国际化配置
 }
 
 // Config app config
@@ -174,4 +175,12 @@ type Admin struct {
 	Username string // 管理员用户名
 	Password string // 管理员密码
 	Nickname string // 管理员昵称
+}
+
+// I18n 国际化配置
+type I18n struct {
+	Enabled          bool     // 是否启用国际化
+	DefaultLanguage  string   // 默认语言
+	SupportLanguages []string // 支持的语言列表
+	ResourcesPath    string   // 语言资源文件路径
 }

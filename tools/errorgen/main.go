@@ -205,12 +205,13 @@ const (
 // 预定义错误实例
 var (
 	// 基础错误
-	ErrSuccess = NewAppError(SuccessCode, "成功", http.StatusOK)
+	ErrSuccess = NewAppError(SuccessCode, "成功", http.StatusOK).SetI18nKey("error.success")
 
 	{{- range .ErrorGroups }}
 	// {{ .Name }}实例
+	{{- $groupName := .GroupConstName | ToLower }}
 	{{- range .Errors }}
-	Err{{ .InstanceName }} = NewAppError({{ .Name }}, "{{ .Message }}", http.Status{{ .HTTPStatusName }})
+	Err{{ .InstanceName }} = NewAppError({{ .Name }}, "{{ .Message }}", http.Status{{ .HTTPStatusName }}).SetI18nKey("error.{{ $groupName }}.{{ .I18nKeyName }}")
 	{{- end }}
 	{{- end }}
 )
@@ -253,6 +254,12 @@ type ErrorDefTemplate struct {
 	HTTPStatus     int
 	HTTPStatusName string
 	InstanceName   string
+	I18nKeyName    string // 国际化键名
+}
+
+// 辅助函数：转换为小写
+func toLower(s string) string {
+	return strings.ToLower(s)
 }
 
 // HTTP状态码转换为Go常量名称
@@ -321,6 +328,24 @@ func generateInstanceName(errorName string) string {
 	return instanceName
 }
 
+// 生成国际化key名称
+func generateI18nKeyName(errorName string) string {
+	// 去除Code后缀和Error前缀，转为小写
+	name := strings.TrimSuffix(errorName, "Code")
+	name = strings.TrimPrefix(name, "Error")
+
+	// 将首字母大写的单词分割，用下划线连接
+	reg := regexp.MustCompile(`[A-Z][a-z]*`)
+	words := reg.FindAllString(name, -1)
+
+	var result []string
+	for _, word := range words {
+		result = append(result, strings.ToLower(word))
+	}
+
+	return strings.Join(result, "_")
+}
+
 func main() {
 	if len(os.Args) < 3 {
 		fmt.Println("用法: go run main.go <markdown文件路径> <输出Go文件路径>")
@@ -359,14 +384,20 @@ func main() {
 				HTTPStatus:     errDef.HTTPStatus,
 				HTTPStatusName: httpStatusToName(errDef.HTTPStatus),
 				InstanceName:   generateInstanceName(errDef.Name),
+				I18nKeyName:    generateI18nKeyName(errDef.Name),
 			})
 		}
 
 		templateData.ErrorGroups = append(templateData.ErrorGroups, templateGroup)
 	}
 
+	// 添加模板函数
+	funcMap := template.FuncMap{
+		"ToLower": toLower,
+	}
+
 	// 执行模板
-	tmpl, err := template.New("codeTemplate").Parse(codeTemplate)
+	tmpl, err := template.New("codeTemplate").Funcs(funcMap).Parse(codeTemplate)
 	if err != nil {
 		fmt.Printf("模板解析失败: %v\n", err)
 		os.Exit(1)

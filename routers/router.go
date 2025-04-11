@@ -22,6 +22,7 @@ func NewRouter() *gin.Engine {
 	r.Use(middleware.LoggerWithCharmbracelet())
 	r.Use(gin.Recovery())
 	r.Use(middleware.Cors())
+	r.Use(middleware.I18n())
 
 	// 获取服务配置
 	config := core.Instance().Config()

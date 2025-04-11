@@ -62,3 +62,10 @@ Admin:
   Username: admin
   Password: admin123
   Nickname: 系统管理员
+I18n:
+  Enabled: true
+  DefaultLanguage: zh-CN
+  SupportLanguages:
+    - zh-CN
+    - en-US
+  ResourcesPath: locales

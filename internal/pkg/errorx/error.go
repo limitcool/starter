@@ -15,6 +15,7 @@ type AppError struct {
 	httpStatus int
 	causeErr   error     // 添加存储被包装的原始错误
 	stackTrace []uintptr // 存储错误发生时的堆栈信息
+	i18nKey    string    // 国际化消息的key
 }
 
 // GetErrorCode 返回错误码
@@ -30,6 +31,21 @@ func (e *AppError) GetErrorMsg() string {
 // GetHttpStatus 返回HTTP状态码
 func (e *AppError) GetHttpStatus() int {
 	return e.httpStatus
+}
+
+// GetI18nKey 返回国际化消息key
+func (e *AppError) GetI18nKey() string {
+	if e.i18nKey == "" {
+		// 如果没有设置i18nKey，使用错误码作为key
+		return fmt.Sprintf("error.%d", e.errorCode)
+	}
+	return e.i18nKey
+}
+
+// SetI18nKey 设置国际化消息key
+func (e *AppError) SetI18nKey(key string) *AppError {
+	e.i18nKey = key
+	return e
 }
 
 // Error 实现error接口
