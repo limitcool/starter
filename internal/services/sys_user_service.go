@@ -5,6 +5,7 @@ import (
 
 	v1 "github.com/limitcool/starter/internal/api/v1"
 	"github.com/limitcool/starter/internal/core"
+	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
@@ -17,15 +18,16 @@ type SysUserService struct {
 	sysUserRepo   *repository.SysUserRepo
 	userRepo      *repository.UserRepo
 	roleService   *RoleService
-	casbinService *CasbinService
+	casbinService casbin.Service
 }
 
 // NewSysUserService 创建用户服务
-func NewSysUserService(sysUserRepo *repository.SysUserRepo, userRepo *repository.UserRepo, roleService *RoleService) *SysUserService {
+func NewSysUserService(sysUserRepo *repository.SysUserRepo, userRepo *repository.UserRepo, roleService *RoleService, casbinService casbin.Service) *SysUserService {
 	return &SysUserService{
-		sysUserRepo: sysUserRepo,
-		userRepo:    userRepo,
-		roleService: roleService,
+		sysUserRepo:   sysUserRepo,
+		userRepo:      userRepo,
+		roleService:   roleService,
+		casbinService: casbinService,
 	}
 }
 

@@ -24,16 +24,64 @@ func (r *MenuRepo) GetByID(id uint) (*model.Menu, error) {
 	return &menu, err
 }
 
+// GetByIDWithRelations 根据ID获取菜单及其关联数据
+func (r *MenuRepo) GetByIDWithRelations(id uint) (*model.Menu, error) {
+	var menu model.Menu
+	err := r.DB.Where("id = ?", id).First(&menu).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 加载按钮
+	r.DB.Where("menu_id = ?", menu.ID).Find(&menu.Buttons)
+
+	// 加载API
+	r.DB.Model(&menu).Association("APIs").Find(&menu.APIs)
+
+	return &menu, nil
+}
+
 // GetAll 获取所有菜单
 func (r *MenuRepo) GetAll() ([]*model.Menu, error) {
 	var menus []*model.Menu
 	err := r.DB.Order("order_num").Find(&menus).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 加载按钮
+	for _, menu := range menus {
+		r.DB.Where("menu_id = ?", menu.ID).Find(&menu.Buttons)
+	}
+
 	return menus, err
 }
 
 // Create 创建菜单
 func (r *MenuRepo) Create(menu *model.Menu) error {
 	return r.DB.Create(menu).Error
+}
+
+// CreateButton 创建菜单按钮
+func (r *MenuRepo) CreateButton(button *model.MenuButton) error {
+	return r.DB.Create(button).Error
+}
+
+// UpdateButton 更新菜单按钮
+func (r *MenuRepo) UpdateButton(button *model.MenuButton) error {
+	return r.DB.Save(button).Error
+}
+
+// DeleteButton 删除菜单按钮
+func (r *MenuRepo) DeleteButton(id uint) error {
+	return r.DB.Delete(&model.MenuButton{}, id).Error
+}
+
+// GetButtonByID 根据ID获取菜单按钮
+func (r *MenuRepo) GetButtonByID(id uint) (*model.MenuButton, error) {
+	var button model.MenuButton
+	err := r.DB.First(&button, id).Error
+	return &button, err
 }
 
 // Update 更新菜单
@@ -184,6 +232,47 @@ func (r *MenuRepo) GetPermsByRoleIDs(roleIDs []uint) ([]string, error) {
 	return perms, nil
 }
 
+// AssociateAPI 关联菜单和API
+func (r *MenuRepo) AssociateAPI(menuID uint, apiIDs []uint) error {
+	// 开始事务
+	tx := r.DB.Begin()
+	defer func() {
+		if rec := recover(); rec != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 获取菜单
+	var menu model.Menu
+	if err := tx.First(&menu, menuID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 删除原有关联
+	if err := tx.Where("menu_id = ?", menuID).Delete(&model.MenuAPI{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 添加新关联
+	if len(apiIDs) > 0 {
+		var menuAPIs []model.MenuAPI
+		for _, apiID := range apiIDs {
+			menuAPIs = append(menuAPIs, model.MenuAPI{
+				MenuID: menuID,
+				APIID:  apiID,
+			})
+		}
+		if err := tx.Create(&menuAPIs).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit().Error
+}
+
 // AssignMenuToRole 为角色分配菜单
 func (r *MenuRepo) AssignMenuToRole(roleID uint, menuIDs []uint) error {
 	// 开始事务
@@ -287,4 +376,56 @@ func (r *MenuRepo) BuildMenuTreeOld(menus []*model.Menu) []*model.Menu {
 	})
 
 	return rootMenus
+}
+
+// AddMenuAPI 添加菜单API关联
+func (r *MenuRepo) AddMenuAPI(menuID uint, apiID uint) error {
+	menuAPI := model.MenuAPI{
+		MenuID: menuID,
+		APIID:  apiID,
+	}
+	return r.DB.Create(&menuAPI).Error
+}
+
+// ClearMenuAPIs 清除菜单API关联
+func (r *MenuRepo) ClearMenuAPIs(menuID uint) error {
+	return r.DB.Where("menu_id = ?", menuID).Delete(&model.MenuAPI{}).Error
+}
+
+// GetMenuIDsByAPIID 获取API关联的所有菜单ID
+func (r *MenuRepo) GetMenuIDsByAPIID(apiID uint) ([]uint, error) {
+	var menuAPIs []model.MenuAPI
+	err := r.DB.Where("api_id = ?", apiID).Find(&menuAPIs).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var menuIDs []uint
+	for _, ma := range menuAPIs {
+		menuIDs = append(menuIDs, ma.MenuID)
+	}
+
+	return menuIDs, nil
+}
+
+// GetRolesByMenuID 获取拥有该菜单的所有角色
+func (r *MenuRepo) GetRolesByMenuID(menuID uint) ([]*model.Role, error) {
+	var roleMenus []model.RoleMenu
+	err := r.DB.Where("menu_id = ?", menuID).Find(&roleMenus).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var roleIDs []uint
+	for _, rm := range roleMenus {
+		roleIDs = append(roleIDs, rm.RoleID)
+	}
+
+	if len(roleIDs) == 0 {
+		return []*model.Role{}, nil
+	}
+
+	var roles []*model.Role
+	err = r.DB.Where("id IN ?", roleIDs).Find(&roles).Error
+	return roles, err
 }

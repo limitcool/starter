@@ -9,9 +9,8 @@ import (
 	"github.com/limitcool/starter/internal/controller"
 	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/middleware"
+	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/storage"
-	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/internal/storage/casbin"
 	"github.com/limitcool/starter/internal/storage/database"
 )
 
@@ -31,14 +30,14 @@ func SetupRouter(db database.DB) *gin.Engine {
 	// 使用依赖注入传入的配置
 	config := core.Instance().Config() // 注意：这里仍然使用全局实例，因为这是应用的入口点
 
-	// 创建Casbin组件
-	var casbinComponent *casbin.Component
+	// 创建Casbin服务
+	var casbinService casbin.Service
 	if config.Casbin.Enabled {
-		// 创建Casbin组件
-		casbinComponent = casbin.NewComponent(config, db.GetDB())
+		// 创建Casbin服务
+		casbinService = casbin.NewService(db.GetDB(), config)
 		// 初始化
-		if err := casbinComponent.Initialize(); err != nil {
-			log.Warn("初始化Casbin组件失败", "err", err)
+		if err := casbinService.Initialize(); err != nil {
+			log.Warn("初始化Casbin服务失败", "err", err)
 		}
 	}
 
@@ -100,8 +99,8 @@ func SetupRouter(db database.DB) *gin.Engine {
 	// 获取数据库连接
 	gormDB := db.GetDB()
 
-	// 初始化Casbin服务（基础服务）
-	casbinService := services.NewCasbinService(db)
+	// 不再使用旧的Casbin服务
+	// 我们已经创建了新的Casbin服务
 
 	// 初始化仓库层
 	repos := initRepositories(gormDB)
@@ -149,8 +148,9 @@ func SetupRouter(db database.DB) *gin.Engine {
 	{
 		authUser.GET("", controllers.UserController.UserInfo)
 		authUser.PUT("/password", controllers.UserController.UserChangePassword)
-		authUser.GET("/menus", controllers.MenuController.GetUserMenus)
-		authUser.GET("/permissions", controllers.MenuController.GetUserMenuPerms)
+		authUser.GET("/menus", controllers.PermissionController.GetUserMenus)
+		authUser.GET("/permissions", controllers.PermissionController.GetUserPermissions)
+		authUser.GET("/roles", controllers.PermissionController.GetUserRoles)
 
 		// 用户头像上传
 		if controllers.FileController != nil {
@@ -169,9 +169,9 @@ func SetupRouter(db database.DB) *gin.Engine {
 	}
 
 	// 管理员路由 - 需要权限验证
-	if config.Casbin.Enabled && casbinComponent != nil {
+	if config.Casbin.Enabled && casbinService != nil {
 		adminGroup := auth.Group("/admin")
-		adminGroup.Use(middleware.CasbinMiddleware(casbinService))
+		adminGroup.Use(middleware.CasbinMiddleware(svcs.PermissionService))
 		{
 			// 系统管理
 			adminSystem := adminGroup.Group("/system")
@@ -211,6 +211,24 @@ func SetupRouter(db database.DB) *gin.Engine {
 				adminPermission.POST("", controllers.PermissionController.CreatePermission)
 				adminPermission.PUT("/:id", controllers.PermissionController.UpdatePermission)
 				adminPermission.DELETE("/:id", controllers.PermissionController.DeletePermission)
+				// 角色权限管理
+				adminPermission.GET("/role/:id", controllers.PermissionController.GetRolePermissions)
+				adminPermission.POST("/role/:id", controllers.PermissionController.AssignPermissionsToRole)
+			}
+
+			// API管理
+			adminAPI := adminGroup.Group("/api")
+			{
+				adminAPI.GET("", controllers.APIController.GetAPIs)
+				adminAPI.GET("/:id", controllers.APIController.GetAPI)
+				adminAPI.POST("", controllers.APIController.CreateAPI)
+				adminAPI.PUT("/:id", controllers.APIController.UpdateAPI)
+				adminAPI.DELETE("/:id", controllers.APIController.DeleteAPI)
+				// 菜单API关联
+				adminAPI.GET("/menu/:id", controllers.APIController.GetMenuAPIs)
+				adminAPI.POST("/menu/:id", controllers.APIController.AssignAPIsToMenu)
+				// 同步菜单API权限
+				adminAPI.POST("/sync", controllers.APIController.SyncMenuAPIPermissions)
 			}
 
 			// 操作日志管理
@@ -221,10 +239,14 @@ func SetupRouter(db database.DB) *gin.Engine {
 				adminLog.POST("/batch-delete", controllers.OperationLogController.ClearOperationLogs)
 			}
 
-			// 系统用户头像管理
-			if controllers.FileController != nil {
-				adminUser := adminGroup.Group("/user")
-				{
+			// 系统用户管理
+			adminUser := adminGroup.Group("/user")
+			{
+				// 用户角色管理
+				adminUser.POST("/:id/roles", controllers.PermissionController.AssignRolesToUser)
+
+				// 系统用户头像管理
+				if controllers.FileController != nil {
 					adminUser.PUT("/avatar", controllers.FileController.UpdateSysUserAvatar)
 					adminUser.PUT("/avatar/:id", controllers.FileController.UpdateSysUserAvatar)
 				}

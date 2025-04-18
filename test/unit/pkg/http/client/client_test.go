@@ -1,4 +1,4 @@
-package client
+package client_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/limitcool/starter/internal/pkg/http/client"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,7 +15,7 @@ func TestHttpClient(t *testing.T) {
 	t.Run("test http get json func", func(t *testing.T) {
 		var ret []byte
 		var want = "http://httpbin.org/get"
-		ret, err := GetJSON(context.Background(), "http://httpbin.org/get")
+		ret, err := client.GetJSON(context.Background(), "http://httpbin.org/get")
 		if err != nil {
 			t.Log(err)
 		}
@@ -33,8 +34,8 @@ func TestHttpClient(t *testing.T) {
 	t.Run("test http post json func", func(t *testing.T) {
 		var ret []byte
 		jsonStr := `{"key1":"value1"}`
-		ret, err := PostJSON(context.Background(), "http://httpbin.org/post", []byte(jsonStr),
-			WithTimeout(5*time.Second))
+		ret, err := client.PostJSON(context.Background(), "http://httpbin.org/post", []byte(jsonStr),
+			client.WithTimeout(5*time.Second))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -56,8 +57,8 @@ func TestHttpClient(t *testing.T) {
 		form := url.Values{}
 		form.Set("comments", "test desc")
 
-		ret, err := PostForm(context.Background(), "http://httpbin.org/post", form,
-			WithTimeout(5*time.Second))
+		ret, err := client.PostForm(context.Background(), "http://httpbin.org/post", form,
+			client.WithTimeout(5*time.Second))
 		if err != nil {
 			t.Fatal(err)
 		}

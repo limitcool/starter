@@ -4,17 +4,18 @@ import (
 	"strconv"
 
 	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/repository"
 )
 
 // MenuService 菜单服务
 type MenuService struct {
 	menuRepo      *repository.MenuRepo
-	casbinService *CasbinService
+	casbinService casbin.Service
 }
 
 // NewMenuService 创建菜单服务
-func NewMenuService(menuRepo *repository.MenuRepo, casbinService *CasbinService) *MenuService {
+func NewMenuService(menuRepo *repository.MenuRepo, casbinService casbin.Service) *MenuService {
 	return &MenuService{
 		menuRepo:      menuRepo,
 		casbinService: casbinService,

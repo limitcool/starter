@@ -13,9 +13,9 @@ const (
 type PermissionType int8
 
 const (
-	PermissionTypeMenu      PermissionType = iota + 1 // 菜单
-	PermissionTypeOperation                           // 操作
-	PermissionTypeAPI                                 // API
+	PermissionTypeMenu   PermissionType = iota + 1 // 菜单
+	PermissionTypeButton                           // 按钮
+	PermissionTypeAPI                              // API
 )
 
 // UserType 用户类型

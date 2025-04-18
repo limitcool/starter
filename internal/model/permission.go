@@ -8,20 +8,26 @@ import (
 type Permission struct {
 	BaseModel
 
-	Name     string              `json:"name" gorm:"size:50;not null;comment:权限名称"`
-	Code     string              `json:"code" gorm:"size:100;not null;unique;comment:权限编码"`
-	Type     enum.PermissionType `json:"type" gorm:"default:0;comment:权限类型(0:菜单,1:操作,2:API)"`
-	MenuID   uint                `json:"menu_id" gorm:"default:0;comment:所属菜单ID"`
-	ParentID uint                `json:"parent_id" gorm:"default:0;comment:父权限ID"`
-	Path     string              `json:"path" gorm:"size:100;comment:权限路径"`
-	Method   string              `json:"method" gorm:"size:10;comment:请求方法"`
-	Enabled  bool                `json:"enabled" gorm:"default:true;comment:是否启用"`
-	Remark   string              `json:"remark" gorm:"size:500;comment:备注"`
+	Name        string              `json:"name" gorm:"size:50;not null;comment:权限名称"`
+	Code        string              `json:"code" gorm:"size:100;not null;unique;index;comment:权限编码"`
+	Type        enum.PermissionType `json:"type" gorm:"default:0;index;comment:权限类型(0:菜单,1:按钮,2:API)"`
+	Description string              `json:"description" gorm:"size:200;comment:权限描述"`
+	Enabled     bool                `json:"enabled" gorm:"default:true;comment:是否启用"`
+	Remark      string              `json:"remark" gorm:"size:500;comment:备注"`
 
-	// 关联
-	Menu    *Menu   `json:"menu" gorm:"foreignKey:MenuID"`               // 所属菜单
-	Roles   []*Role `json:"roles" gorm:"many2many:sys_role_permission;"` // 关联的角色
-	RoleIDs []uint  `json:"role_ids" gorm:"-"`                           // 角色ID列表，不映射到数据库
+	// 关联字段
+	MenuID   uint `json:"menu_id" gorm:"default:0;index;comment:关联菜单ID"`
+	ButtonID uint `json:"button_id" gorm:"default:0;index;comment:关联按钮ID"`
+	APIID    uint `json:"api_id" gorm:"default:0;index;comment:关联接口ID"`
+
+	// 关联对象
+	Menu   *Menu       `json:"menu" gorm:"foreignKey:MenuID"`               // 所属菜单
+	Button *MenuButton `json:"button" gorm:"foreignKey:ButtonID"`           // 所属按钮
+	API    *API        `json:"api" gorm:"foreignKey:APIID"`                 // 所属接口
+	Roles  []*Role     `json:"roles" gorm:"many2many:sys_role_permission;"` // 关联的角色
+
+	// 非数据库字段
+	RoleIDs []uint `json:"role_ids" gorm:"-"` // 角色ID列表，不映射到数据库
 }
 
 // 表名
@@ -33,8 +39,8 @@ func (Permission) TableName() string {
 type RolePermission struct {
 	BaseModel
 
-	RoleID       uint `json:"role_id" gorm:"not null;comment:角色ID"`
-	PermissionID uint `json:"permission_id" gorm:"not null;comment:权限ID"`
+	RoleID       uint `json:"role_id" gorm:"not null;index;comment:角色ID"`
+	PermissionID uint `json:"permission_id" gorm:"not null;index;comment:权限ID"`
 }
 
 // 表名

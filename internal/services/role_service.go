@@ -5,17 +5,18 @@ import (
 	"strconv"
 
 	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/repository"
 )
 
 // RoleService 角色服务
 type RoleService struct {
 	roleRepo      *repository.RoleRepo
-	casbinService *CasbinService
+	casbinService casbin.Service
 }
 
 // NewRoleService 创建角色服务
-func NewRoleService(roleRepo *repository.RoleRepo, casbinService *CasbinService) *RoleService {
+func NewRoleService(roleRepo *repository.RoleRepo, casbinService casbin.Service) *RoleService {
 	return &RoleService{
 		roleRepo:      roleRepo,
 		casbinService: casbinService,

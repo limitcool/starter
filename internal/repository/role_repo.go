@@ -22,6 +22,13 @@ func (r *RoleRepo) GetByID(id uint) (*model.Role, error) {
 	return &role, err
 }
 
+// GetByCode 根据编码获取角色
+func (r *RoleRepo) GetByCode(code string) (*model.Role, error) {
+	var role model.Role
+	err := r.DB.Where("code = ?", code).First(&role).Error
+	return &role, err
+}
+
 // GetAll 获取所有角色
 func (r *RoleRepo) GetAll() ([]model.Role, error) {
 	var roles []model.Role
@@ -164,4 +171,29 @@ func (r *RoleRepo) AssignMenusToRole(roleID uint, menuIDs []uint) error {
 	}
 
 	return tx.Commit().Error
+}
+
+// GetRolesByMenuID 获取拥有指定菜单的所有角色
+func (r *RoleRepo) GetRolesByMenuID(menuID uint) ([]*model.Role, error) {
+	// 查询菜单关联的角色ID
+	var roleMenus []model.RoleMenu
+	err := r.DB.Where("menu_id = ?", menuID).Find(&roleMenus).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 提取角色ID
+	var roleIDs []uint
+	for _, rm := range roleMenus {
+		roleIDs = append(roleIDs, rm.RoleID)
+	}
+
+	if len(roleIDs) == 0 {
+		return []*model.Role{}, nil
+	}
+
+	// 查询角色
+	var roles []*model.Role
+	err = r.DB.Where("id IN ?", roleIDs).Find(&roles).Error
+	return roles, err
 }

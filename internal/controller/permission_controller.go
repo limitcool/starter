@@ -3,8 +3,10 @@ package controller
 import (
 	"strconv"
 
+	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
+	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
@@ -126,4 +128,137 @@ func (pc *PermissionController) DeletePermission(c *gin.Context) {
 	}
 
 	response.Success[any](c, nil)
+}
+
+// GetUserPermissions 获取当前用户的权限列表
+func (pc *PermissionController) GetUserPermissions(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Error(c, errorx.ErrUserNoLogin)
+		return
+	}
+
+	// 获取用户权限
+	permissions, err := pc.permissionService.GetPermissionsByUserID(uint(userID))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, permissions)
+}
+
+// GetUserMenus 获取当前用户的菜单列表（包括按钮权限）
+func (pc *PermissionController) GetUserMenus(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Error(c, errorx.ErrUserNoLogin)
+		return
+	}
+
+	// 获取用户菜单
+	menus, err := pc.permissionService.GetUserMenus(strconv.FormatUint(userID, 10))
+	if err != nil {
+		log.Error("获取用户菜单失败", "error", err)
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, menus)
+}
+
+// GetUserRoles 获取当前用户的角色列表
+func (pc *PermissionController) GetUserRoles(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID := middleware.GetUserID(c)
+	if userID == 0 {
+		response.Error(c, errorx.ErrUserNoLogin)
+		return
+	}
+
+	// 获取用户角色
+	roles, err := pc.permissionService.GetUserRoles(strconv.FormatUint(userID, 10))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, roles)
+}
+
+// AssignRolesToUser 为用户分配角色
+func (pc *PermissionController) AssignRolesToUser(c *gin.Context) {
+	// 获取用户ID
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(c, errorx.ErrInvalidParams)
+		return
+	}
+
+	// 获取角色ID列表
+	var req struct {
+		RoleIDs []uint `json:"role_ids" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errorx.ErrInvalidParams)
+		return
+	}
+
+	// 分配角色
+	if err := pc.permissionService.AssignRolesToUser(strconv.FormatUint(userID, 10), req.RoleIDs); err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success[any](c, nil)
+}
+
+// AssignPermissionsToRole 为角色分配权限
+func (pc *PermissionController) AssignPermissionsToRole(c *gin.Context) {
+	// 获取角色ID
+	roleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(c, errorx.ErrInvalidParams)
+		return
+	}
+
+	// 获取权限ID列表
+	var req struct {
+		PermissionIDs []uint `json:"permission_ids" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, errorx.ErrInvalidParams)
+		return
+	}
+
+	// 分配权限
+	if err := pc.permissionService.AssignPermissionToRole(uint(roleID), req.PermissionIDs); err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success[any](c, nil)
+}
+
+// GetRolePermissions 获取角色的权限列表
+func (pc *PermissionController) GetRolePermissions(c *gin.Context) {
+	// 获取角色ID
+	roleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(c, errorx.ErrInvalidParams)
+		return
+	}
+
+	// 获取角色权限
+	permissions, err := pc.permissionService.GetPermissionsByRoleID(uint(roleID))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, permissions)
 }

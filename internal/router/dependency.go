@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/limitcool/starter/internal/controller"
+	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/storage"
 	"github.com/limitcool/starter/internal/repository"
 	"github.com/limitcool/starter/internal/services"
@@ -18,11 +19,12 @@ type Repositories struct {
 	OperationLogRepo *repository.OperationLogRepo
 	UserRepo         *repository.UserRepo
 	FileRepo         *repository.FileRepo
+	APIRepo          *repository.APIRepo
 }
 
 // Services 服务层依赖集合
 type Services struct {
-	CasbinService       *services.CasbinService
+	CasbinService       casbin.Service
 	RoleService         *services.RoleService
 	MenuService         *services.MenuService
 	SysUserService      *services.SysUserService
@@ -30,6 +32,8 @@ type Services struct {
 	OperationLogService *services.OperationLogService
 	SystemService       *services.SystemService
 	UserService         *services.UserService
+	APIService          *services.APIService
+	MenuAPIService      *services.MenuAPIService
 }
 
 // Controllers 控制器层依赖集合
@@ -42,6 +46,7 @@ type Controllers struct {
 	OperationLogController *controller.OperationLogController
 	SystemController       *controller.SystemController
 	FileController         *controller.FileController
+	APIController          *controller.APIController
 }
 
 // initRepositories 初始化仓库层
@@ -54,24 +59,35 @@ func initRepositories(db *gorm.DB) *Repositories {
 		OperationLogRepo: repository.NewOperationLogRepo(db),
 		UserRepo:         repository.NewUserRepo(db),
 		FileRepo:         repository.NewFileRepo(db),
+		APIRepo:          repository.NewAPIRepo(db),
 	}
 }
 
 // initServices 初始化服务层
-func initServices(repos *Repositories, casbinService *services.CasbinService, db database.DB) *Services {
+func initServices(repos *Repositories, casbinService casbin.Service, db database.DB) *Services {
 	// 创建服务
 	svcs := &Services{
 		CasbinService:       casbinService,
 		RoleService:         services.NewRoleService(repos.RoleRepo, casbinService),
 		MenuService:         services.NewMenuService(repos.MenuRepo, casbinService),
-		PermissionService:   services.NewPermissionService(repos.PermissionRepo),
+		PermissionService:   services.NewPermissionService(repos.PermissionRepo, repos.RoleRepo, repos.MenuRepo, casbinService),
 		OperationLogService: services.NewOperationLogService(repos.OperationLogRepo),
 		SystemService:       services.NewSystemService(db),
 		UserService:         services.NewUserService(repos.UserRepo),
+		APIService:          services.NewAPIService(repos.APIRepo),
 	}
 
 	// 创建 SysUserService 并设置 RoleService
-	svcs.SysUserService = services.NewSysUserService(repos.SysUserRepo, repos.UserRepo, svcs.RoleService)
+	svcs.SysUserService = services.NewSysUserService(repos.SysUserRepo, repos.UserRepo, svcs.RoleService, casbinService)
+
+	// 创建 MenuAPIService
+	svcs.MenuAPIService = services.NewMenuAPIService(
+		repos.MenuRepo,
+		repos.APIRepo,
+		repos.RoleRepo,
+		repos.PermissionRepo,
+		casbinService,
+	)
 
 	return svcs
 }
@@ -87,6 +103,7 @@ func initControllers(svcs *Services, repos *Repositories, stg *storage.Storage) 
 		PermissionController:   controller.NewPermissionController(svcs.PermissionService),
 		OperationLogController: controller.NewOperationLogController(svcs.OperationLogService),
 		SystemController:       controller.NewSystemController(svcs.SystemService),
+		APIController:          controller.NewAPIController(svcs.APIService, svcs.MenuAPIService),
 	}
 
 	// 如果存储组件可用，创建文件控制器

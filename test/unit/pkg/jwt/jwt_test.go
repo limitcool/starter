@@ -1,10 +1,11 @@
-package jwt
+package jwt_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/assert"
 )
@@ -32,7 +33,7 @@ func TestGenerateToken(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			token, err := GenerateToken(tc.claims, tc.secret, tc.expireDuration)
+			token, err := jwtpkg.GenerateToken(tc.claims, tc.secret, tc.expireDuration)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -40,7 +41,7 @@ func TestGenerateToken(t *testing.T) {
 				assert.NotEmpty(t, token)
 
 				// 测试解析生成的token
-				claims, err := ParseToken(token, tc.secret)
+				claims, err := jwtpkg.ParseToken(token, tc.secret)
 				assert.NoError(t, err)
 				assert.Equal(t, tc.claims["user_id"], (*claims)["user_id"])
 				assert.Equal(t, tc.claims["username"], (*claims)["username"])
@@ -56,7 +57,7 @@ func TestParseToken(t *testing.T) {
 		"username": "testuser",
 	}
 	secret := "testsecret"
-	token, err := GenerateToken(claims, secret, time.Hour)
+	token, err := jwtpkg.GenerateToken(claims, secret, time.Hour)
 	if err != nil {
 		t.Fatalf("Failed to generate token for test: %v", err)
 	}
@@ -91,7 +92,7 @@ func TestParseToken(t *testing.T) {
 	// 测试
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			claims, err := ParseToken(tc.token, tc.secret)
+			claims, err := jwtpkg.ParseToken(tc.token, tc.secret)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {

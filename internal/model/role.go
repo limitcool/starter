@@ -1,11 +1,11 @@
 package model
 
-// 角色实体
+// Role 角色实体
 type Role struct {
 	BaseModel
 
 	Name        string `json:"name" gorm:"size:50;not null;unique;comment:角色名称"`
-	Code        string `json:"code" gorm:"size:100;not null;unique;comment:角色编码"`
+	Code        string `json:"code" gorm:"size:100;not null;unique;index;comment:角色编码"`
 	Enabled     bool   `json:"enabled" gorm:"default:true;comment:是否启用"`
 	Sort        int    `json:"sort" gorm:"default:0;comment:排序"`
 	Description string `json:"description" gorm:"size:200;comment:角色描述"`
@@ -34,12 +34,12 @@ func (Role) TableName() string {
 // IsAssignedToUser
 // DeleteRoleMenus
 
-// 角色菜单关联表
+// RoleMenu 角色菜单关联表
 type RoleMenu struct {
 	BaseModel
 
-	RoleID uint `json:"role_id" gorm:"not null;comment:角色ID"`
-	MenuID uint `json:"menu_id" gorm:"not null;comment:菜单ID"`
+	RoleID uint `json:"role_id" gorm:"not null;index;comment:角色ID"`
+	MenuID uint `json:"menu_id" gorm:"not null;index;comment:菜单ID"`
 }
 
 // 表名
@@ -51,12 +51,12 @@ func (RoleMenu) TableName() string {
 // BatchCreate
 // GetMenuIDsByRoleID
 
-// 用户角色关联表
+// UserRole 用户角色关联表
 type UserRole struct {
 	BaseModel
 
-	UserID int64 `json:"user_id" gorm:"type:bigint;not null;comment:用户ID"`
-	RoleID uint  `json:"role_id" gorm:"not null;comment:角色ID"`
+	UserID int64 `json:"user_id" gorm:"type:bigint;not null;index;comment:用户ID"`
+	RoleID uint  `json:"role_id" gorm:"not null;index;comment:角色ID"`
 }
 
 // 表名

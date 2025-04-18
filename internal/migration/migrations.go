@@ -130,6 +130,43 @@ func RegisterPermissionMigrations(migrator *Migrator) {
 			return tx.Migrator().DropTable("sys_permission")
 		},
 	})
+
+	// Casbin规则表迁移
+	migrator.Register(&MigrationEntry{
+		Version: "202504080010",
+		Name:    "create_casbin_rule_table",
+		Up: func(tx *gorm.DB) error {
+			// 检查表是否存在
+			if tx.Migrator().HasTable("casbin_rule") {
+				log.Info("casbin_rule表已存在，跳过创建")
+				return nil
+			}
+
+			// 创建Casbin规则表
+			sql := `CREATE TABLE casbin_rule (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				ptype VARCHAR(100) DEFAULT NULL,
+				v0 VARCHAR(100) DEFAULT NULL,
+				v1 VARCHAR(100) DEFAULT NULL,
+				v2 VARCHAR(100) DEFAULT NULL,
+				v3 VARCHAR(100) DEFAULT NULL,
+				v4 VARCHAR(100) DEFAULT NULL,
+				v5 VARCHAR(100) DEFAULT NULL,
+				PRIMARY KEY (id),
+				UNIQUE KEY idx_casbin_rule (ptype,v0,v1,v2,v3,v4,v5)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+
+			if err := tx.Exec(sql).Error; err != nil {
+				return fmt.Errorf("创建Casbin规则表失败: %w", err)
+			}
+
+			log.Info("Casbin规则表创建成功")
+			return nil
+		},
+		Down: func(tx *gorm.DB) error {
+			return tx.Migrator().DropTable("casbin_rule")
+		},
+	})
 }
 
 // RegisterMenuMigrations 注册菜单相关迁移
