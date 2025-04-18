@@ -16,11 +16,11 @@ import (
 
 // UserService 普通用户服务
 type UserService struct {
-	userRepo *repository.GormUserRepository
+	userRepo *repository.UserRepo
 }
 
 // NewUserService 创建普通用户服务
-func NewUserService(userRepo *repository.GormUserRepository) *UserService {
+func NewUserService(userRepo *repository.UserRepo) *UserService {
 	return &UserService{
 		userRepo: userRepo,
 	}
@@ -92,7 +92,7 @@ func (s *UserService) Login(username, password string, ip string) (*v1.LoginResp
 	}
 
 	// 更新最后登录时间和IP
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	}
@@ -146,7 +146,7 @@ func (s *UserService) UpdateUser(id uint, data map[string]any) error {
 	delete(data, "deleted_at")
 
 	// 更新用户信息
-	fields := make(map[string]interface{}, len(data))
+	fields := make(map[string]any, len(data))
 	for k, v := range data {
 		fields[k] = v
 	}
@@ -173,7 +173,7 @@ func (s *UserService) ChangePassword(id int64, oldPassword, newPassword string) 
 	}
 
 	// 更新密码
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"password": hashedPassword,
 	}
 	return s.userRepo.UpdateFields(id, fields)

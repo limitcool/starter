@@ -15,13 +15,13 @@ import (
 // SysUserService 用户服务
 type SysUserService struct {
 	sysUserRepo   *repository.SysUserRepo
-	userRepo      *repository.GormUserRepository
+	userRepo      *repository.UserRepo
 	roleService   *RoleService
 	casbinService *CasbinService
 }
 
 // NewSysUserService 创建用户服务
-func NewSysUserService(sysUserRepo *repository.SysUserRepo, userRepo *repository.GormUserRepository, roleService *RoleService) *SysUserService {
+func NewSysUserService(sysUserRepo *repository.SysUserRepo, userRepo *repository.UserRepo, roleService *RoleService) *SysUserService {
 	return &SysUserService{
 		sysUserRepo: sysUserRepo,
 		userRepo:    userRepo,
@@ -54,7 +54,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*v1.LoginR
 	}
 
 	// 更新最后登录时间和IP
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	}
