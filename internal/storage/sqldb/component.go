@@ -65,8 +65,8 @@ func (c *Component) Initialize() error {
 
 	c.db = db
 
-	// 执行设置全局实例
-	setupInstance(c)
+	// 不再设置全局实例
+	// setupInstance(c) // 已移除，使用依赖注入代替
 
 	// 不再自动执行迁移
 	// if err := db.AutoMigrate(); err != nil {

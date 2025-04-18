@@ -28,7 +28,8 @@ func SetupRouter(db database.DB) *gin.Engine {
 	r.Use(middleware.I18n())
 
 	// 获取服务配置
-	config := core.Instance().Config()
+	// 使用依赖注入传入的配置
+	config := core.Instance().Config() // 注意：这里仍然使用全局实例，因为这是应用的入口点
 
 	// 创建Casbin组件
 	var casbinComponent *casbin.Component

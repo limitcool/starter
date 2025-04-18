@@ -4,14 +4,18 @@ import (
 	"context"
 	"time"
 
-	"github.com/limitcool/starter/internal/storage/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// 使用辅助方法获取集合
-func getOperationLogCollection() *mongo.Collection {
-	return mongodb.Instance().GetCollection("operation_log")
+// 使用依赖注入获取集合
+// 注意: 已移除全局实例访问方式
+var operationLogCollection *mongo.Collection
+
+// SetOperationLogCollection 设置操作日志集合
+// 这个函数应该在应用初始化时调用
+func SetOperationLogCollection(collection *mongo.Collection) {
+	operationLogCollection = collection
 }
 
 // OperationLog 操作记录模型
@@ -52,12 +56,15 @@ func (OperationLog) TableName() string {
 // Delete
 // BatchDelete
 
+// Registry 初始化集合
 func (OperationLog) Registry() {
-	var ctx = context.Background()
-	coll := getOperationLogCollection()
-	if coll == nil {
+	// 注意: 已移除全局实例访问方式
+	// 现在需要通过依赖注入设置集合
+	if operationLogCollection == nil {
 		return
 	}
+
 	// 创建索引等操作
-	coll.FindOne(ctx, bson.M{"module": "system"})
+	var ctx = context.Background()
+	operationLogCollection.FindOne(ctx, bson.M{"module": "system"})
 }

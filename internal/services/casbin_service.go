@@ -6,6 +6,7 @@ import (
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/charmbracelet/log"
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/storage/database"
 )
@@ -16,12 +17,14 @@ import (
 type CasbinService struct {
 	db       database.DB
 	enforcer *casbin.Enforcer
+	config   *configs.Config
 }
 
 // NewCasbinService 创建Casbin服务
 func NewCasbinService(db database.DB) *CasbinService {
 	s := &CasbinService{
-		db: db,
+		db:     db,
+		config: core.Instance().Config(), // 在初始化时获取配置，避免后续全局访问
 	}
 
 	// 初始化
@@ -43,8 +46,7 @@ func (s *CasbinService) Initialize() error {
 	}
 
 	// 如果权限系统未启用，直接返回
-	config := core.Instance().Config()
-	if config != nil && !config.Casbin.Enabled {
+	if s.config != nil && !s.config.Casbin.Enabled {
 		return nil
 	}
 
@@ -57,8 +59,8 @@ func (s *CasbinService) Initialize() error {
 
 	// 获取模型文件路径
 	modelPath := "configs/rbac_model.conf"
-	if config != nil && config.Casbin.ModelPath != "" {
-		modelPath = config.Casbin.ModelPath
+	if s.config != nil && s.config.Casbin.ModelPath != "" {
+		modelPath = s.config.Casbin.ModelPath
 	}
 
 	// 创建enforcer

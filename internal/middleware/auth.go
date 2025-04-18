@@ -6,11 +6,18 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/global"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/jwt"
+)
+
+// 上下文键类型
+type contextKey string
+
+// 上下文键常量
+const (
+	TokenKey contextKey = "token"
 )
 
 // JWTAuth JWT认证中间件
@@ -43,7 +50,7 @@ func JWTAuth() gin.HandlerFunc {
 		}
 
 		// 将claims存入请求上下文
-		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), global.Token, claims))
+		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), TokenKey, claims))
 
 		// 将用户ID存入请求上下文
 		if userId, exists := (*claims)["user_id"]; exists {

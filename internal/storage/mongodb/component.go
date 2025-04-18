@@ -71,12 +71,11 @@ func (m *Component) Initialize() error {
 
 	m.client = client
 
-	// 设置全局实例
-	setupInstance(m)
+	// 不再设置全局实例
+	// setupInstance(m) // 已移除，使用依赖注入代替
 
-	// 设置兼容性全局变量（已弃用）
-	// 请使用 Instance().GetClient() 获取MongoDB客户端
-	Mongo = client
+	// 不再设置兼容性全局变量
+	// Mongo = client // 已移除，使用依赖注入代替
 
 	log.Info("MongoDB component initialized successfully")
 	return nil

@@ -110,8 +110,8 @@ func NewDB(c configs.Config) *gorm.DB {
 	var db *gorm.DB
 	dbOnce.Do(func() {
 		db = newDbConn(&c)
-		// 设置全局实例
-		setupInstance(&Component{db: db, Config: &c, enabled: c.Database.Enabled})
+		// 不再设置全局实例
+		// setupInstance(&Component{db: db, Config: &c, enabled: c.Database.Enabled}) // 已移除，使用依赖注入代替
 	})
 	return db
 }

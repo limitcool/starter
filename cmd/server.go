@@ -10,12 +10,13 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/internal/core"
+	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/router"
 	"github.com/limitcool/starter/internal/storage/casbin"
 	"github.com/limitcool/starter/internal/storage/database"
 	"github.com/limitcool/starter/internal/storage/mongodb"
 	"github.com/limitcool/starter/internal/storage/redisdb"
 	"github.com/limitcool/starter/internal/storage/sqldb"
-	"github.com/limitcool/starter/routers"
 	"github.com/spf13/cobra"
 )
 
@@ -116,13 +117,30 @@ func runServer(cmd *cobra.Command, args []string) {
 	// 创建数据库适配器
 	db := database.NewGormDB(dbComponent.DB())
 
+	// 初始化MongoDB集合
+	if cfg.Mongo.Enabled {
+		// 获取MongoDB组件
+		var mongoComponent *mongodb.Component
+		for _, component := range app.ComponentManager.GetComponents() {
+			if c, ok := component.(*mongodb.Component); ok {
+				mongoComponent = c
+				break
+			}
+		}
+
+		if mongoComponent != nil {
+			// 设置操作日志集合
+			model.SetOperationLogCollection(mongoComponent.GetCollection("operation_log"))
+		}
+	}
+
 	// 确保资源清理
 	defer app.Cleanup()
 	// 初始化路由
-	router := routers.NewRouter(db)
+	r := router.SetupRouter(db)
 	s := &http.Server{
 		Addr:           fmt.Sprintf("0.0.0.0:%d", cfg.App.Port),
-		Handler:        router,
+		Handler:        r,
 		MaxHeaderBytes: 1 << 20,
 	}
 	log.Info("Server started", "url", fmt.Sprintf("http://127.0.0.1:%d", cfg.App.Port))

@@ -67,8 +67,8 @@ func (r *Component) Initialize() error {
 		}
 	}
 
-	// 设置全局访问实例
-	setupInstance(r)
+	// 不再设置全局访问实例
+	// setupInstance(r) // 已移除，使用依赖注入代替
 
 	log.Info("Redis component initialized successfully")
 	return nil
