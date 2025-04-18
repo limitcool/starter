@@ -54,13 +54,13 @@ func (e *AppError) Error() string {
 }
 
 // WithMsg 为错误添加额外的错误信息
-func (e *AppError) WithMsg(msg string) error {
+func (e *AppError) WithMsg(msg string) *AppError {
 	e.errorMsg = fmt.Sprintf("%s, %s", e.errorMsg, msg)
 	return e
 }
 
 // WithError 为错误添加额外的错误
-func (e *AppError) WithError(err error) error {
+func (e *AppError) WithError(err error) *AppError {
 	clone := &AppError{
 		errorCode:  e.errorCode,
 		errorMsg:   e.errorMsg,
@@ -72,7 +72,7 @@ func (e *AppError) WithError(err error) error {
 }
 
 // WithNewMsgAndError 同时覆盖错误消息并追加上层错误
-func (e *AppError) WithNewMsgAndError(newMsg string, err error) error {
+func (e *AppError) WithNewMsgAndError(newMsg string, err error) *AppError {
 	clone := &AppError{
 		errorCode:  e.errorCode,
 		errorMsg:   newMsg,

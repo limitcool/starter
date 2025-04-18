@@ -10,15 +10,19 @@ import (
 	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/pkg/storage"
+	"github.com/limitcool/starter/internal/repository"
+	"github.com/limitcool/starter/internal/services"
 	"github.com/limitcool/starter/internal/storage/casbin"
+	"github.com/limitcool/starter/internal/storage/database"
 )
 
 // NewRouter 初始化并返回一个配置完整的Gin路由引擎
-func NewRouter() *gin.Engine {
+func NewRouter(db database.DB) *gin.Engine {
 	// 创建不带默认中间件的路由
 	r := gin.New()
 
 	// 添加全局中间件
+	r.Use(middleware.ErrorHandler()) // 添加全局错误处理中间件
 	r.Use(middleware.LoggerWithCharmbracelet())
 	r.Use(gin.Recovery())
 	r.Use(middleware.Cors())
@@ -27,12 +31,14 @@ func NewRouter() *gin.Engine {
 	// 获取服务配置
 	config := core.Instance().Config()
 
-	// 初始化Casbin权限系统（如果启用）
+	// 创建Casbin组件
 	var casbinComponent *casbin.Component
-	if config.Permission.Enabled {
-		casbinComponent = casbin.NewComponent(config)
+	if config.Casbin.Enabled {
+		// 创建Casbin组件
+		casbinComponent = casbin.NewComponent(config, db.GetDB())
+		// 初始化
 		if err := casbinComponent.Initialize(); err != nil {
-			panic("Casbin组件初始化失败: " + err.Error())
+			log.Warn("初始化Casbin组件失败", "err", err)
 		}
 	}
 
@@ -89,14 +95,33 @@ func NewRouter() *gin.Engine {
 		r.StaticFS(urlPath, http.Dir(config.Storage.Local.Path))
 	}
 
+	// 使用传入的数据库实例创建服务
+
+	// 创建仓库实例
+	gormDB := db.GetDB()
+	menuRepo := repository.NewMenuRepo(gormDB)
+	roleRepo := repository.NewRoleRepo(gormDB)
+	sysUserRepo := repository.NewSysUserRepo(gormDB)
+	permissionRepo := repository.NewPermissionRepo(gormDB)
+	operationLogRepo := repository.NewOperationLogRepo(gormDB)
+
+	// 创建服务实例
+	casbinService := services.NewCasbinService(db)
+	roleService := services.NewRoleService(roleRepo, casbinService)
+	menuService := services.NewMenuService(menuRepo, casbinService)
+	sysUserService := services.NewSysUserService(sysUserRepo, roleService)
+	permissionService := services.NewPermissionService(permissionRepo)
+	operationLogService := services.NewOperationLogService(operationLogRepo)
+	systemService := services.NewSystemService(db)
+
 	// 初始化控制器
-	userController := controller.NewUserController()
-	adminController := controller.NewAdminController()
-	roleController := controller.NewRoleController()
-	menuController := controller.NewMenuController()
-	permissionController := controller.NewPermissionController()
-	operationLogController := controller.NewOperationLogController()
-	systemController := controller.NewSystemController()
+	userController := controller.NewUserController(sysUserService)
+	adminController := controller.NewAdminController(sysUserService)
+	roleController := controller.NewRoleController(roleService, menuService)
+	menuController := controller.NewMenuController(menuService)
+	permissionController := controller.NewPermissionController(permissionService)
+	operationLogController := controller.NewOperationLogController(operationLogService)
+	systemController := controller.NewSystemController(systemService)
 
 	var fileController *controller.FileController
 	if stg != nil {
@@ -160,9 +185,9 @@ func NewRouter() *gin.Engine {
 	}
 
 	// 管理员路由 - 需要权限验证
-	if config.Permission.Enabled && casbinComponent != nil {
+	if config.Casbin.Enabled && casbinComponent != nil {
 		adminGroup := auth.Group("/admin")
-		adminGroup.Use(middleware.CasbinComponentMiddleware())
+		adminGroup.Use(middleware.CasbinMiddleware(casbinService))
 		{
 			// 系统管理
 			adminSystem := adminGroup.Group("/system")

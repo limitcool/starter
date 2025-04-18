@@ -5,29 +5,31 @@ import (
 	"strconv"
 
 	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/repository"
 )
 
 // RoleService 角色服务
 type RoleService struct {
+	roleRepo      repository.RoleRepository
 	casbinService *CasbinService
 }
 
 // NewRoleService 创建角色服务
-func NewRoleService() *RoleService {
-	// 直接创建依赖服务
+func NewRoleService(roleRepo repository.RoleRepository, casbinService *CasbinService) *RoleService {
 	return &RoleService{
-		casbinService: NewCasbinService(),
+		roleRepo:      roleRepo,
+		casbinService: casbinService,
 	}
 }
 
 // CreateRole 创建角色
 func (s *RoleService) CreateRole(role *model.Role) error {
-	return role.Create()
+	return s.roleRepo.Create(role)
 }
 
 // UpdateRole 更新角色
 func (s *RoleService) UpdateRole(role *model.Role) error {
-	return role.Update()
+	return s.roleRepo.Update(role)
 }
 
 // DeleteRole 删除角色

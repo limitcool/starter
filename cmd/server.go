@@ -10,6 +10,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/internal/core"
+	"github.com/limitcool/starter/internal/storage/casbin"
+	"github.com/limitcool/starter/internal/storage/database"
 	"github.com/limitcool/starter/internal/storage/mongodb"
 	"github.com/limitcool/starter/internal/storage/redisdb"
 	"github.com/limitcool/starter/internal/storage/sqldb"
@@ -73,15 +75,51 @@ func runServer(cmd *cobra.Command, args []string) {
 	redisComponent := redisdb.NewComponent(cfg)
 	app.ComponentManager.AddComponent(redisComponent)
 
+	// 添加Casbin组件（如果配置了启用）
+	if cfg.Casbin.Enabled {
+		log.Info("Adding Casbin component")
+		// 获取数据库组件
+		var dbComponent *sqldb.Component
+		for _, component := range app.ComponentManager.GetComponents() {
+			if c, ok := component.(*sqldb.Component); ok {
+				dbComponent = c
+				break
+			}
+		}
+
+		if dbComponent != nil {
+			casbinComponent := casbin.NewComponent(cfg, dbComponent.DB())
+			app.ComponentManager.AddComponent(casbinComponent)
+		} else {
+			log.Warn("Cannot add Casbin component: database component not found")
+		}
+	}
+
 	// 初始化所有组件
 	if err := app.Initialize(); err != nil {
 		log.Fatal("Failed to initialize application", "error", err)
 	}
 
+	// 获取数据库组件
+	var dbComponent *sqldb.Component
+	for _, component := range app.ComponentManager.GetComponents() {
+		if c, ok := component.(*sqldb.Component); ok {
+			dbComponent = c
+			break
+		}
+	}
+
+	if dbComponent == nil {
+		log.Fatal("Failed to get database component")
+	}
+
+	// 创建数据库适配器
+	db := database.NewGormDB(dbComponent.DB())
+
 	// 确保资源清理
 	defer app.Cleanup()
 	// 初始化路由
-	router := routers.NewRouter()
+	router := routers.NewRouter(db)
 	s := &http.Server{
 		Addr:           fmt.Sprintf("0.0.0.0:%d", cfg.App.Port),
 		Handler:        router,

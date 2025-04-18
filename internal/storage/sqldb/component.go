@@ -15,6 +15,27 @@ type Component struct {
 	enabled bool
 }
 
+// Database 数据库接口
+type Database interface {
+	// DB 获取数据库连接
+	DB() *gorm.DB
+
+	// Close 关闭数据库连接
+	Close() error
+
+	// IsEnabled 检查数据库是否启用
+	IsEnabled() bool
+}
+
+// DB 数据库接口
+type DB interface {
+	// GetDB 获取数据库连接
+	GetDB() *gorm.DB
+
+	// Close 关闭数据库连接
+	Close() error
+}
+
 // NewComponent 创建数据库组件
 func NewComponent(cfg *configs.Config) *Component {
 	return &Component{
@@ -43,7 +64,6 @@ func (c *Component) Initialize() error {
 	}
 
 	c.db = db
-	DB = db // 设置全局访问点
 
 	// 执行设置全局实例
 	setupInstance(c)
@@ -74,13 +94,20 @@ func (c *Component) Migrate() error {
 
 // Cleanup 清理数据库资源
 func (c *Component) Cleanup() {
+	_ = c.Close()
+}
+
+// Close 关闭数据库连接
+func (c *Component) Close() error {
 	if c.db != nil {
 		sqlDB, err := c.db.DB()
 		if err == nil {
 			log.Info("Closing database connection")
-			_ = sqlDB.Close()
+			return sqlDB.Close()
 		}
+		return err
 	}
+	return nil
 }
 
 // IsEnabled 检查组件是否启用
@@ -93,5 +120,11 @@ func (c *Component) IsEnabled() bool {
 // 当您已经持有Component实例时，应优先使用此方法而非包级函数GetDB()，
 // 这样可以获得更好的代码组织和依赖管理。
 func (c *Component) DB() *gorm.DB {
+	return c.db
+}
+
+// GetDB 获取数据库连接
+// 实现database.DB接口
+func (c *Component) GetDB() *gorm.DB {
 	return c.db
 }

@@ -11,11 +11,14 @@ import (
 )
 
 // 创建菜单
-func NewMenuController() *MenuController {
-	return &MenuController{}
+func NewMenuController(menuService *services.MenuService) *MenuController {
+	return &MenuController{
+		menuService: menuService,
+	}
 }
 
 type MenuController struct {
+	menuService *services.MenuService
 }
 
 func (mc *MenuController) CreateMenu(c *gin.Context) {
@@ -25,8 +28,8 @@ func (mc *MenuController) CreateMenu(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService()
-	if err := menuService.CreateMenu(&menu); err != nil {
+	// 使用控制器中的服务实例
+	if err := mc.menuService.CreateMenu(&menu); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -49,8 +52,7 @@ func (mc *MenuController) UpdateMenu(c *gin.Context) {
 	}
 
 	menu.ID = uint(id)
-	menuService := services.NewMenuService()
-	if err := menuService.UpdateMenu(&menu); err != nil {
+	if err := mc.menuService.UpdateMenu(&menu); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -66,8 +68,7 @@ func (mc *MenuController) DeleteMenu(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService()
-	if err := menuService.DeleteMenu(uint(id)); err != nil {
+	if err := mc.menuService.DeleteMenu(uint(id)); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -83,8 +84,8 @@ func (mc *MenuController) GetMenu(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService()
-	menu, err := menuService.GetMenuByID(uint(id))
+	// 使用控制器中的服务实例
+	menu, err := mc.menuService.GetMenuByID(uint(id))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -95,8 +96,7 @@ func (mc *MenuController) GetMenu(c *gin.Context) {
 
 // 获取菜单树
 func (mc *MenuController) GetMenuTree(c *gin.Context) {
-	menuService := services.NewMenuService()
-	menus, err := menuService.GetMenuTree()
+	menus, err := mc.menuService.GetMenuTree()
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -114,8 +114,8 @@ func (mc *MenuController) GetUserMenus(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService()
-	menus, err := menuService.GetUserMenus(uint(userID.(float64)))
+	// 使用控制器中的服务实例
+	menus, err := mc.menuService.GetUserMenus(uint(userID.(float64)))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -133,8 +133,8 @@ func (mc *MenuController) GetUserMenuPerms(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService()
-	perms, err := menuService.GetMenuPermsByUserID(uint(userID.(float64)))
+	// 使用控制器中的服务实例
+	perms, err := mc.menuService.GetMenuPermsByUserID(uint(userID.(float64)))
 	if err != nil {
 		response.Error(c, err)
 		return

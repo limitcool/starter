@@ -2,20 +2,12 @@ package casbin
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/internal/core"
-	"github.com/limitcool/starter/internal/storage/sqldb"
 	"gorm.io/gorm"
-)
-
-var (
-	enforcer *casbin.Enforcer
-	once     sync.Once
 )
 
 // Component Casbin组件
@@ -26,27 +18,28 @@ type Component struct {
 }
 
 // NewComponent 创建Casbin组件
-func NewComponent(cfg *configs.Config) *Component {
+func NewComponent(cfg *configs.Config, db *gorm.DB) *Component {
 	return &Component{
 		config: cfg,
+		db:     db,
 	}
+}
+
+// Name 返回组件名称
+func (c *Component) Name() string {
+	return "Casbin"
 }
 
 // Initialize 初始化Casbin组件
 func (c *Component) Initialize() error {
 	// 如果权限系统未启用，直接返回
-	if c.config != nil && !c.config.Permission.Enabled {
+	if c.config != nil && !c.config.Casbin.Enabled {
 		return nil
 	}
 
-	// 获取数据库连接
-	c.db = sqldb.Instance().DB()
+	// 检查数据库连接
 	if c.db == nil {
-		// 尝试从SQL组件获取数据库连接
-		c.db = sqldb.Instance().DB()
-		if c.db == nil {
-			return fmt.Errorf("数据库未初始化")
-		}
+		return fmt.Errorf("数据库未初始化")
 	}
 
 	// 初始化Casbin
@@ -56,47 +49,39 @@ func (c *Component) Initialize() error {
 	}
 
 	c.enforcer = e
-	enforcer = e // 设置全局enforcer
 
 	return nil
 }
 
 // 初始化Casbin Enforcer
 func (c *Component) initEnforcer() (*casbin.Enforcer, error) {
-	var err error
-	var e *casbin.Enforcer
+	// 使用gorm适配器
+	adapter, err := gormadapter.NewAdapterByDB(c.db)
+	if err != nil {
+		return nil, err
+	}
 
-	once.Do(func() {
-		// 使用gorm适配器
-		adapter, adapterErr := gormadapter.NewAdapterByDB(c.db)
-		if adapterErr != nil {
-			err = adapterErr
-			return
-		}
+	// 获取模型文件路径，如果配置中没有指定则使用默认值
+	modelPath := "configs/rbac_model.conf"
+	if c.config != nil && c.config.Casbin.ModelPath != "" {
+		modelPath = c.config.Casbin.ModelPath
+	}
 
-		// 获取模型文件路径，如果配置中没有指定则使用默认值
-		modelPath := "configs/rbac_model.conf"
-		if c.config != nil && c.config.Permission.ModelPath != "" {
-			modelPath = c.config.Permission.ModelPath
-		}
+	// 创建enforcer
+	e, err := casbin.NewEnforcer(modelPath, adapter)
+	if err != nil {
+		return nil, err
+	}
 
-		// 创建enforcer
-		e, err = casbin.NewEnforcer(modelPath, adapter)
-		if err != nil {
-			return
-		}
+	// 加载策略
+	if err := e.LoadPolicy(); err != nil {
+		return nil, err
+	}
 
-		// 加载策略
-		if loadErr := e.LoadPolicy(); loadErr != nil {
-			err = loadErr
-			return
-		}
+	// 启用自动保存
+	e.EnableAutoSave(true)
 
-		// 启用自动保存
-		e.EnableAutoSave(true)
-	})
-
-	return e, err
+	return e, nil
 }
 
 // GetEnforcer 获取Casbin实例
@@ -104,19 +89,9 @@ func (c *Component) GetEnforcer() *casbin.Enforcer {
 	return c.enforcer
 }
 
-// 获取全局Enforcer实例
-func GetEnforcer() *casbin.Enforcer {
-	// 如果权限系统未启用，直接返回nil
-	cfg := core.Instance().Config()
-	if cfg != nil && !cfg.Permission.Enabled {
-		return nil
-	}
-	return enforcer
-}
-
 // Cleanup 清理资源
-func (c *Component) Cleanup() error {
-	return nil
+func (c *Component) Cleanup() {
+	// 无需清理的资源
 }
 
 // Migrate 执行Casbin相关迁移

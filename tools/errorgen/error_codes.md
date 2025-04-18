@@ -28,6 +28,12 @@
 | 20000 | DatabaseInsertErrorCode | Database insert failed | 500 |
 | 20001 | DatabaseDeleteErrorCode | Database delete failed | 500 |
 | 20002 | DatabaseQueryErrorCode | Database query failed | 500 |
+| 20003 | DatabaseUpdateErrorCode | Database update failed | 500 |
+| 20004 | DatabaseConnectionErrorCode | Database connection failed | 500 |
+| 20005 | DatabaseTransactionErrorCode | Database transaction failed | 500 |
+| 20006 | DatabaseDuplicateKeyErrorCode | Duplicate key error | 400 |
+| 20007 | DatabaseForeignKeyErrorCode | Foreign key constraint failed | 400 |
+| 20008 | DatabaseConstraintErrorCode | Constraint check failed | 400 |
 
 ## 用户相关错误码 (30000-39999)
 
@@ -70,3 +76,26 @@
 | 错误码 | 名称 | 错误消息 | HTTP状态码 |
 |------|------|--------|----------|
 | 60000 | FileStroageCode | File storage failed | 500 |
+| 60001 | FileNotFoundCode | File not found | 404 |
+| 60002 | FileUploadFailedCode | File upload failed | 500 |
+| 60003 | FileDownloadFailedCode | File download failed | 500 |
+| 60004 | FileDeleteFailedCode | File delete failed | 500 |
+| 60005 | FileSizeTooLargeCode | File size too large | 400 |
+| 60006 | FileTypeNotAllowedCode | File type not allowed | 400 |
+| 60007 | FileCorruptedCode | File corrupted | 400 |
+| 60008 | FilePermissionDeniedCode | File permission denied | 403 |
+
+## HTTP请求错误码 (70000-79999)
+
+| 错误码 | 名称 | 错误消息 | HTTP状态码 |
+|------|------|--------|----------|
+| 70000 | HTTPRequestFailedCode | HTTP request failed | 500 |
+| 70001 | HTTPTimeoutCode | HTTP request timeout | 500 |
+| 70002 | HTTPConnectionFailedCode | HTTP connection failed | 500 |
+| 70003 | HTTPResponseParseErrorCode | HTTP response parse error | 500 |
+| 70004 | HTTPInvalidURLCode | Invalid URL | 400 |
+| 70005 | HTTPServerErrorCode | Remote server error | 500 |
+| 70006 | HTTPClientErrorCode | Client error | 400 |
+| 70007 | HTTPUnauthorizedCode | Unauthorized request | 401 |
+| 70008 | HTTPForbiddenCode | Forbidden request | 403 |
+| 70009 | HTTPNotFoundCode | Resource not found | 404 |

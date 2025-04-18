@@ -28,17 +28,17 @@ const (
 )
 
 type Config struct {
-	App        App
-	Driver     DBDriver
-	Database   Database
-	JwtAuth    JwtAuth
-	Mongo      Mongo
-	Redis      map[string]Redis
-	Log        LogConfig
-	Permission Permission // 权限系统配置
-	Storage    Storage    // 文件存储配置
-	Admin      Admin      // 管理员配置
-	I18n       I18n       // 国际化配置
+	App      App
+	Driver   DBDriver
+	Database Database
+	JwtAuth  JwtAuth
+	Mongo    Mongo
+	Redis    map[string]Redis
+	Log      LogConfig
+	Casbin   Casbin  // 权限系统配置
+	Storage  Storage // 文件存储配置
+	Admin    Admin   // 管理员配置
+	I18n     I18n    // 国际化配置
 }
 
 // Config app config
@@ -118,12 +118,13 @@ type FileLogConfig struct {
 	Compress   bool   // 是否压缩旧日志文件
 }
 
-// Permission 权限系统配置
-type Permission struct {
-	Enabled      bool   // 是否启用权限系统
-	DefaultAllow bool   // 默认是否允许访问（权限系统关闭时使用）
-	ModelPath    string // Casbin模型文件路径
-	PolicyTable  string // 策略表名
+// Casbin 权限系统配置
+type Casbin struct {
+	Enabled          bool   // 是否启用权限系统
+	DefaultAllow     bool   // 默认是否允许访问（权限系统关闭时使用）
+	ModelPath        string // Casbin模型文件路径
+	PolicyTable      string // 策略表名
+	AutoLoadInterval int    // 自动加载策略间隔（秒）
 }
 
 // Storage 文件存储配置

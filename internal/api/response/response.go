@@ -79,8 +79,17 @@ func Error(c *gin.Context, err error, msg ...string) {
 	// 检查是否需要显示堆栈
 	showStackTrace := logger.ShouldShowStackTrace(log.DebugLevel)
 
+	// 尝试处理数据库错误
+	dbErr := errorx.HandleDBError(err)
+	if dbErr != err {
+		// 如果错误被处理了，使用处理后的错误
+		err = dbErr
+	}
+
 	// 类型断言获取错误信息
-	if appErr, ok := err.(*errorx.AppError); ok {
+	var appErr *errorx.AppError
+	if ae, ok := err.(*errorx.AppError); ok {
+		appErr = ae
 		message = appErr.GetErrorMsg()
 		httpStatus = getHttpStatus(appErr)
 		errorCode = appErr.GetErrorCode()
@@ -98,26 +107,34 @@ func Error(c *gin.Context, err error, msg ...string) {
 				"i18n_key", i18nKey)
 		}
 	} else {
+		// 将非AppError类型的错误转换为AppError
+		appErr = errorx.ErrUnknown.WithError(err)
 		message = err.Error()
 		httpStatus = http.StatusInternalServerError
 		errorCode = errorx.ErrorUnknownCode
 		i18nKey = "error.unknown"
 
 		// 记录原始错误，对于非AppError类型
-		logFields := []interface{}{"err_code", errorCode, "err_msg", message, "i18n_key", i18nKey}
+		logFields := []any{"err_code", errorCode, "err_msg", message, "i18n_key", i18nKey}
 
 		// 根据配置决定是否记录堆栈
 		if showStackTrace {
 			// 尝试使用Formatter接口获取堆栈
 			if formatter, ok := err.(fmt.Formatter); ok {
 				var buf bytes.Buffer
-				fmt.Fprintf(&buf, "%+v", formatter)
+				_, _ = fmt.Fprintf(&buf, "%+v", formatter)
 				logFields = append(logFields, "stack", "\n"+buf.String())
 			}
 		}
 
 		log.Debug("API error details", logFields...)
 	}
+
+	// 记录错误到日志
+	log.Error("API error occurred",
+		"code", appErr.GetErrorCode(),
+		"message", appErr.GetErrorMsg(),
+		"i18n_key", appErr.GetI18nKey())
 
 	// 允许调用方覆盖原始错误消息
 	if len(msg) > 0 {

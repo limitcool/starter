@@ -11,9 +11,9 @@ import (
 	"github.com/spf13/cast"
 )
 
-func NewUserController() *UserController {
+func NewUserController(userService *services.SysUserService) *UserController {
 	return &UserController{
-		userService: services.NewSysUserService(),
+		userService: userService,
 	}
 }
 
@@ -122,9 +122,8 @@ func (uc *UserController) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	// 使用服务管理器获取用户服务
-	userService := services.NewSysUserService()
-	tokenResponse, err := userService.RefreshToken(req.RefreshToken)
+	// 使用控制器中的服务实例
+	tokenResponse, err := uc.userService.RefreshToken(req.RefreshToken)
 	if err != nil {
 		logger.LogError("RefreshToken 刷新访问令牌失败", err,
 			"refresh_token", req.RefreshToken)

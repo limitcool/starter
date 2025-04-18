@@ -10,21 +10,21 @@ import (
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
-	"github.com/limitcool/starter/internal/storage/sqldb"
+	"github.com/limitcool/starter/internal/repository"
 )
 
 // SysUserService 用户服务
 type SysUserService struct {
+	sysUserRepo   repository.SysUserRepository
 	roleService   *RoleService
 	casbinService *CasbinService
 }
 
 // NewSysUserService 创建用户服务
-func NewSysUserService() *SysUserService {
-	// 直接创建依赖服务
+func NewSysUserService(sysUserRepo repository.SysUserRepository, roleService *RoleService) *SysUserService {
 	return &SysUserService{
-		roleService:   NewRoleService(),
-		casbinService: NewCasbinService(),
+		sysUserRepo: sysUserRepo,
+		roleService: roleService,
 	}
 }
 
@@ -36,7 +36,7 @@ func (s *SysUserService) VerifyPassword(password, hashedPassword string) bool {
 // Login 用户登录
 func (s *SysUserService) Login(username, password string, ip string) (*v1.LoginResponse, error) {
 	// 获取用户
-	user, err := model.NewSysUser().GetUserByUsername(username)
+	user, err := s.sysUserRepo.GetByUsername(username)
 	if err != nil {
 		// AppError的WithError会自动捕获堆栈
 		return nil, errorx.ErrUserNotFound.WithError(err)
@@ -51,12 +51,13 @@ func (s *SysUserService) Login(username, password string, ip string) (*v1.LoginR
 	if !s.VerifyPassword(password, user.Password) {
 		return nil, errorx.ErrUserPasswordError
 	}
-	db := sqldb.Instance().DB()
+
 	// 更新最后登录时间和IP
-	if err := db.Model(user).Updates(map[string]interface{}{
+	fields := map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
-	}).Error; err != nil {
+	}
+	if err := s.sysUserRepo.UpdateFields(user.ID, fields); err != nil {
 		// 直接返回错误，错误会自动捕获堆栈
 		return nil, err
 	}

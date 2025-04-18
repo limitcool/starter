@@ -10,11 +10,16 @@ import (
 	"github.com/limitcool/starter/internal/services"
 )
 
-func NewRoleController() *RoleController {
-	return &RoleController{}
+func NewRoleController(roleService *services.RoleService, menuService *services.MenuService) *RoleController {
+	return &RoleController{
+		roleService: roleService,
+		menuService: menuService,
+	}
 }
 
 type RoleController struct {
+	roleService *services.RoleService
+	menuService *services.MenuService
 }
 
 // 创建角色
@@ -25,8 +30,8 @@ func (rc *RoleController) CreateRole(c *gin.Context) {
 		return
 	}
 
-	roleService := services.NewRoleService()
-	if err := roleService.CreateRole(&role); err != nil {
+	// 使用控制器中的服务实例
+	if err := rc.roleService.CreateRole(&role); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -49,8 +54,7 @@ func (rc *RoleController) UpdateRole(c *gin.Context) {
 	}
 
 	role.ID = uint(id)
-	roleService := services.NewRoleService()
-	if err := roleService.UpdateRole(&role); err != nil {
+	if err := rc.roleService.UpdateRole(&role); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -66,8 +70,7 @@ func (rc *RoleController) DeleteRole(c *gin.Context) {
 		return
 	}
 
-	roleService := services.NewRoleService()
-	if err := roleService.DeleteRole(uint(id)); err != nil {
+	if err := rc.roleService.DeleteRole(uint(id)); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -83,16 +86,15 @@ func (rc *RoleController) GetRole(c *gin.Context) {
 		return
 	}
 
-	roleService := services.NewRoleService()
-	role, err := roleService.GetRoleByID(uint(id))
+	// 使用控制器中的服务实例
+	role, err := rc.roleService.GetRoleByID(uint(id))
 	if err != nil {
 		response.Error(c, err)
 		return
 	}
 
 	// 获取角色菜单ID
-	menuService := services.NewMenuService()
-	roleMenus, err := menuService.GetMenusByRoleID(role.ID)
+	roleMenus, err := rc.menuService.GetMenusByRoleID(role.ID)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -110,8 +112,8 @@ func (rc *RoleController) GetRole(c *gin.Context) {
 
 // 获取角色列表
 func (rc *RoleController) GetRoles(c *gin.Context) {
-	roleService := services.NewRoleService()
-	roles, err := roleService.GetRoles()
+	// 使用控制器中的服务实例
+	roles, err := rc.roleService.GetRoles()
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -132,8 +134,8 @@ func (rc *RoleController) AssignMenuToRole(c *gin.Context) {
 		return
 	}
 
-	menuService := services.NewMenuService()
-	if err := menuService.AssignMenuToRole(req.RoleID, req.MenuIDs); err != nil {
+	// 使用控制器中的服务实例
+	if err := rc.menuService.AssignMenuToRole(req.RoleID, req.MenuIDs); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -154,8 +156,8 @@ func (rc *RoleController) SetRolePermission(c *gin.Context) {
 		return
 	}
 
-	roleService := services.NewRoleService()
-	if err := roleService.SetRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
+	// 使用控制器中的服务实例
+	if err := rc.roleService.SetRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -176,8 +178,8 @@ func (rc *RoleController) DeleteRolePermission(c *gin.Context) {
 		return
 	}
 
-	roleService := services.NewRoleService()
-	if err := roleService.DeleteRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
+	// 使用控制器中的服务实例
+	if err := rc.roleService.DeleteRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
 		response.Error(c, err)
 		return
 	}

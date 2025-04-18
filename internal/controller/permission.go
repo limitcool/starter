@@ -1,23 +1,23 @@
 package controller
 
 import (
-	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
-	"github.com/limitcool/starter/internal/storage/sqldb"
-	"github.com/spf13/viper"
+	"github.com/limitcool/starter/internal/services"
 )
 
-func NewPermissionController() *PermissionController {
-	return &PermissionController{}
+func NewPermissionController(permissionService *services.PermissionService) *PermissionController {
+	return &PermissionController{
+		permissionService: permissionService,
+	}
 }
 
 type PermissionController struct {
+	permissionService *services.PermissionService
 }
 
 // 更新权限系统设置
@@ -32,31 +32,14 @@ func (pc *PermissionController) UpdatePermissionSettings(c *gin.Context) {
 		return
 	}
 
-	// 获取配置
-	config := core.Instance().Config()
-
-	// 更新内存中的配置
-	config.Permission.Enabled = req.Enabled
-	config.Permission.DefaultAllow = req.DefaultAllow
-
-	// 更新配置文件
-	v := viper.New()
-	v.SetConfigFile(filepath.Join("configs", "config.yaml"))
-
-	if err := v.ReadInConfig(); err != nil {
+	// 使用服务层更新权限设置
+	err := pc.permissionService.UpdatePermissionSettings(req.Enabled, req.DefaultAllow)
+	if err != nil {
 		response.Error(c, err)
 		return
 	}
 
-	v.Set("permission.enabled", req.Enabled)
-	v.Set("permission.default_allow", req.DefaultAllow)
-
-	if err := v.WriteConfig(); err != nil {
-		response.Error(c, err)
-		return
-	}
-
-	response.Success(c, map[string]interface{}{
+	response.Success(c, map[string]any{
 		"message":       "权限系统设置已更新",
 		"enabled":       req.Enabled,
 		"default_allow": req.DefaultAllow,
@@ -65,9 +48,8 @@ func (pc *PermissionController) UpdatePermissionSettings(c *gin.Context) {
 
 // GetPermissions 获取权限列表
 func (pc *PermissionController) GetPermissions(c *gin.Context) {
-	var permissions []model.Permission
-	db := sqldb.Instance().DB()
-	if err := db.Find(&permissions).Error; err != nil {
+	permissions, err := pc.permissionService.GetPermissions()
+	if err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -82,9 +64,8 @@ func (pc *PermissionController) GetPermission(c *gin.Context) {
 		return
 	}
 
-	var permission model.Permission
-	db := sqldb.Instance().DB()
-	if err := db.Where("id = ?", id).First(&permission).Error; err != nil {
+	permission, err := pc.permissionService.GetPermission(id)
+	if err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -100,8 +81,7 @@ func (pc *PermissionController) CreatePermission(c *gin.Context) {
 		return
 	}
 
-	db := sqldb.Instance().DB()
-	if err := db.Create(&permission).Error; err != nil {
+	if err := pc.permissionService.CreatePermission(&permission); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -123,9 +103,7 @@ func (pc *PermissionController) UpdatePermission(c *gin.Context) {
 		return
 	}
 
-	permission.ID = uint(id)
-	db := sqldb.Instance().DB()
-	if err := db.Model(&model.Permission{}).Where("id = ?", id).Updates(permission).Error; err != nil {
+	if err := pc.permissionService.UpdatePermission(id, &permission); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -142,8 +120,7 @@ func (pc *PermissionController) DeletePermission(c *gin.Context) {
 	}
 
 	// 删除权限
-	db := sqldb.Instance().DB()
-	if err := db.Delete(&model.Permission{}, id).Error; err != nil {
+	if err := pc.permissionService.DeletePermission(id); err != nil {
 		response.Error(c, err)
 		return
 	}

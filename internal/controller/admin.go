@@ -10,10 +10,13 @@ import (
 )
 
 type AdminController struct {
+	userService *services.SysUserService
 }
 
-func NewAdminController() *AdminController {
-	return &AdminController{}
+func NewAdminController(userService *services.SysUserService) *AdminController {
+	return &AdminController{
+		userService: userService,
+	}
 }
 
 // AdminLogin 管理员登录
@@ -28,9 +31,8 @@ func (ac *AdminController) AdminLogin(c *gin.Context) {
 	// 获取客户端IP地址
 	clientIP := c.ClientIP()
 
-	// 使用服务管理器获取用户服务
-	userService := services.NewSysUserService()
-	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
+	// 使用控制器中的服务实例
+	tokenResponse, err := ac.userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
 		// 使用辅助函数记录错误，同时包含额外的上下文信息
 		logger.LogError("AdminLogin 登录失败", err,

@@ -11,7 +11,7 @@ import (
 )
 
 // OperationLogMiddleware 操作日志中间件
-func OperationLogMiddleware(module, action, description string) gin.HandlerFunc {
+func OperationLogMiddleware(logService *services.OperationLogService, module, action, description string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 记录开始时间
 		startTime := time.Now()
@@ -35,8 +35,7 @@ func OperationLogMiddleware(module, action, description string) gin.HandlerFunc 
 			return
 		}
 
-		// 创建操作日志服务
-		logService := services.NewOperationLogService()
+		// 使用传入的日志服务
 
 		// 提取用户信息
 		mapClaims, ok := claims.(jwt.MapClaims)
@@ -63,9 +62,9 @@ func OperationLogMiddleware(module, action, description string) gin.HandlerFunc 
 
 		// 根据用户类型记录不同的日志
 		if userType == "sys_user" {
-			logService.CreateSysUserLog(c, userID, username, module, action, description, startTime)
+			_ = logService.CreateSysUserLog(c, userID, username, module, action, description, startTime)
 		} else {
-			logService.CreateUserLog(c, userID, username, module, action, description, startTime)
+			_ = logService.CreateUserLog(c, userID, username, module, action, description, startTime)
 		}
 	}
 }

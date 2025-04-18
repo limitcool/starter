@@ -14,7 +14,10 @@ import (
 
 // 使用辅助方法获取集合
 func getOperationLogCollection() *mongo.Collection {
-	return mongodb.Collection("operation_log")
+	if mongodb.Instance() != nil {
+		return mongodb.Instance().GetCollection("operation_log")
+	}
+	return nil
 }
 
 // OperationLog 操作记录模型

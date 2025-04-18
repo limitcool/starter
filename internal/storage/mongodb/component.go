@@ -74,7 +74,8 @@ func (m *Component) Initialize() error {
 	// 设置全局实例
 	setupInstance(m)
 
-	// 设置兼容性全局变量
+	// 设置兼容性全局变量（已弃用）
+	// 请使用 Instance().GetClient() 获取MongoDB客户端
 	Mongo = client
 
 	log.Info("MongoDB component initialized successfully")

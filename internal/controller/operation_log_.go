@@ -10,11 +10,14 @@ import (
 	"github.com/limitcool/starter/internal/services"
 )
 
-func NewOperationLogController() *OperationLogController {
-	return &OperationLogController{}
+func NewOperationLogController(opLogService *services.OperationLogService) *OperationLogController {
+	return &OperationLogController{
+		opLogService: opLogService,
+	}
 }
 
 type OperationLogController struct {
+	opLogService *services.OperationLogService
 }
 
 // GetOperationLogs 获取操作日志列表
@@ -35,8 +38,7 @@ func (olc *OperationLogController) GetOperationLogs(c *gin.Context) {
 	}
 
 	// 获取操作日志
-	opLogService := services.NewOperationLogService()
-	result, err := opLogService.GetOperationLogs(&query)
+	result, err := olc.opLogService.GetOperationLogs(&query)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -53,8 +55,7 @@ func (olc *OperationLogController) DeleteOperationLog(c *gin.Context) {
 		return
 	}
 
-	opLogService := services.NewOperationLogService()
-	if err := opLogService.DeleteOperationLog(uint(id)); err != nil {
+	if err := olc.opLogService.DeleteOperationLog(uint(id)); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -77,8 +78,7 @@ func (olc *OperationLogController) ClearOperationLogs(c *gin.Context) {
 	}
 
 	// 批量删除操作日志
-	opLogService := services.NewOperationLogService()
-	if err := opLogService.BatchDeleteOperationLogs(req.IDs); err != nil {
+	if err := olc.opLogService.BatchDeleteOperationLogs(req.IDs); err != nil {
 		response.Error(c, err)
 		return
 	}

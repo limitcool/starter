@@ -9,14 +9,14 @@ import (
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/pkg/errorx"
-	"github.com/limitcool/starter/internal/storage/casbin"
+	"github.com/limitcool/starter/internal/services"
 )
 
-// CasbinComponentMiddleware 基于路径和方法的权限控制中间件
-func CasbinComponentMiddleware() gin.HandlerFunc {
+// CasbinMiddleware 基于路径和方法的权限控制中间件
+func CasbinMiddleware(casbinService *services.CasbinService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
-		if !core.Instance().Config().Permission.Enabled {
+		if !core.Instance().Config().Casbin.Enabled {
 			// 权限系统未启用，直接放行
 			c.Next()
 			return
@@ -39,7 +39,7 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 		act := c.Request.Method
 
 		// 获取Casbin实例
-		enforcer := casbin.GetEnforcer()
+		enforcer := casbinService.GetEnforcer()
 		if enforcer == nil {
 			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
@@ -73,10 +73,10 @@ func CasbinComponentMiddleware() gin.HandlerFunc {
 }
 
 // PermissionCodeMiddleware 基于权限编码的权限控制中间件
-func PermissionCodeMiddleware() gin.HandlerFunc {
+func PermissionCodeMiddleware(casbinService *services.CasbinService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
-		if !core.Instance().Config().Permission.Enabled {
+		if !core.Instance().Config().Casbin.Enabled {
 			// 权限系统未启用，直接放行
 			c.Next()
 			return
@@ -101,7 +101,7 @@ func PermissionCodeMiddleware() gin.HandlerFunc {
 		userID := strconv.FormatUint(uint64(userIDInterface.(float64)), 10)
 
 		// 获取Casbin实例
-		enforcer := casbin.GetEnforcer()
+		enforcer := casbinService.GetEnforcer()
 		if enforcer == nil {
 			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()

@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/limitcool/starter/internal/pkg/enum"
+	"github.com/limitcool/starter/internal/storage/sqldb"
 )
 
 // 菜单实体
@@ -38,19 +39,20 @@ func (Menu) TableName() string {
 
 // 创建菜单
 func (m *Menu) Create() error {
-	return DB().Create(m).Error
+	return sqldb.Instance().DB().Create(m).Error
 }
 
 // 更新菜单
 func (m *Menu) Update() error {
-	return DB().Model(&Menu{}).Where("id = ?", m.ID).Updates(m).Error
+	return sqldb.Instance().DB().Model(&Menu{}).Where("id = ?", m.ID).Updates(m).Error
 }
 
 // 删除菜单
 func (m *Menu) Delete(id uint) error {
 	// 检查是否有子菜单
 	var count int64
-	if err := DB().Model(&Menu{}).Where("parent_id = ?", id).Count(&count).Error; err != nil {
+	db := sqldb.Instance().DB()
+	if err := db.Model(&Menu{}).Where("parent_id = ?", id).Count(&count).Error; err != nil {
 		return err
 	}
 	if count > 0 {
@@ -58,31 +60,32 @@ func (m *Menu) Delete(id uint) error {
 	}
 
 	// 删除菜单
-	return DB().Delete(&Menu{}, id).Error
+	return db.Delete(&Menu{}, id).Error
 }
 
 // 根据ID获取菜单
 func (m *Menu) GetByID(id uint) (*Menu, error) {
 	var menu Menu
-	err := DB().Where("id = ?", id).First(&menu).Error
+	err := sqldb.Instance().DB().Where("id = ?", id).First(&menu).Error
 	return &menu, err
 }
 
 // 获取所有菜单
 func (m *Menu) GetAll() ([]*Menu, error) {
 	var menus []*Menu
-	err := DB().Order("order_num").Find(&menus).Error
+	err := sqldb.Instance().DB().Order("order_num").Find(&menus).Error
 	if err != nil {
 		return nil, err
 	}
-	return BuildMenuTree(menus), nil
+	return BuildMenuTreeOld(menus), nil
 }
 
 // 获取角色菜单
 func (m *Menu) GetByRoleID(roleID uint) ([]*Menu, error) {
 	// 查询角色关联的菜单ID
 	var roleMenus []RoleMenu
-	err := DB().Where("role_id = ?", roleID).Find(&roleMenus).Error
+	db := sqldb.Instance().DB()
+	err := db.Where("role_id = ?", roleID).Find(&roleMenus).Error
 	if err != nil {
 		return nil, err
 	}
@@ -100,19 +103,20 @@ func (m *Menu) GetByRoleID(roleID uint) ([]*Menu, error) {
 
 	// 查询菜单
 	var menus []*Menu
-	err = DB().Where("id IN ?", menuIDs).Order("order_num").Find(&menus).Error
+	err = db.Where("id IN ?", menuIDs).Order("order_num").Find(&menus).Error
 	if err != nil {
 		return nil, err
 	}
 
-	return BuildMenuTree(menus), nil
+	return BuildMenuTreeOld(menus), nil
 }
 
 // 获取用户菜单
 func (m *Menu) GetByUserID(userID uint) ([]*Menu, error) {
 	// 1. 获取用户角色
 	var userRoles []UserRole
-	err := DB().Where("user_id = ?", userID).Find(&userRoles).Error
+	db := sqldb.Instance().DB()
+	err := db.Where("user_id = ?", userID).Find(&userRoles).Error
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +134,7 @@ func (m *Menu) GetByUserID(userID uint) ([]*Menu, error) {
 
 	// 2. 获取角色关联的菜单ID
 	var roleMenus []RoleMenu
-	err = DB().Where("role_id IN ?", roleIDs).Find(&roleMenus).Error
+	err = db.Where("role_id IN ?", roleIDs).Find(&roleMenus).Error
 	if err != nil {
 		return nil, err
 	}
@@ -152,20 +156,21 @@ func (m *Menu) GetByUserID(userID uint) ([]*Menu, error) {
 
 	// 3. 查询菜单信息
 	var menus []*Menu
-	err = DB().Where("id IN ? AND status = ? AND type IN ?", menuIDs, 1, []int8{0, 1}).Order("order_num").Find(&menus).Error
+	err = db.Where("id IN ? AND status = ? AND type IN ?", menuIDs, 1, []int8{0, 1}).Order("order_num").Find(&menus).Error
 	if err != nil {
 		return nil, err
 	}
 
 	// 4. 构建菜单树
-	return BuildMenuTree(menus), nil
+	return BuildMenuTreeOld(menus), nil
 }
 
 // 获取用户菜单权限标识
 func (m *Menu) GetPermsByUserRoles(roleIDs []uint) ([]string, error) {
 	// 查询角色菜单
 	var roleMenus []RoleMenu
-	err := DB().Where("role_id IN ?", roleIDs).Find(&roleMenus).Error
+	db := sqldb.Instance().DB()
+	err := db.Where("role_id IN ?", roleIDs).Find(&roleMenus).Error
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +187,7 @@ func (m *Menu) GetPermsByUserRoles(roleIDs []uint) ([]string, error) {
 
 	// 查询菜单权限标识
 	var perms []string
-	err = DB().Model(&Menu{}).
+	err = db.Model(&Menu{}).
 		Where("id IN ? AND status = ? AND perms != ''", menuIDs, 1).
 		Pluck("perms", &perms).Error
 	if err != nil {
@@ -192,8 +197,8 @@ func (m *Menu) GetPermsByUserRoles(roleIDs []uint) ([]string, error) {
 	return perms, nil
 }
 
-// 构建菜单树
-func BuildMenuTree(menus []*Menu) []*Menu {
+// BuildMenuTreeOld 构建菜单树(旧版本)
+func BuildMenuTreeOld(menus []*Menu) []*Menu {
 	// 创建一个map用于快速查找
 	menuMap := make(map[uint]*Menu)
 	for _, m := range menus {

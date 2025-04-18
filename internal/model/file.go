@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/storage/sqldb"
 )
 
 // 文件类型枚举
@@ -52,13 +53,13 @@ func (File) TableName() string {
 
 // 创建文件记录
 func (f *File) Create() error {
-	return DB().Create(f).Error
+	return sqldb.Instance().DB().Create(f).Error
 }
 
 // 根据ID获取文件
 func (f *File) GetByID(id string) (*File, error) {
 	var file File
-	if err := DB().First(&file, id).Error; err != nil {
+	if err := sqldb.Instance().DB().First(&file, id).Error; err != nil {
 		return nil, errorx.ErrNotFound.WithError(err)
 	}
 	return &file, nil
@@ -66,34 +67,36 @@ func (f *File) GetByID(id string) (*File, error) {
 
 // 删除文件记录
 func (f *File) Delete() error {
-	return DB().Delete(f).Error
+	return sqldb.Instance().DB().Delete(f).Error
 }
 
 // 更新文件记录
 func (f *File) Update() error {
-	return DB().Save(f).Error
+	return sqldb.Instance().DB().Save(f).Error
 }
 
 // 更新用户头像
 func (f *File) UpdateUserAvatar(userID int64, fileID uint) error {
+	db := sqldb.Instance().DB()
 	user := User{}
-	if err := DB().First(&user, userID).Error; err != nil {
+	if err := db.First(&user, userID).Error; err != nil {
 		return errorx.ErrNotFound.WithError(err)
 	}
 
 	// 更新用户头像
 	user.AvatarFileID = fileID
-	return DB().Save(&user).Error
+	return db.Save(&user).Error
 }
 
 // 更新系统用户头像
 func (f *File) UpdateSysUserAvatar(userID int64, fileID uint) error {
+	db := sqldb.Instance().DB()
 	sysUser := SysUser{}
-	if err := DB().First(&sysUser, userID).Error; err != nil {
+	if err := db.First(&sysUser, userID).Error; err != nil {
 		return errorx.ErrNotFound.WithError(err)
 	}
 
 	// 更新用户头像
 	sysUser.AvatarFileID = fileID
-	return DB().Save(&sysUser).Error
+	return db.Save(&sysUser).Error
 }

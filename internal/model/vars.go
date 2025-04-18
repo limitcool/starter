@@ -37,27 +37,24 @@ func GenerateUUID() string {
 // DB 获取SQL数据库连接
 // 推荐直接使用sqldb.Instance().DB()获取数据库连接
 func DB() *gorm.DB {
+	// 优先使用组件实例
 	if sqldb.Instance() != nil {
 		return sqldb.Instance().DB()
 	}
-	// 回退到全局变量
-	if sqldb.DB != nil {
-		return sqldb.DB
-	}
+	// 记录警告日志
+	log.Warn("使用了已弃用的数据库访问方式，请使用 sqldb.Instance().DB()", "caller", "model.DB()")
 	return nil
 }
 
 // GetMongoDB 获取MongoDB数据库
 func GetMongoDB() *mongo.Database {
-	// 使用直接访问方式保持兼容性
-	if mongodb.Mongo == nil {
-		return nil
+	// 优先使用组件实例
+	if mongodb.Instance() != nil {
+		return mongodb.Instance().GetDB()
 	}
-	dbName := mongodb.GetDatabaseName()
-	if dbName == "" {
-		return nil
-	}
-	return mongodb.Mongo.Database(dbName)
+	// 记录警告日志
+	log.Warn("使用了已弃用的MongoDB访问方式，请使用 mongodb.Instance().GetDB()", "caller", "model.GetMongoDB()")
+	return nil
 }
 
 // 全局错误定义

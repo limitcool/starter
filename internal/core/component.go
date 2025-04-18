@@ -98,3 +98,8 @@ func (m *ComponentManager) Cleanup() {
 func (m *ComponentManager) GetConfig() *configs.Config {
 	return m.config
 }
+
+// GetComponents 获取所有组件
+func (m *ComponentManager) GetComponents() []Component {
+	return m.components
+}

@@ -86,7 +86,7 @@ func (s *UserService) Login(username, password string, ip string) (*v1.LoginResp
 	}
 
 	// 更新最后登录时间和IP
-	sqldb.Instance().DB().Model(user).Updates(map[string]interface{}{
+	sqldb.Instance().DB().Model(user).Updates(map[string]any{
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	})
@@ -128,7 +128,7 @@ func (s *UserService) Login(username, password string, ip string) (*v1.LoginResp
 }
 
 // UpdateUser 更新用户信息
-func (s *UserService) UpdateUser(id uint, data map[string]interface{}) error {
+func (s *UserService) UpdateUser(id uint, data map[string]any) error {
 	// 不允许更新的字段
 	delete(data, "id")
 	delete(data, "username")

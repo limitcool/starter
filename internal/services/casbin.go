@@ -1,93 +1,94 @@
 package services
 
 import (
-	"sync"
+	"fmt"
 
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/internal/core"
-	"github.com/limitcool/starter/internal/storage/sqldb"
+	"github.com/limitcool/starter/internal/storage/database"
 )
 
-var (
-	enforcer *casbin.Enforcer
-	once     sync.Once
-)
+// 注意: 我们已经移除了全局实例和单例模式
 
 // CasbinService Casbin权限服务
 type CasbinService struct {
+	db       database.DB
 	enforcer *casbin.Enforcer
 }
 
 // NewCasbinService 创建Casbin服务
-func NewCasbinService() *CasbinService {
-	e, err := InitCasbin()
-	if err != nil {
-		log.Error("初始化Casbin失败", "error", err)
-		return nil
+func NewCasbinService(db database.DB) *CasbinService {
+	s := &CasbinService{
+		db: db,
 	}
-	return &CasbinService{
-		enforcer: e,
-	}
+
+	// 初始化
+	_ = s.Initialize()
+
+	return s
 }
 
-// InitCasbin 初始化Casbin
-func InitCasbin() (*casbin.Enforcer, error) {
-	var err error
-
-	// 如果权限系统未启用，直接返回nil
-	config := core.Instance().Config()
-	if config != nil && !config.Permission.Enabled {
-		return nil, nil
-	}
-
-	// 如果已经初始化，直接返回
-	if enforcer != nil {
-		return enforcer, nil
-	}
-
-	once.Do(func() {
-
-		// 使用gorm适配器
-		adapter, adapterErr := gormadapter.NewAdapterByDB(sqldb.Instance().DB())
-		if adapterErr != nil {
-			err = adapterErr
-			return
-		}
-
-		// 获取模型文件路径
-		modelPath := "configs/rbac_model.conf"
-		if config != nil && config.Permission.ModelPath != "" {
-			modelPath = config.Permission.ModelPath
-		}
-
-		// 创建enforcer
-		e, casbinErr := casbin.NewEnforcer(modelPath, adapter)
-		if casbinErr != nil {
-			err = casbinErr
-			return
-		}
-
-		// 加载策略
-		if loadErr := e.LoadPolicy(); loadErr != nil {
-			err = loadErr
-			return
-		}
-
-		// 启用自动保存
-		e.EnableAutoSave(true)
-
-		enforcer = e
-	})
-
-	return enforcer, err
-}
-
-// GetEnforcer 获取Casbin实例
+// GetEnforcer 获取Casbin执行器
 func (s *CasbinService) GetEnforcer() *casbin.Enforcer {
 	return s.enforcer
 }
+
+// Initialize 初始Casbin服务
+func (s *CasbinService) Initialize() error {
+	if s.db == nil || s.db.GetDB() == nil {
+		log.Error("数据库连接未初始化")
+		return nil
+	}
+
+	// 如果权限系统未启用，直接返回
+	config := core.Instance().Config()
+	if config != nil && !config.Casbin.Enabled {
+		return nil
+	}
+
+	// 使用gorm适配器
+	adapter, err := gormadapter.NewAdapterByDB(s.db.GetDB())
+	if err != nil {
+		log.Error("创建Casbin适配器失败", "error", err)
+		return err
+	}
+
+	// 获取模型文件路径
+	modelPath := "configs/rbac_model.conf"
+	if config != nil && config.Casbin.ModelPath != "" {
+		modelPath = config.Casbin.ModelPath
+	}
+
+	// 创建enforcer
+	e, err := casbin.NewEnforcer(modelPath, adapter)
+	if err != nil {
+		log.Error("创建Casbin Enforcer失败", "error", err)
+		return err
+	}
+
+	// 加载策略
+	if err := e.LoadPolicy(); err != nil {
+		log.Error("加载Casbin策略失败", "error", err)
+		return err
+	}
+
+	// 启用自动保存
+	e.EnableAutoSave(true)
+
+	s.enforcer = e
+
+	return nil
+}
+
+// InitCasbin 初始化Casbin
+// 已弃用: 请使用依赖注入创建Casbin服务
+func InitCasbin() (*casbin.Enforcer, error) {
+	return nil, fmt.Errorf("请使用依赖注入创建Casbin服务")
+}
+
+// 注意: 这个方法已经在上面声明过了
 
 // CheckPermission 检查权限
 func (s *CasbinService) CheckPermission(userID string, obj string, act string) (bool, error) {

@@ -16,10 +16,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// DB 全局数据库连接
-// 推荐使用Instance().DB()方法获取数据库连接，而不是直接使用此变量
+// 全局变量
 var (
-	DB     *gorm.DB
 	dbOnce sync.Once
 )
 
@@ -107,14 +105,15 @@ func getGormLogLevel(c *configs.Config) logger.LogLevel {
 	return logger.Silent
 }
 
-// NewDB 创建数据库连接并设置为全局
+// NewDB 创建数据库连接
 func NewDB(c configs.Config) *gorm.DB {
 	var db *gorm.DB
 	dbOnce.Do(func() {
 		db = newDbConn(&c)
-		DB = db
+		// 设置全局实例
+		setupInstance(&Component{db: db, Config: &c, enabled: c.Database.Enabled})
 	})
-	return DB
+	return Instance().DB()
 }
 
 // func NewMysql(dsn string, c configs.Config) *gorm.DB {

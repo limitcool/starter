@@ -53,16 +53,16 @@ func (s *SysUser) GetUserByUsername(username string) (*SysUser, error) {
 		return nil, err
 	}
 
-	// // 获取用户的角色
-	// if err := sqldb.Instance().DB().Model(&user).Association("Roles").Find(&user.Roles); err != nil {
-	// 	// 直接返回错误，错误会自动捕获堆栈
-	// 	return nil, err
-	// }
+	// 获取用户的角色
+	if err := db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
+		return nil, err
+	}
 
-	// // 提取角色编码
-	// for _, role := range user.Roles {
-	// 	user.RoleCodes = append(user.RoleCodes, role.Code)
-	// }
+	// 提取角色编码
+	for _, role := range user.Roles {
+		user.RoleCodes = append(user.RoleCodes, role.Code)
+	}
 
 	return &user, nil
 }

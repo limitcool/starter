@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/charmbracelet/log"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -13,7 +14,7 @@ var (
 	ErrNotInitialized = errors.New("mongodb component not initialized")
 )
 
-// 兼容旧代码的全局变量
+// 已弃用: 请使用 Instance().GetClient() 获取MongoDB客户端
 var Mongo *mongo.Client
 
 var (
@@ -71,12 +72,11 @@ func GetCollection(name string) (*mongo.Collection, error) {
 }
 
 // 为兼容性提供的方法
+// 已弃用: 请使用 Instance().GetCollection(name) 获取集合
 func Collection(name string) *mongo.Collection {
-	if Mongo == nil {
-		return nil
+	if instance != nil && instance.IsEnabled() {
+		return instance.GetCollection(name)
 	}
-	if instance == nil || instance.Config == nil {
-		return nil
-	}
-	return Mongo.Database(instance.Config.Mongo.DB).Collection(name)
+	log.Warn("使用了已弃用的MongoDB访问方式，请使用 Instance().GetCollection()", "caller", "mongodb.Collection()")
+	return nil
 }
