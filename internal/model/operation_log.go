@@ -1,21 +1,13 @@
 package model
 
 import (
-	"context"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// 使用依赖注入获取集合
-// 注意: 已移除全局实例访问方式
-var operationLogCollection *mongo.Collection
-
-// SetOperationLogCollection 设置操作日志集合
-// 这个函数应该在应用初始化时调用
-func SetOperationLogCollection(collection *mongo.Collection) {
-	operationLogCollection = collection
+// OperationLogRepository 操作日志仓库接口
+type OperationLogRepository interface {
+	// 实现操作日志相关方法
+	Registry()
 }
 
 // OperationLog 操作记录模型
@@ -58,13 +50,6 @@ func (OperationLog) TableName() string {
 
 // Registry 初始化集合
 func (OperationLog) Registry() {
-	// 注意: 已移除全局实例访问方式
-	// 现在需要通过依赖注入设置集合
-	if operationLogCollection == nil {
-		return
-	}
-
-	// 创建索引等操作
-	var ctx = context.Background()
-	operationLogCollection.FindOne(ctx, bson.M{"module": "system"})
+	// 该方法已经移动到仓库层实现
+	// 请使用依赖注入的方式获取仓库实例
 }

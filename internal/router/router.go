@@ -6,8 +6,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/controller"
-	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/storage"
@@ -15,7 +15,7 @@ import (
 )
 
 // SetupRouter 初始化并返回一个配置完整的Gin路由引擎
-func SetupRouter(db database.DB) *gin.Engine {
+func SetupRouter(db database.DB, config *configs.Config) *gin.Engine {
 	// 创建不带默认中间件的路由
 	r := gin.New()
 
@@ -24,11 +24,9 @@ func SetupRouter(db database.DB) *gin.Engine {
 	r.Use(middleware.LoggerWithCharmbracelet())
 	r.Use(gin.Recovery())
 	r.Use(middleware.Cors())
-	r.Use(middleware.I18n())
+	r.Use(middleware.I18n(config))
 
-	// 获取服务配置
 	// 使用依赖注入传入的配置
-	config := core.Instance().Config() // 注意：这里仍然使用全局实例，因为这是应用的入口点
 
 	// 创建Casbin服务
 	var casbinService casbin.Service
@@ -106,7 +104,7 @@ func SetupRouter(db database.DB) *gin.Engine {
 	repos := initRepositories(gormDB)
 
 	// 初始化服务层
-	svcs := initServices(repos, casbinService, db)
+	svcs := initServices(repos, casbinService, db, config)
 
 	// 初始化控制器层
 	controllers := initControllers(svcs, repos, stg)
@@ -140,7 +138,7 @@ func SetupRouter(db database.DB) *gin.Engine {
 
 	// ======= 需要认证的路由 =======
 	auth := apiV1.Group("")
-	auth.Use(middleware.JWTAuth())
+	auth.Use(middleware.JWTAuth(config))
 
 	// 用户相关 - 需要认证
 	authUser := auth.Group("/user")
@@ -171,7 +169,7 @@ func SetupRouter(db database.DB) *gin.Engine {
 	// 管理员路由 - 需要权限验证
 	if config.Casbin.Enabled && casbinService != nil {
 		adminGroup := auth.Group("/admin")
-		adminGroup.Use(middleware.CasbinMiddleware(svcs.PermissionService))
+		adminGroup.Use(middleware.CasbinMiddleware(svcs.PermissionService, config))
 		{
 			// 系统管理
 			adminSystem := adminGroup.Group("/system")

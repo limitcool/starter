@@ -81,7 +81,7 @@ func (r *SysUserRepo) Update(user *model.SysUser) error {
 }
 
 // UpdateFields 更新系统用户字段
-func (r *SysUserRepo) UpdateFields(id int64, fields map[string]interface{}) error {
+func (r *SysUserRepo) UpdateFields(id int64, fields map[string]any) error {
 	return r.DB.Model(&model.SysUser{}).Where("id = ?", id).Updates(fields).Error
 }
 

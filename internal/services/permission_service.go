@@ -3,7 +3,7 @@ package services
 import (
 	"path/filepath"
 
-	"github.com/limitcool/starter/internal/core"
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/repository"
@@ -16,6 +16,7 @@ type PermissionService struct {
 	roleRepo       *repository.RoleRepo
 	menuRepo       *repository.MenuRepo
 	casbinService  casbin.Service
+	config         *configs.Config
 }
 
 // NewPermissionService 创建权限服务
@@ -24,23 +25,22 @@ func NewPermissionService(
 	roleRepo *repository.RoleRepo,
 	menuRepo *repository.MenuRepo,
 	casbinService casbin.Service,
+	config *configs.Config,
 ) *PermissionService {
 	return &PermissionService{
 		permissionRepo: permissionRepo,
 		roleRepo:       roleRepo,
 		menuRepo:       menuRepo,
 		casbinService:  casbinService,
+		config:         config,
 	}
 }
 
 // UpdatePermissionSettings 更新权限系统设置
 func (s *PermissionService) UpdatePermissionSettings(enabled, defaultAllow bool) error {
-	// 获取配置
-	config := core.Instance().Config()
-
 	// 更新内存中的配置
-	config.Casbin.Enabled = enabled
-	config.Casbin.DefaultAllow = defaultAllow
+	s.config.Casbin.Enabled = enabled
+	s.config.Casbin.DefaultAllow = defaultAllow
 
 	// 更新配置文件
 	v := viper.New()

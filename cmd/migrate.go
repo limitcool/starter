@@ -79,7 +79,8 @@ func runMigration(cmd *cobra.Command, args []string) {
 	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	if err := migration.InitializeMigrator(sqlComponent.DB(), cfg); err != nil {
+	migrator, err := migration.InitializeMigrator(sqlComponent.DB(), cfg)
+	if err != nil {
 		log.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
 	}
@@ -88,7 +89,7 @@ func runMigration(cmd *cobra.Command, args []string) {
 	fresh, _ := cmd.Flags().GetBool("fresh")
 	if fresh {
 		log.Warn("Preparing to clear and rebuild the database...")
-		if err := migration.GlobalMigrator.Reset(); err != nil {
+		if err := migrator.Reset(); err != nil {
 			if err.Error() != "No migrations to reset" {
 				log.Error("Failed to reset database", "error", err)
 				os.Exit(1)
@@ -97,7 +98,7 @@ func runMigration(cmd *cobra.Command, args []string) {
 	}
 
 	// 执行迁移
-	if err := migration.GlobalMigrator.Migrate(); err != nil {
+	if err := migrator.Migrate(); err != nil {
 		log.Error("Database migration failed", "error", err)
 		os.Exit(1)
 	}
@@ -129,13 +130,14 @@ func runMigrationRollback(cmd *cobra.Command, args []string) {
 	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	if err := migration.InitializeMigrator(sqlComponent.DB(), cfg); err != nil {
+	migrator, err := migration.InitializeMigrator(sqlComponent.DB(), cfg)
+	if err != nil {
 		log.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
 	}
 
 	// 回滚迁移
-	if err := migration.GlobalMigrator.Rollback(); err != nil {
+	if err := migrator.Rollback(); err != nil {
 		log.Error("Database migration rollback failed", "error", err)
 		os.Exit(1)
 	}
@@ -165,13 +167,14 @@ func runMigrationStatus(cmd *cobra.Command, args []string) {
 	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	if err := migration.InitializeMigrator(sqlComponent.DB(), cfg); err != nil {
+	migrator, err := migration.InitializeMigrator(sqlComponent.DB(), cfg)
+	if err != nil {
 		log.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
 	}
 
 	// 获取迁移状态
-	status, err := migration.GlobalMigrator.Status()
+	status, err := migrator.Status()
 	if err != nil {
 		log.Error("Failed to get migration status", "error", err)
 		os.Exit(1)
@@ -217,13 +220,14 @@ func runMigrationReset(cmd *cobra.Command, args []string) {
 	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	if err := migration.InitializeMigrator(sqlComponent.DB(), cfg); err != nil {
+	migrator, err := migration.InitializeMigrator(sqlComponent.DB(), cfg)
+	if err != nil {
 		log.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
 	}
 
 	// 重置迁移
-	if err := migration.GlobalMigrator.Reset(); err != nil {
+	if err := migrator.Reset(); err != nil {
 		log.Error("Database migration reset failed", "error", err)
 		os.Exit(1)
 	}

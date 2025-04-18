@@ -6,18 +6,18 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
 )
 
 // CasbinMiddleware 基于路径和方法的权限控制中间件
 // 用于检查用户是否有权限访问特定的API路径和方法
-func CasbinMiddleware(permissionService *services.PermissionService) gin.HandlerFunc {
+func CasbinMiddleware(permissionService *services.PermissionService, config *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
-		if !core.Instance().Config().Casbin.Enabled {
+		if !config.Casbin.Enabled {
 			// 权限系统未启用，直接放行
 			c.Next()
 			return
@@ -74,10 +74,10 @@ func CasbinMiddleware(permissionService *services.PermissionService) gin.Handler
 // PermissionCodeMiddleware 基于权限编码的权限控制中间件
 // 用于检查用户是否有权限访问特定的权限编码
 // 权限编码通过请求头 X-Required-Permission 指定
-func PermissionCodeMiddleware(permissionService *services.PermissionService) gin.HandlerFunc {
+func PermissionCodeMiddleware(permissionService *services.PermissionService, config *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
-		if !core.Instance().Config().Casbin.Enabled {
+		if !config.Casbin.Enabled {
 			// 权限系统未启用，直接放行
 			c.Next()
 			return
@@ -145,10 +145,10 @@ func PermissionCodeMiddleware(permissionService *services.PermissionService) gin
 // RequirePermission 创建一个需要特定权限的中间件
 // 用于检查用户是否有权限访问特定的权限编码
 // 与 PermissionCodeMiddleware 不同的是，权限编码在创建中间件时指定
-func RequirePermission(permCode string, permissionService *services.PermissionService) gin.HandlerFunc {
+func RequirePermission(permCode string, permissionService *services.PermissionService, config *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
-		if !core.Instance().Config().Casbin.Enabled {
+		if !config.Casbin.Enabled {
 			// 权限系统未启用，直接放行
 			c.Next()
 			return

@@ -2,7 +2,6 @@ package services
 
 import (
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/storage/database"
 )
 
@@ -13,10 +12,10 @@ type SystemService struct {
 }
 
 // NewSystemService 创建系统服务
-func NewSystemService(db database.DB) *SystemService {
+func NewSystemService(db database.DB, config *configs.Config) *SystemService {
 	return &SystemService{
 		db:     db,
-		config: core.Instance().Config(), // 在初始化时获取配置，避免全局访问
+		config: config,
 	}
 }
 

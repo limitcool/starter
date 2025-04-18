@@ -23,20 +23,12 @@ type ErrorMonitorService struct {
 	threshold  int                // 报警阈值
 }
 
-var (
-	errorMonitorInstance *ErrorMonitorService
-	errorMonitorOnce     sync.Once
-)
-
 // NewErrorMonitorService 创建错误监控服务
 func NewErrorMonitorService() *ErrorMonitorService {
-	errorMonitorOnce.Do(func() {
-		errorMonitorInstance = &ErrorMonitorService{
-			errorStats: make(map[int]*ErrorStat),
-			threshold:  10, // 默认阈值：同一错误出现10次触发报警
-		}
-	})
-	return errorMonitorInstance
+	return &ErrorMonitorService{
+		errorStats: make(map[int]*ErrorStat),
+		threshold:  10, // 默认阈值：同一错误出现10次触发报警
+	}
 }
 
 // RecordError 记录错误
@@ -46,7 +38,10 @@ func (s *ErrorMonitorService) RecordError(err error) {
 		return
 	}
 
-	appErr := err.(*errorx.AppError)
+	appErr, ok := err.(*errorx.AppError)
+	if !ok {
+		return
+	}
 	code := appErr.GetErrorCode()
 	now := time.Now()
 
@@ -57,7 +52,7 @@ func (s *ErrorMonitorService) RecordError(err error) {
 	if stat, exists := s.errorStats[code]; exists {
 		stat.Count++
 		stat.LastSeen = now
-		
+
 		// 检查是否达到报警阈值
 		if stat.Count == s.threshold {
 			s.triggerAlert(appErr, stat)
@@ -97,10 +92,10 @@ func (s *ErrorMonitorService) SetThreshold(threshold int) {
 	if threshold <= 0 {
 		return
 	}
-	
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	s.threshold = threshold
 }
 
@@ -108,7 +103,7 @@ func (s *ErrorMonitorService) SetThreshold(threshold int) {
 func (s *ErrorMonitorService) ResetStats() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	s.errorStats = make(map[int]*ErrorStat)
 }
 

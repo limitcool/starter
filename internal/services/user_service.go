@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/limitcool/starter/configs"
 	v1 "github.com/limitcool/starter/internal/api/v1"
-	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	"github.com/limitcool/starter/internal/pkg/enum"
@@ -17,12 +17,14 @@ import (
 // UserService 普通用户服务
 type UserService struct {
 	userRepo *repository.UserRepo
+	config   *configs.Config
 }
 
 // NewUserService 创建普通用户服务
-func NewUserService(userRepo *repository.UserRepo) *UserService {
+func NewUserService(userRepo *repository.UserRepo, config *configs.Config) *UserService {
 	return &UserService{
 		userRepo: userRepo,
+		config:   config,
 	}
 }
 
@@ -101,7 +103,7 @@ func (s *UserService) Login(username, password string, ip string) (*v1.LoginResp
 	}
 
 	// 获取配置
-	cfg := core.Instance().Config()
+	cfg := s.config
 
 	// 生成访问令牌
 	accessClaims := &jwtpkg.CustomClaims{

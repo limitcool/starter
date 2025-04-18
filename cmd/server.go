@@ -10,7 +10,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/internal/core"
-	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/router"
 	"github.com/limitcool/starter/internal/storage/database"
@@ -55,7 +54,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	// 日志系统配置完成后的第一条日志
 	log.Info("Application starting", "name", cfg.App.Name)
 
-	// 初始化应用核心
+	// 创建应用实例
 	app := core.Setup(cfg)
 
 	// 添加SQL数据库组件（如果配置了启用）
@@ -119,25 +118,15 @@ func runServer(cmd *cobra.Command, args []string) {
 
 	// 初始化MongoDB集合
 	if cfg.Mongo.Enabled {
-		// 获取MongoDB组件
-		var mongoComponent *mongodb.Component
-		for _, component := range app.ComponentManager.GetComponents() {
-			if c, ok := component.(*mongodb.Component); ok {
-				mongoComponent = c
-				break
-			}
-		}
-
-		if mongoComponent != nil {
-			// 设置操作日志集合
-			model.SetOperationLogCollection(mongoComponent.GetCollection("operation_log"))
-		}
+		// MongoDB 组件已经初始化，可以在仓库层使用
+		// 不再需要设置全局集合变量
+		log.Info("MongoDB component initialized and available for repository layer")
 	}
 
 	// 确保资源清理
 	defer app.Cleanup()
 	// 初始化路由
-	r := router.SetupRouter(db)
+	r := router.SetupRouter(db, cfg)
 	s := &http.Server{
 		Addr:           fmt.Sprintf("0.0.0.0:%d", cfg.App.Port),
 		Handler:        r,

@@ -1,8 +1,6 @@
 package core
 
 import (
-	"sync"
-
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/storage/database"
 )
@@ -11,37 +9,24 @@ import (
 type App struct {
 	ComponentManager *ComponentManager
 	AppConfig        *configs.Config
-	ServiceFactory   interface{} // 服务工厂
+	ServiceFactory   any // 服务工厂
 }
 
-var (
-	instance *App
-	once     sync.Once
-)
-
-// Instance 获取应用实例
-func Instance() *App {
-	return instance
-}
-
-// Setup 设置应用实例
+// Setup 创建应用实例
 func Setup(cfg *configs.Config) *App {
-	once.Do(func() {
-		instance = &App{
-			ComponentManager: NewComponentManager(cfg),
-			AppConfig:        cfg,
-		}
-	})
-	return instance
+	return &App{
+		ComponentManager: NewComponentManager(cfg),
+		AppConfig:        cfg,
+	}
 }
 
 // SetServiceFactory 设置服务工厂
-func (a *App) SetServiceFactory(factory interface{}) {
+func (a *App) SetServiceFactory(factory any) {
 	a.ServiceFactory = factory
 }
 
 // GetServiceFactory 获取服务工厂
-func (a *App) GetServiceFactory() interface{} {
+func (a *App) GetServiceFactory() any {
 	return a.ServiceFactory
 }
 

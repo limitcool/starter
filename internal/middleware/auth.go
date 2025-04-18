@@ -7,8 +7,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/jwt"
 )
@@ -52,7 +52,7 @@ func GetUserID(c *gin.Context) uint64 {
 }
 
 // JWTAuth JWT认证中间件
-func JWTAuth() gin.HandlerFunc {
+func JWTAuth(config *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取 Authorization header
 		authorization := c.GetHeader("Authorization")
@@ -72,7 +72,7 @@ func JWTAuth() gin.HandlerFunc {
 		}
 
 		// 解析token
-		claims, err := jwt.ParseToken(token, core.Instance().Config().JwtAuth.AccessSecret)
+		claims, err := jwt.ParseToken(token, config.JwtAuth.AccessSecret)
 		if err != nil {
 			log.Error("Authentication token parse failed", "error", err)
 			response.Error(c, errorx.ErrUserTokenError)

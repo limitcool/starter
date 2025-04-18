@@ -258,7 +258,7 @@ func (m *Migrator) Reset() error {
 }
 
 // Status 获取迁移状态
-func (m *Migrator) Status() ([]map[string]interface{}, error) {
+func (m *Migrator) Status() ([]map[string]any, error) {
 	// 获取所有已运行的迁移
 	var ranMigrations []Migration
 	if err := m.db.Find(&ranMigrations).Error; err != nil {
@@ -276,7 +276,7 @@ func (m *Migrator) Status() ([]map[string]interface{}, error) {
 	})
 
 	// 构建状态
-	var status []map[string]interface{}
+	var status []map[string]any
 	for _, migration := range m.migrations {
 		ran, exists := ranVersions[migration.Version]
 		var batch int
@@ -285,7 +285,7 @@ func (m *Migrator) Status() ([]map[string]interface{}, error) {
 			batch = ran.Batch
 			timestamp = ran.CreatedAt
 		}
-		status = append(status, map[string]interface{}{
+		status = append(status, map[string]any{
 			"version":   migration.Version,
 			"name":      migration.Name,
 			"ran":       exists,
@@ -297,14 +297,11 @@ func (m *Migrator) Status() ([]map[string]interface{}, error) {
 	return status, nil
 }
 
-// GlobalMigrator 全局迁移实例
-var GlobalMigrator *Migrator
+// InitializeMigrator 初始化迁移器并注册所有迁移
+func InitializeMigrator(db *gorm.DB, config *configs.Config) (*Migrator, error) {
+	migrator := NewMigrator(db, config)
+	RegisterAllMigrations(migrator) // 注册所有迁移
 
-// InitializeMigrator 初始化全局迁移实例
-func InitializeMigrator(db *gorm.DB, config *configs.Config) error {
-
-	GlobalMigrator = NewMigrator(db, config)
-	RegisterAllMigrations(GlobalMigrator) // 注册所有迁移
-
-	return GlobalMigrator.Initialize()
+	err := migrator.Initialize()
+	return migrator, err
 }

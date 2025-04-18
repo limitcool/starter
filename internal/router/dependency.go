@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/controller"
 	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/storage"
@@ -64,21 +65,21 @@ func initRepositories(db *gorm.DB) *Repositories {
 }
 
 // initServices 初始化服务层
-func initServices(repos *Repositories, casbinService casbin.Service, db database.DB) *Services {
+func initServices(repos *Repositories, casbinService casbin.Service, db database.DB, config *configs.Config) *Services {
 	// 创建服务
 	svcs := &Services{
 		CasbinService:       casbinService,
 		RoleService:         services.NewRoleService(repos.RoleRepo, casbinService),
 		MenuService:         services.NewMenuService(repos.MenuRepo, casbinService),
-		PermissionService:   services.NewPermissionService(repos.PermissionRepo, repos.RoleRepo, repos.MenuRepo, casbinService),
+		PermissionService:   services.NewPermissionService(repos.PermissionRepo, repos.RoleRepo, repos.MenuRepo, casbinService, config),
 		OperationLogService: services.NewOperationLogService(repos.OperationLogRepo),
-		SystemService:       services.NewSystemService(db),
-		UserService:         services.NewUserService(repos.UserRepo),
+		SystemService:       services.NewSystemService(db, config),
+		UserService:         services.NewUserService(repos.UserRepo, config),
 		APIService:          services.NewAPIService(repos.APIRepo),
 	}
 
 	// 创建 SysUserService 并设置 RoleService
-	svcs.SysUserService = services.NewSysUserService(repos.SysUserRepo, repos.UserRepo, svcs.RoleService, casbinService)
+	svcs.SysUserService = services.NewSysUserService(repos.SysUserRepo, repos.UserRepo, svcs.RoleService, casbinService, config)
 
 	// 创建 MenuAPIService
 	svcs.MenuAPIService = services.NewMenuAPIService(

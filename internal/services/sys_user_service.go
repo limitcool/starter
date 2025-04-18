@@ -3,8 +3,8 @@ package services
 import (
 	"time"
 
+	"github.com/limitcool/starter/configs"
 	v1 "github.com/limitcool/starter/internal/api/v1"
-	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	"github.com/limitcool/starter/internal/pkg/enum"
@@ -19,15 +19,17 @@ type SysUserService struct {
 	userRepo      *repository.UserRepo
 	roleService   *RoleService
 	casbinService casbin.Service
+	config        *configs.Config
 }
 
 // NewSysUserService 创建用户服务
-func NewSysUserService(sysUserRepo *repository.SysUserRepo, userRepo *repository.UserRepo, roleService *RoleService, casbinService casbin.Service) *SysUserService {
+func NewSysUserService(sysUserRepo *repository.SysUserRepo, userRepo *repository.UserRepo, roleService *RoleService, casbinService casbin.Service, config *configs.Config) *SysUserService {
 	return &SysUserService{
 		sysUserRepo:   sysUserRepo,
 		userRepo:      userRepo,
 		roleService:   roleService,
 		casbinService: casbinService,
+		config:        config,
 	}
 }
 
@@ -66,7 +68,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*v1.LoginR
 	}
 
 	// 获取配置
-	cfg := core.Instance().Config()
+	cfg := s.config
 
 	// 生成访问令牌
 	accessClaims := &jwtpkg.CustomClaims{
@@ -110,7 +112,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*v1.LoginR
 // RefreshToken 刷新访问令牌
 func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, error) {
 	// 获取配置
-	cfg := core.Instance().Config()
+	cfg := s.config
 
 	// 验证刷新令牌
 	claims, err := jwtpkg.ParseTokenWithCustomClaims(refreshToken, cfg.JwtAuth.RefreshSecret)

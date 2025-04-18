@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/internal/core"
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/pkg/i18n"
 )
 
@@ -16,11 +16,10 @@ const (
 )
 
 // I18n 国际化中间件
-func I18n() gin.HandlerFunc {
+func I18n(config *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 获取配置
-		cfg := core.Instance().Config()
-		if !cfg.I18n.Enabled {
+		if !config.I18n.Enabled {
 			c.Next()
 			return
 		}
@@ -38,7 +37,7 @@ func I18n() gin.HandlerFunc {
 				acceptLanguage := c.GetHeader(headerAcceptLanguage)
 				if acceptLanguage != "" {
 					// 解析Accept-Language
-					preferredLang := parseAcceptLanguage(acceptLanguage, cfg.I18n.SupportLanguages)
+					preferredLang := parseAcceptLanguage(acceptLanguage, config.I18n.SupportLanguages)
 					if preferredLang != "" {
 						lang = preferredLang
 					}
@@ -47,8 +46,8 @@ func I18n() gin.HandlerFunc {
 		}
 
 		// 如果没有获取到语言或语言不受支持，使用默认语言
-		if lang == "" || !isSupported(lang, cfg.I18n.SupportLanguages) {
-			lang = cfg.I18n.DefaultLanguage
+		if lang == "" || !isSupported(lang, config.I18n.SupportLanguages) {
+			lang = config.I18n.DefaultLanguage
 		}
 
 		// 将语言设置到上下文
