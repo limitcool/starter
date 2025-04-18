@@ -35,7 +35,7 @@ type Services struct {
 // Controllers 控制器层依赖集合
 type Controllers struct {
 	UserController         *controller.UserController
-	AdminController        *controller.AdminController
+	SysUserController      *controller.SysUserController
 	RoleController         *controller.RoleController
 	MenuController         *controller.MenuController
 	PermissionController   *controller.PermissionController
@@ -81,7 +81,7 @@ func initControllers(svcs *Services, repos *Repositories, stg *storage.Storage) 
 	// 创建控制器
 	controllers := &Controllers{
 		UserController:         controller.NewUserController(svcs.SysUserService, svcs.UserService),
-		AdminController:        controller.NewAdminController(svcs.SysUserService),
+		SysUserController:      controller.NewSysUserController(svcs.SysUserService),
 		RoleController:         controller.NewRoleController(svcs.RoleService, svcs.MenuService),
 		MenuController:         controller.NewMenuController(svcs.MenuService),
 		PermissionController:   controller.NewPermissionController(svcs.PermissionService),

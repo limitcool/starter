@@ -9,21 +9,21 @@ import (
 	"github.com/limitcool/starter/internal/services"
 )
 
-type AdminController struct {
+type SysUserController struct {
 	userService *services.SysUserService
 }
 
-func NewAdminController(userService *services.SysUserService) *AdminController {
-	return &AdminController{
+func NewSysUserController(userService *services.SysUserService) *SysUserController {
+	return &SysUserController{
 		userService: userService,
 	}
 }
 
-// AdminLogin 管理员登录
-func (ac *AdminController) AdminLogin(c *gin.Context) {
+// SysUserLogin 系统用户登录
+func (ctrl *SysUserController) SysUserLogin(c *gin.Context) {
 	var req v1.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.LogError("AdminLogin 无效的请求参数", err)
+		logger.LogError("SysUserLogin 无效的请求参数", err)
 		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
@@ -32,10 +32,10 @@ func (ac *AdminController) AdminLogin(c *gin.Context) {
 	clientIP := c.ClientIP()
 
 	// 使用控制器中的服务实例
-	tokenResponse, err := ac.userService.Login(req.Username, req.Password, clientIP)
+	tokenResponse, err := ctrl.userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
 		// 使用辅助函数记录错误，同时包含额外的上下文信息
-		logger.LogError("AdminLogin 登录失败", err,
+		logger.LogError("SysUserLogin 登录失败", err,
 			"username", req.Username,
 			"ip", clientIP)
 

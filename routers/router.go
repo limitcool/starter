@@ -104,7 +104,7 @@ func NewRouter(db database.DB) *gin.Engine {
 	sysUserRepo := repository.NewSysUserRepo(gormDB)
 	permissionRepo := repository.NewPermissionRepo(gormDB)
 	operationLogRepo := repository.NewOperationLogRepo(gormDB)
-	userRepo := repository.NewUserRepository(gormDB)
+	userRepo := repository.NewUserRepo(gormDB)
 	fileRepo := repository.NewFileRepo(gormDB)
 
 	// 创建服务实例
@@ -119,7 +119,7 @@ func NewRouter(db database.DB) *gin.Engine {
 
 	// 初始化控制器
 	userController := controller.NewUserController(sysUserService, userService)
-	adminController := controller.NewAdminController(sysUserService)
+	sysUserController := controller.NewSysUserController(sysUserService)
 	roleController := controller.NewRoleController(roleService, menuService)
 	menuController := controller.NewMenuController(menuService)
 	permissionController := controller.NewPermissionController(permissionService)
@@ -150,7 +150,7 @@ func NewRouter(db database.DB) *gin.Engine {
 	// 管理员相关 - 公开路由
 	publicAdmin := apiV1.Group("/admin")
 	{
-		publicAdmin.POST("/login", adminController.AdminLogin)
+		publicAdmin.POST("/login", sysUserController.SysUserLogin)
 	}
 
 	// ======= 文件下载API（无需认证）=======

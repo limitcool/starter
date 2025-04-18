@@ -23,7 +23,7 @@ type UserController struct {
 }
 
 // UserLogin 普通用户登录
-func (uc *UserController) UserLogin(ctx *gin.Context) {
+func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 	var req v1.LoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.Error(ctx, errorx.ErrInvalidParams)
@@ -32,7 +32,7 @@ func (uc *UserController) UserLogin(ctx *gin.Context) {
 
 	// 获取客户端IP地址
 	clientIP := ctx.ClientIP()
-	tokenResponse, err := uc.userService.Login(req.Username, req.Password, clientIP)
+	tokenResponse, err := ctrl.userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
 		logger.LogError("UserLogin 登录失败", err,
 			"username", req.Username,
@@ -45,7 +45,7 @@ func (uc *UserController) UserLogin(ctx *gin.Context) {
 }
 
 // UserRegister 普通用户注册
-func (uc *UserController) UserRegister(c *gin.Context) {
+func (ctrl *UserController) UserRegister(c *gin.Context) {
 	var req v1.UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
@@ -55,7 +55,7 @@ func (uc *UserController) UserRegister(c *gin.Context) {
 	// 获取客户端IP地址
 	clientIP := c.ClientIP()
 
-	user, err := uc.userService.Register(req, clientIP)
+	user, err := ctrl.userService.Register(req, clientIP)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -68,7 +68,7 @@ func (uc *UserController) UserRegister(c *gin.Context) {
 }
 
 // UserChangePassword 修改密码
-func (uc *UserController) UserChangePassword(c *gin.Context) {
+func (ctrl *UserController) UserChangePassword(c *gin.Context) {
 	// 获取用户ID
 	userID, _ := c.Get("user_id")
 
@@ -78,7 +78,7 @@ func (uc *UserController) UserChangePassword(c *gin.Context) {
 		return
 	}
 
-	err := uc.userService.ChangePassword(cast.ToInt64(userID), req.OldPassword, req.NewPassword)
+	err := ctrl.userService.ChangePassword(cast.ToInt64(userID), req.OldPassword, req.NewPassword)
 	if err != nil {
 		if errorx.IsAppErr(err) {
 			response.Error(c, err)
@@ -92,7 +92,7 @@ func (uc *UserController) UserChangePassword(c *gin.Context) {
 }
 
 // UserInfo 获取用户信息
-func (uc *UserController) UserInfo(c *gin.Context) {
+func (ctrl *UserController) UserInfo(c *gin.Context) {
 	// 获取用户ID
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -101,7 +101,7 @@ func (uc *UserController) UserInfo(c *gin.Context) {
 	}
 
 	// 获取用户信息
-	user, err := uc.userService.GetUserByID(cast.ToInt64(userID))
+	user, err := ctrl.userService.GetUserByID(cast.ToInt64(userID))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -114,7 +114,7 @@ func (uc *UserController) UserInfo(c *gin.Context) {
 }
 
 // RefreshToken 刷新访问令牌
-func (uc *UserController) RefreshToken(c *gin.Context) {
+func (ctrl *UserController) RefreshToken(c *gin.Context) {
 	var req v1.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
@@ -122,7 +122,7 @@ func (uc *UserController) RefreshToken(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	tokenResponse, err := uc.sysUserService.RefreshToken(req.RefreshToken)
+	tokenResponse, err := ctrl.sysUserService.RefreshToken(req.RefreshToken)
 	if err != nil {
 		logger.LogError("RefreshToken 刷新访问令牌失败", err,
 			"refresh_token", req.RefreshToken)

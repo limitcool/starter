@@ -130,7 +130,7 @@ func SetupRouter(db database.DB) *gin.Engine {
 	// 管理员相关 - 公开路由
 	publicAdmin := apiV1.Group("/admin")
 	{
-		publicAdmin.POST("/login", controllers.AdminController.AdminLogin)
+		publicAdmin.POST("/login", controllers.SysUserController.SysUserLogin)
 	}
 
 	// ======= 文件下载API（无需认证）=======
