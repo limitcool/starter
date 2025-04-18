@@ -5,7 +5,6 @@ import (
 
 	v1 "github.com/limitcool/starter/internal/api/v1"
 	"github.com/limitcool/starter/internal/core"
-	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
@@ -15,15 +14,17 @@ import (
 
 // SysUserService 用户服务
 type SysUserService struct {
-	sysUserRepo   repository.SysUserRepository
+	sysUserRepo   *repository.SysUserRepo
+	userRepo      *repository.GormUserRepository
 	roleService   *RoleService
 	casbinService *CasbinService
 }
 
 // NewSysUserService 创建用户服务
-func NewSysUserService(sysUserRepo repository.SysUserRepository, roleService *RoleService) *SysUserService {
+func NewSysUserService(sysUserRepo *repository.SysUserRepo, userRepo *repository.GormUserRepository, roleService *RoleService) *SysUserService {
 	return &SysUserService{
 		sysUserRepo: sysUserRepo,
+		userRepo:    userRepo,
 		roleService: roleService,
 	}
 }
@@ -131,7 +132,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 	switch userType {
 	case enum.UserTypeSysUser:
 		// 系统用户 - 查询系统用户表
-		user, err := model.NewSysUser().GetUserByID(claims.UserID)
+		user, err := s.sysUserRepo.GetByID(claims.UserID)
 		if err != nil {
 			if errorx.IsAppErr(err) {
 				return nil, err
@@ -171,7 +172,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 
 	case enum.UserTypeUser:
 		// 普通用户 - 查询普通用户表
-		user, err := model.NewUser().GetUserByID(claims.UserID)
+		user, err := s.userRepo.GetByID(claims.UserID)
 		if err != nil {
 			if errorx.IsAppErr(err) {
 				return nil, err
@@ -179,7 +180,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 			return nil, errorx.ErrUserNotFound.WithError(err)
 		}
 
-		// 检查用户状态（如果普通用户有状态字段）
+		// 检查用户状态
 		if !user.Enabled {
 			return nil, errorx.ErrUserDisabled
 		}

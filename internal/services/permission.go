@@ -11,12 +11,12 @@ import (
 
 // PermissionService 权限服务
 type PermissionService struct {
-	permissionRepo repository.PermissionRepository
+	permissionRepo *repository.PermissionRepo
 	casbinService  *CasbinService
 }
 
 // NewPermissionService 创建权限服务
-func NewPermissionService(permissionRepo repository.PermissionRepository) *PermissionService {
+func NewPermissionService(permissionRepo *repository.PermissionRepo) *PermissionService {
 	return &PermissionService{
 		permissionRepo: permissionRepo,
 	}

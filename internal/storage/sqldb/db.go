@@ -113,7 +113,7 @@ func NewDB(c configs.Config) *gorm.DB {
 		// 设置全局实例
 		setupInstance(&Component{db: db, Config: &c, enabled: c.Database.Enabled})
 	})
-	return Instance().DB()
+	return db
 }
 
 // func NewMysql(dsn string, c configs.Config) *gorm.DB {

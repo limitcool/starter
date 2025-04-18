@@ -2,9 +2,6 @@ package model
 
 import (
 	"time"
-
-	"github.com/limitcool/starter/internal/pkg/errorx"
-	"github.com/limitcool/starter/internal/storage/sqldb"
 )
 
 // 文件类型枚举
@@ -51,52 +48,10 @@ func (File) TableName() string {
 	return "file"
 }
 
-// 创建文件记录
-func (f *File) Create() error {
-	return sqldb.Instance().DB().Create(f).Error
-}
-
-// 根据ID获取文件
-func (f *File) GetByID(id string) (*File, error) {
-	var file File
-	if err := sqldb.Instance().DB().First(&file, id).Error; err != nil {
-		return nil, errorx.ErrNotFound.WithError(err)
-	}
-	return &file, nil
-}
-
-// 删除文件记录
-func (f *File) Delete() error {
-	return sqldb.Instance().DB().Delete(f).Error
-}
-
-// 更新文件记录
-func (f *File) Update() error {
-	return sqldb.Instance().DB().Save(f).Error
-}
-
-// 更新用户头像
-func (f *File) UpdateUserAvatar(userID int64, fileID uint) error {
-	db := sqldb.Instance().DB()
-	user := User{}
-	if err := db.First(&user, userID).Error; err != nil {
-		return errorx.ErrNotFound.WithError(err)
-	}
-
-	// 更新用户头像
-	user.AvatarFileID = fileID
-	return db.Save(&user).Error
-}
-
-// 更新系统用户头像
-func (f *File) UpdateSysUserAvatar(userID int64, fileID uint) error {
-	db := sqldb.Instance().DB()
-	sysUser := SysUser{}
-	if err := db.First(&sysUser, userID).Error; err != nil {
-		return errorx.ErrNotFound.WithError(err)
-	}
-
-	// 更新用户头像
-	sysUser.AvatarFileID = fileID
-	return db.Save(&sysUser).Error
-}
+// 以下方法已移动到 repository/file_repo.go
+// Create
+// GetByID
+// Delete
+// Update
+// UpdateUserAvatar
+// UpdateSysUserAvatar

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/internal/api/response"
 	v1 "github.com/limitcool/starter/internal/api/v1"
 	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/model"
@@ -13,16 +11,24 @@ import (
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
-	"github.com/limitcool/starter/internal/storage/sqldb"
+	"github.com/limitcool/starter/internal/repository"
 )
 
 // UserService 普通用户服务
 type UserService struct {
+	userRepo *repository.GormUserRepository
 }
 
 // NewUserService 创建普通用户服务
-func NewUserService() *UserService {
-	return &UserService{}
+func NewUserService(userRepo *repository.GormUserRepository) *UserService {
+	return &UserService{
+		userRepo: userRepo,
+	}
+}
+
+// GetUserByID 根据ID获取用户信息
+func (s *UserService) GetUserByID(id int64) (*model.User, error) {
+	return s.userRepo.GetByID(id)
 }
 
 // VerifyPassword 验证用户密码
@@ -32,7 +38,7 @@ func (s *UserService) VerifyPassword(password, hashedPassword string) bool {
 
 // Register 用户注册
 func (s *UserService) Register(req v1.UserRegisterRequest, registerIP string) (*model.User, error) {
-	isExist, err := model.NewUser().IsExist()
+	isExist, err := s.userRepo.IsExist(req.Username)
 	if err != nil {
 		return nil, errorx.ErrDatabaseQueryError.WithError(err)
 	}
@@ -60,7 +66,7 @@ func (s *UserService) Register(req v1.UserRegisterRequest, registerIP string) (*
 		RegisterIP: registerIP,
 	}
 
-	if err := user.Create(); err != nil {
+	if err := s.userRepo.Create(user); err != nil {
 		return nil, errorx.ErrDatabaseInsertError.WithError(err)
 	}
 
@@ -70,7 +76,7 @@ func (s *UserService) Register(req v1.UserRegisterRequest, registerIP string) (*
 // Login 用户登录
 func (s *UserService) Login(username, password string, ip string) (*v1.LoginResponse, error) {
 	// 获取用户
-	user, err := model.NewUser().GetUserByUsername(username)
+	user, err := s.userRepo.GetByUsername(username)
 	if err != nil {
 		return nil, err
 	}
@@ -86,10 +92,13 @@ func (s *UserService) Login(username, password string, ip string) (*v1.LoginResp
 	}
 
 	// 更新最后登录时间和IP
-	sqldb.Instance().DB().Model(user).Updates(map[string]any{
+	fields := map[string]interface{}{
 		"last_login": time.Now(),
 		"last_ip":    ip,
-	})
+	}
+	if err := s.userRepo.UpdateFields(user.ID, fields); err != nil {
+		return nil, err
+	}
 
 	// 获取配置
 	cfg := core.Instance().Config()
@@ -137,13 +146,17 @@ func (s *UserService) UpdateUser(id uint, data map[string]any) error {
 	delete(data, "deleted_at")
 
 	// 更新用户信息
-	return sqldb.Instance().DB().Model(&model.User{}).Where("id = ?", id).Updates(data).Error
+	fields := make(map[string]interface{}, len(data))
+	for k, v := range data {
+		fields[k] = v
+	}
+	return s.userRepo.UpdateFields(int64(id), fields)
 }
 
 // ChangePassword 修改密码
 func (s *UserService) ChangePassword(id int64, oldPassword, newPassword string) error {
 	// 获取用户
-	user, err := model.NewUser().GetUserByID(id)
+	user, err := s.userRepo.GetByID(id)
 	if err != nil {
 		return err
 	}
@@ -160,29 +173,10 @@ func (s *UserService) ChangePassword(id int64, oldPassword, newPassword string) 
 	}
 
 	// 更新密码
-	return sqldb.Instance().DB().Model(&model.User{}).Where("id = ?", id).Update("password", hashedPassword).Error
+	fields := map[string]interface{}{
+		"password": hashedPassword,
+	}
+	return s.userRepo.UpdateFields(id, fields)
 }
 
-func GetUserInfo(ctx *gin.Context) {
-	userId, exists := ctx.Get("userID")
-	if !exists {
-		response.Error(ctx, errorx.ErrUserNoLogin)
-		return
-	}
-
-	var user model.User
-	if err := sqldb.Instance().DB().First(&user, userId).Error; err != nil {
-		response.Error(ctx, errorx.ErrDatabaseQueryError)
-		return
-	}
-
-	// 加载头像文件信息
-	if user.AvatarFileID != 0 {
-		var avatarFile model.File
-		if err := sqldb.Instance().DB().First(&avatarFile, user.AvatarFileID).Error; err == nil {
-			user.AvatarURL = avatarFile.URL
-		}
-	}
-
-	response.Success(ctx, user)
-}
+// 该函数已移动到 controller/user.go 中的 UserInfo 方法

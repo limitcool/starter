@@ -519,18 +519,31 @@ func (s *Service) List(query *request.YourQuery) ([]YourModel, int64, error) {
 }
 ```
 
-## 组件访问规范
+## 依赖注入规范
 
-本项目使用组件模式管理各种资源，推荐以下访问方式：
+本项目使用依赖注入模式管理各种资源，推荐以下访问方式：
 
 ```go
-// 获取数据库连接
-db := sqldb.Instance().DB()
+// 通过依赖注入获取数据库连接
+// 在仓库层
+func NewUserRepository(db *gorm.DB) *UserRepository {
+    return &UserRepository{db: db}
+}
 
-// 获取Redis客户端
-client := redisdb.Instance().Client()
+// 在服务层
+func NewUserService(userRepo *UserRepository) *UserService {
+    return &UserService{userRepo: userRepo}
+}
 
-// 获取MongoDB数据库
-mongo := mongodb.Instance().DB()
+// 在控制器层
+func NewUserController(userService *UserService) *UserController {
+    return &UserController{userService: userService}
+}
 ```
 
+这种依赖注入的方式有以下优点：
+
+1. 更好的可测试性：可以轻松地模拟依赖，使得单元测试更加容易
+2. 更好的可维护性：依赖关系更加明确，代码更加易于理解和维护
+3. 更好的灵活性：可以轻松地替换依赖的实现，而不需要修改使用它的代码
+4. 避免全局状态：全局状态会导致代码难以理解和测试，依赖注入可以避免这个问题

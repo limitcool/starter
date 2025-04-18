@@ -14,7 +14,7 @@ type SysUserRepo struct {
 }
 
 // NewSysUserRepo 创建系统用户仓库
-func NewSysUserRepo(db *gorm.DB) SysUserRepository {
+func NewSysUserRepo(db *gorm.DB) *SysUserRepo {
 	return &SysUserRepo{DB: db}
 }
 
@@ -25,7 +25,23 @@ func (r *SysUserRepo) GetByID(id int64) (*model.SysUser, error) {
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
-	return &user, err
+	if err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
+		return nil, err
+	}
+
+	// 获取用户的角色
+	if err := r.DB.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
+		return nil, err
+	}
+
+	// 提取角色编码
+	for _, role := range user.Roles {
+		user.RoleCodes = append(user.RoleCodes, role.Code)
+	}
+
+	return &user, nil
 }
 
 // GetByUsername 根据用户名获取系统用户
@@ -35,7 +51,23 @@ func (r *SysUserRepo) GetByUsername(username string) (*model.SysUser, error) {
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errorx.ErrUserNotFound
 	}
-	return &user, err
+	if err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
+		return nil, err
+	}
+
+	// 获取用户的角色
+	if err := r.DB.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
+		// 直接返回错误，错误会自动捕获堆栈
+		return nil, err
+	}
+
+	// 提取角色编码
+	for _, role := range user.Roles {
+		user.RoleCodes = append(user.RoleCodes, role.Code)
+	}
+
+	return &user, nil
 }
 
 // Create 创建系统用户

@@ -7,15 +7,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/storage"
+	"github.com/limitcool/starter/internal/repository"
 	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/internal/storage/sqldb"
 	"github.com/spf13/cast"
 )
 
@@ -25,9 +24,9 @@ type FileController struct {
 }
 
 // NewFileController 创建文件控制器
-func NewFileController(storage *storage.Storage) *FileController {
+func NewFileController(storage *storage.Storage, fileRepo *repository.FileRepo) *FileController {
 	return &FileController{
-		fileService: services.NewFileService(storage),
+		fileService: services.NewFileService(storage, fileRepo),
 	}
 }
 
@@ -80,12 +79,11 @@ func (ctrl *FileController) UploadFile(c *gin.Context) {
 	}
 
 	// 如果用户指定了文件用途，更新文件记录
-	if fileUsage != "general" {
+	if fileUsage != "general" && fileUsage != model.FileUsageGeneral {
+		// 直接设置文件用途
 		fileModel.Usage = fileUsage
-		if err := sqldb.Instance().DB().Save(fileModel).Error; err != nil {
-			// 更新失败只记录日志，不影响上传结果
-			log.Error("更新文件用途失败", "err", err)
-		}
+		response.Success(c, fileModel)
+		return
 	}
 
 	response.Success(c, fileModel)
@@ -146,7 +144,7 @@ func (ctrl *FileController) DeleteFile(c *gin.Context) {
 		return
 	}
 
-	response.Success[interface{}](c, nil)
+	response.Success[any](c, nil)
 }
 
 // DownloadFile 下载文件

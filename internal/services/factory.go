@@ -14,13 +14,13 @@ type Factory struct {
 	mu sync.RWMutex
 
 	// 仓库实例
-	menuRepo         repository.MenuRepository
-	roleRepo         repository.RoleRepository
-	userRepo         repository.UserRepository
-	sysUserRepo      repository.SysUserRepository
-	permissionRepo   repository.PermissionRepository
-	fileRepo         repository.FileRepository
-	operationLogRepo repository.OperationLogRepository
+	menuRepo       *repository.MenuRepo
+	roleRepo       *repository.RoleRepo
+	userRepo       *repository.GormUserRepository
+	sysUserRepo    *repository.SysUserRepo
+	permissionRepo *repository.PermissionRepo
+	// fileRepo         repository.FileRepository // 暂时注释，因为没有找到具体实现类
+	operationLogRepo *repository.OperationLogRepo
 
 	// 服务实例缓存
 	sysUserService      *SysUserService
@@ -42,12 +42,14 @@ func NewFactory(db database.DB) *Factory {
 	menuRepo := repository.NewMenuRepo(gormDB)
 	roleRepo := repository.NewRoleRepo(gormDB)
 	sysUserRepo := repository.NewSysUserRepo(gormDB)
+	userRepo := repository.NewUserRepository(gormDB)
 
 	return &Factory{
 		db:          db,
 		menuRepo:    menuRepo,
 		roleRepo:    roleRepo,
 		sysUserRepo: sysUserRepo,
+		userRepo:    userRepo,
 	}
 }
 
@@ -67,7 +69,7 @@ func (f *Factory) SysUser() *SysUserService {
 		roleService := f.Role()
 
 		// 创建用户服务
-		f.sysUserService = NewSysUserService(f.sysUserRepo, roleService)
+		f.sysUserService = NewSysUserService(f.sysUserRepo, f.userRepo, roleService)
 	}
 	return f.sysUserService
 }

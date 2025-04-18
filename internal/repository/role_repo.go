@@ -11,7 +11,7 @@ type RoleRepo struct {
 }
 
 // NewRoleRepo 创建角色仓库
-func NewRoleRepo(db *gorm.DB) RoleRepository {
+func NewRoleRepo(db *gorm.DB) *RoleRepo {
 	return &RoleRepo{DB: db}
 }
 
@@ -114,6 +114,50 @@ func (r *RoleRepo) AssignRolesToUser(userID int64, roleIDs []uint) error {
 			})
 		}
 		if err := tx.Create(&userRoles).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit().Error
+}
+
+// BatchCreateRoleMenus 批量创建角色菜单关联
+func (r *RoleRepo) BatchCreateRoleMenus(roleMenus []model.RoleMenu) error {
+	return r.DB.Create(&roleMenus).Error
+}
+
+// DeleteUserRolesByUserID 删除用户的角色关联
+func (r *RoleRepo) DeleteUserRolesByUserID(userID int64) error {
+	return r.DB.Where("user_id = ?", userID).Delete(&model.UserRole{}).Error
+}
+
+// AssignMenusToRole 为角色分配菜单
+func (r *RoleRepo) AssignMenusToRole(roleID uint, menuIDs []uint) error {
+	// 开始事务
+	tx := r.DB.Begin()
+	defer func() {
+		if rec := recover(); rec != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 删除原有的角色菜单关联
+	if err := tx.Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 添加新的角色菜单关联
+	if len(menuIDs) > 0 {
+		var roleMenus []model.RoleMenu
+		for _, menuID := range menuIDs {
+			roleMenus = append(roleMenus, model.RoleMenu{
+				RoleID: roleID,
+				MenuID: menuID,
+			})
+		}
+		if err := tx.Create(&roleMenus).Error; err != nil {
 			tx.Rollback()
 			return err
 		}

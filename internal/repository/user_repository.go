@@ -8,17 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// UserRepository 用户仓库接口
-type UserRepository interface {
-	GetByID(id int64) (*model.User, error)
-	GetByUsername(username string) (*model.User, error)
-	Create(user *model.User) error
-	Update(user *model.User) error
-	UpdateFields(id int64, fields map[string]interface{}) error
-	Delete(id int64) error
-	IsExist(username string) (bool, error)
-	UpdateAvatar(userID int64, fileID uint) error
-}
+// 已移除 UserRepository 接口定义
 
 // GormUserRepository 基于Gorm的用户仓库实现
 type GormUserRepository struct {
@@ -26,7 +16,7 @@ type GormUserRepository struct {
 }
 
 // NewUserRepository 创建用户仓库
-func NewUserRepository(db *gorm.DB) UserRepository {
+func NewUserRepository(db *gorm.DB) *GormUserRepository {
 	return &GormUserRepository{db: db}
 }
 

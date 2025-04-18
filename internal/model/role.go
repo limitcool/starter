@@ -1,7 +1,5 @@
 package model
 
-import "github.com/limitcool/starter/internal/storage/sqldb"
-
 // 角色实体
 type Role struct {
 	BaseModel
@@ -27,46 +25,14 @@ func (Role) TableName() string {
 	return "sys_role"
 }
 
-// 创建角色
-func (r *Role) Create() error {
-	return sqldb.Instance().DB().Create(r).Error
-}
-
-// 更新角色
-func (r *Role) Update() error {
-	return sqldb.Instance().DB().Model(&Role{}).Where("id = ?", r.ID).Updates(r).Error
-}
-
-// 删除角色
-func (r *Role) Delete() error {
-	return sqldb.Instance().DB().Delete(&Role{}, r.ID).Error
-}
-
-// 根据ID获取角色
-func (r *Role) GetByID(id uint) (*Role, error) {
-	var role Role
-	err := sqldb.Instance().DB().Where("id = ?", id).First(&role).Error
-	return &role, err
-}
-
-// 获取所有角色
-func (r *Role) GetAll() ([]Role, error) {
-	var roles []Role
-	err := sqldb.Instance().DB().Order("sort").Find(&roles).Error
-	return roles, err
-}
-
-// 检查角色是否已分配给用户
-func (r *Role) IsAssignedToUser(id uint) (bool, error) {
-	var count int64
-	err := sqldb.Instance().DB().Model(&UserRole{}).Where("role_id = ?", id).Count(&count).Error
-	return count > 0, err
-}
-
-// DeleteRoleMenus 删除角色的菜单关联
-func (r *Role) DeleteRoleMenus(roleID uint) error {
-	return sqldb.Instance().DB().Where("role_id = ?", roleID).Delete(&RoleMenu{}).Error
-}
+// 以下方法已移动到 repository/role_repo.go
+// Create
+// Update
+// Delete
+// GetByID
+// GetAll
+// IsAssignedToUser
+// DeleteRoleMenus
 
 // 角色菜单关联表
 type RoleMenu struct {
@@ -81,26 +47,9 @@ func (RoleMenu) TableName() string {
 	return "sys_role_menu"
 }
 
-// 批量创建角色菜单关联
-func (rm *RoleMenu) BatchCreate(roleMenus []RoleMenu) error {
-	return sqldb.Instance().DB().Create(&roleMenus).Error
-}
-
-// 获取角色菜单ID列表
-func (rm *RoleMenu) GetMenuIDsByRoleID(roleID uint) ([]uint, error) {
-	var roleMenus []RoleMenu
-	err := sqldb.Instance().DB().Where("role_id = ?", roleID).Find(&roleMenus).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var menuIDs []uint
-	for _, rm := range roleMenus {
-		menuIDs = append(menuIDs, rm.MenuID)
-	}
-
-	return menuIDs, nil
-}
+// 以下方法已移动到 repository/role_repo.go
+// BatchCreate
+// GetMenuIDsByRoleID
 
 // 用户角色关联表
 type UserRole struct {
@@ -115,28 +64,7 @@ func (UserRole) TableName() string {
 	return "sys_user_role"
 }
 
-// 批量创建用户角色关联
-func (ur *UserRole) BatchCreate(userRoles []UserRole) error {
-	return sqldb.Instance().DB().Create(&userRoles).Error
-}
-
-// 删除用户的角色关联
-func (ur *UserRole) DeleteByUserID(userID int64) error {
-	return sqldb.Instance().DB().Where("user_id = ?", userID).Delete(&UserRole{}).Error
-}
-
-// 获取用户的角色ID列表
-func (ur *UserRole) GetRoleIDsByUserID(userID uint) ([]uint, error) {
-	var userRoles []UserRole
-	err := sqldb.Instance().DB().Where("user_id = ?", userID).Find(&userRoles).Error
-	if err != nil {
-		return nil, err
-	}
-
-	var roleIDs []uint
-	for _, ur := range userRoles {
-		roleIDs = append(roleIDs, ur.RoleID)
-	}
-
-	return roleIDs, nil
-}
+// 以下方法已移动到 repository/role_repo.go
+// BatchCreate
+// DeleteByUserID
+// GetRoleIDsByUserID

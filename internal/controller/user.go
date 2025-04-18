@@ -4,21 +4,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	v1 "github.com/limitcool/starter/internal/api/v1"
-	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/spf13/cast"
 )
 
-func NewUserController(userService *services.SysUserService) *UserController {
+func NewUserController(sysUserService *services.SysUserService, userService *services.UserService) *UserController {
 	return &UserController{
-		userService: userService,
+		sysUserService: sysUserService,
+		userService:    userService,
 	}
 }
 
 type UserController struct {
-	userService *services.SysUserService
+	sysUserService *services.SysUserService
+	userService    *services.UserService
 }
 
 // UserLogin 普通用户登录
@@ -31,8 +32,7 @@ func (uc *UserController) UserLogin(ctx *gin.Context) {
 
 	// 获取客户端IP地址
 	clientIP := ctx.ClientIP()
-	userService := services.NewUserService()
-	tokenResponse, err := userService.Login(req.Username, req.Password, clientIP)
+	tokenResponse, err := uc.userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
 		logger.LogError("UserLogin 登录失败", err,
 			"username", req.Username,
@@ -55,8 +55,7 @@ func (uc *UserController) UserRegister(c *gin.Context) {
 	// 获取客户端IP地址
 	clientIP := c.ClientIP()
 
-	userService := services.NewUserService()
-	user, err := userService.Register(req, clientIP)
+	user, err := uc.userService.Register(req, clientIP)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -79,8 +78,7 @@ func (uc *UserController) UserChangePassword(c *gin.Context) {
 		return
 	}
 
-	userService := services.NewUserService()
-	err := userService.ChangePassword(cast.ToInt64(userID), req.OldPassword, req.NewPassword)
+	err := uc.userService.ChangePassword(cast.ToInt64(userID), req.OldPassword, req.NewPassword)
 	if err != nil {
 		if errorx.IsAppErr(err) {
 			response.Error(c, err)
@@ -102,7 +100,8 @@ func (uc *UserController) UserInfo(c *gin.Context) {
 		return
 	}
 
-	user, err := model.NewUser().GetUserByID(cast.ToInt64(userID))
+	// 获取用户信息
+	user, err := uc.userService.GetUserByID(cast.ToInt64(userID))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -123,7 +122,7 @@ func (uc *UserController) RefreshToken(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	tokenResponse, err := uc.userService.RefreshToken(req.RefreshToken)
+	tokenResponse, err := uc.sysUserService.RefreshToken(req.RefreshToken)
 	if err != nil {
 		logger.LogError("RefreshToken 刷新访问令牌失败", err,
 			"refresh_token", req.RefreshToken)

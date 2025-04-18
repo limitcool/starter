@@ -1,12 +1,7 @@
 package model
 
 import (
-	"errors"
 	"time"
-
-	"github.com/limitcool/starter/internal/pkg/errorx"
-	"github.com/limitcool/starter/internal/storage/sqldb"
-	"gorm.io/gorm"
 )
 
 // SysUser 系统用户
@@ -40,56 +35,6 @@ func NewSysUser() *SysUser {
 	return &SysUser{}
 }
 
-// GetUserByUsername 根据用户名获取用户
-func (s *SysUser) GetUserByUsername(username string) (*SysUser, error) {
-	var user SysUser
-	db := sqldb.Instance().DB()
-	err := db.Where("username = ?", username).First(&user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errorx.ErrUserNotFound
-	}
-	if err != nil {
-		// 直接返回错误，错误会自动捕获堆栈
-		return nil, err
-	}
+// 已移除 GetUserByUsername 方法到 repository/sys_user_repo.go
 
-	// 获取用户的角色
-	if err := db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
-		// 直接返回错误，错误会自动捕获堆栈
-		return nil, err
-	}
-
-	// 提取角色编码
-	for _, role := range user.Roles {
-		user.RoleCodes = append(user.RoleCodes, role.Code)
-	}
-
-	return &user, nil
-}
-
-// GetUserByID 根据ID获取用户
-func (s *SysUser) GetUserByID(id int64) (*SysUser, error) {
-	var user SysUser
-	db := sqldb.Instance().DB()
-	err := db.First(&user, id).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errorx.ErrUserNotFound
-	}
-	if err != nil {
-		// 直接返回错误，错误会自动捕获堆栈
-		return nil, err
-	}
-
-	// 获取用户的角色
-	if err := db.Model(&user).Association("Roles").Find(&user.Roles); err != nil {
-		// 直接返回错误，错误会自动捕获堆栈
-		return nil, err
-	}
-
-	// 提取角色编码
-	for _, role := range user.Roles {
-		user.RoleCodes = append(user.RoleCodes, role.Code)
-	}
-
-	return &user, nil
-}
+// 已移除 GetUserByID 方法到 repository/sys_user_repo.go

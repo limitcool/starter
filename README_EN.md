@@ -521,15 +521,22 @@ func (s *Service) List(query *request.YourQuery) ([]YourModel, int64, error) {
 
 ## Component Access Standards
 
-This project uses the component pattern to manage various resources, and the following access methods are recommended:
+This project uses dependency injection to manage various resources, and the following access methods are recommended:
 
 ```go
-// Get database connection
-db := sqldb.Instance().DB()
+// Get database connection through dependency injection
+// In repository layer
+func NewUserRepository(db *gorm.DB) *UserRepository {
+    return &UserRepository{db: db}
+}
 
-// Get Redis client
-client := redisdb.Instance().Client()
+// In service layer
+func NewUserService(userRepo *UserRepository) *UserService {
+    return &UserService{userRepo: userRepo}
+}
 
-// Get MongoDB database
-mongo := mongodb.Instance().DB()
+// In controller layer
+func NewUserController(userService *UserService) *UserController {
+    return &UserController{userService: userService}
+}
 ```

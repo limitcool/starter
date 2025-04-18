@@ -1,12 +1,7 @@
 package model
 
 import (
-	"errors"
 	"time"
-
-	"github.com/limitcool/starter/internal/pkg/errorx"
-	"github.com/limitcool/starter/internal/storage/sqldb"
-	"gorm.io/gorm"
 )
 
 // User 普通用户
@@ -41,32 +36,8 @@ func NewUser() *User {
 	return &User{}
 }
 
-// IsExist 判断用户是否存在
-func (u *User) IsExist() (bool, error) {
-	db := sqldb.Instance().DB()
-	return db.Model(&User{}).Where("username = ?", u.Username).First(&User{}).RowsAffected > 0, nil
-}
-
-// Create 创建用户
-func (u *User) Create() error {
-	db := sqldb.Instance().DB()
-	return db.Create(u).Error
-}
-
-// GetUserByUsername 根据用户名获取用户
-func (u *User) GetUserByUsername(username string) (*User, error) {
-	db := sqldb.Instance().DB()
-	var user User
-	err := db.Model(&User{}).Where("username = ?", username).First(&user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errorx.ErrUserNotFound.WithError(err)
-	}
-	return &user, err
-}
-
-func (u *User) GetUserByID(id int64) (*User, error) {
-	db := sqldb.Instance().DB()
-	var user User
-	err := db.Model(&User{}).Where("id = ?", id).First(&user).Error
-	return &user, err
-}
+// 以下方法已移动到 repository/user_repository.go
+// IsExist
+// Create
+// GetUserByUsername
+// GetUserByID

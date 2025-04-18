@@ -13,18 +13,20 @@ import (
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/storage"
-	"github.com/limitcool/starter/internal/storage/sqldb"
+	"github.com/limitcool/starter/internal/repository"
 )
 
 // FileService 文件服务
 type FileService struct {
-	storage *storage.Storage
+	storage  *storage.Storage
+	fileRepo *repository.FileRepo
 }
 
 // NewFileService 创建文件服务
-func NewFileService(storage *storage.Storage) *FileService {
+func NewFileService(storage *storage.Storage, fileRepo *repository.FileRepo) *FileService {
 	return &FileService{
-		storage: storage,
+		storage:  storage,
+		fileRepo: fileRepo,
 	}
 }
 
@@ -97,7 +99,7 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 		IsPublic:       isPublic, // 设置是否公开
 	}
 
-	if err := sqldb.Instance().DB().Create(fileModel).Error; err != nil {
+	if err := s.fileRepo.Create(fileModel); err != nil {
 		return nil, errorx.ErrDatabase.WithError(err)
 	}
 
@@ -106,38 +108,38 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 
 // GetFile 获取文件信息
 func (s *FileService) GetFile(id string, currentUserID int64, currentUserType enum.UserType) (*model.File, error) {
-	var file model.File
-	if err := sqldb.Instance().DB().First(&file, id).Error; err != nil {
-		return nil, errorx.ErrNotFound.WithError(err)
+	file, err := s.fileRepo.GetByID(id)
+	if err != nil {
+		return nil, err
 	}
 
 	// 特殊情况：未登录用户（ID=0）只能访问公开文件、图片和文档类型的文件
 	if currentUserID == 0 {
 		if file.IsPublic || file.Type == model.FileTypeImage || file.Type == model.FileTypeDocument {
-			return &file, nil
+			return file, nil
 		}
 		return nil, errorx.ErrAccessDenied.WithMsg("您无权访问此文件")
 	}
 
 	// 系统用户可以访问所有文件
 	if currentUserType == enum.UserTypeSysUser {
-		return &file, nil
+		return file, nil
 	}
 
 	// 公开文件任何人都可以访问
 	if file.IsPublic {
-		return &file, nil
+		return file, nil
 	}
 
 	// 普通用户可以访问自己上传的文件
 	if currentUserType == enum.UserTypeUser && uint8(enum.UserTypeUser) == file.UploadedByType && file.UploadedBy == currentUserID {
-		return &file, nil
+		return file, nil
 	}
 
 	// 普通用户可以访问特定类型的公开文件（如图片和文档）
 	if currentUserType == enum.UserTypeUser && (file.Type == model.FileTypeImage || file.Type == model.FileTypeDocument) {
 		// 这里可以添加额外的权限逻辑
-		return &file, nil
+		return file, nil
 	}
 
 	return nil, errorx.ErrAccessDenied.WithMsg("您无权访问此文件")
@@ -145,9 +147,9 @@ func (s *FileService) GetFile(id string, currentUserID int64, currentUserType en
 
 // DeleteFile 删除文件
 func (s *FileService) DeleteFile(id string, currentUserID int64, currentUserType enum.UserType) error {
-	var file model.File
-	if err := sqldb.Instance().DB().First(&file, id).Error; err != nil {
-		return errorx.ErrNotFound.WithError(err)
+	file, err := s.fileRepo.GetByID(id)
+	if err != nil {
+		return err
 	}
 
 	// 权限检查：系统用户可以删除所有文件，普通用户只能删除自己上传的文件
@@ -161,7 +163,7 @@ func (s *FileService) DeleteFile(id string, currentUserID int64, currentUserType
 	}
 
 	// 从数据库中删除记录
-	if err := sqldb.Instance().DB().Delete(&file).Error; err != nil {
+	if err := s.fileRepo.Delete(id); err != nil {
 		return errorx.ErrDatabase.WithError(err)
 	}
 
@@ -194,21 +196,13 @@ func (s *FileService) UpdateUserAvatar(userID int64, fileHeader *multipart.FileH
 	}
 
 	// 设置文件用途为头像
-	file.Usage = model.FileUsageAvatar
-	if err := sqldb.Instance().DB().Save(file).Error; err != nil {
+	if err := s.fileRepo.UpdateFileUsage(file, model.FileUsageAvatar); err != nil {
 		return "", errorx.ErrDatabase.WithError(err)
-	}
-
-	// 查找用户
-	user := model.User{}
-	if err := sqldb.Instance().DB().First(&user, userID).Error; err != nil {
-		return "", errorx.ErrNotFound.WithError(err)
 	}
 
 	// 更新用户头像
-	user.AvatarFileID = file.ID
-	if err := sqldb.Instance().DB().Save(&user).Error; err != nil {
-		return "", errorx.ErrDatabase.WithError(err)
+	if err := s.fileRepo.UpdateUserAvatar(userID, file.ID); err != nil {
+		return "", err
 	}
 
 	return file.URL, nil
@@ -223,21 +217,13 @@ func (s *FileService) UpdateSysUserAvatar(userID int64, fileHeader *multipart.Fi
 	}
 
 	// 设置文件用途为头像
-	file.Usage = model.FileUsageAvatar
-	if err := sqldb.Instance().DB().Save(file).Error; err != nil {
+	if err := s.fileRepo.UpdateFileUsage(file, model.FileUsageAvatar); err != nil {
 		return "", errorx.ErrDatabase.WithError(err)
 	}
 
-	// 查找系统用户
-	sysUser := model.SysUser{}
-	if err := sqldb.Instance().DB().First(&sysUser, userID).Error; err != nil {
-		return "", errorx.ErrNotFound.WithError(err)
-	}
-
-	// 更新用户头像
-	sysUser.AvatarFileID = file.ID
-	if err := sqldb.Instance().DB().Save(&sysUser).Error; err != nil {
-		return "", errorx.ErrDatabase.WithError(err)
+	// 更新系统用户头像
+	if err := s.fileRepo.UpdateSysUserAvatar(userID, file.ID); err != nil {
+		return "", err
 	}
 
 	return file.URL, nil

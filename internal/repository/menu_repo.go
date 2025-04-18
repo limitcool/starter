@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"sort"
+
 	"github.com/limitcool/starter/internal/model"
 	"gorm.io/gorm"
 )
@@ -11,7 +13,7 @@ type MenuRepo struct {
 }
 
 // NewMenuRepo 创建菜单仓库
-func NewMenuRepo(db *gorm.DB) MenuRepository {
+func NewMenuRepo(db *gorm.DB) *MenuRepo {
 	return &MenuRepo{DB: db}
 }
 
@@ -242,6 +244,47 @@ func (r *MenuRepo) BuildMenuTree(menus []*model.Menu) []*model.MenuTree {
 			}
 		}
 	}
+
+	return rootMenus
+}
+
+// BuildMenuTreeOld 构建菜单树(旧版本)
+func (r *MenuRepo) BuildMenuTreeOld(menus []*model.Menu) []*model.Menu {
+	// 创建一个map用于快速查找
+	menuMap := make(map[uint]*model.Menu)
+	for _, m := range menus {
+		menuMap[m.ID] = m
+	}
+
+	var rootMenus []*model.Menu
+	for _, m := range menus {
+		if m.ParentID == 0 {
+			// 顶级菜单
+			rootMenus = append(rootMenus, m)
+		} else {
+			// 子菜单
+			if parent, ok := menuMap[m.ParentID]; ok {
+				if parent.Children == nil {
+					parent.Children = []*model.Menu{}
+				}
+				parent.Children = append(parent.Children, m)
+			}
+		}
+	}
+
+	// 菜单排序
+	for _, m := range menuMap {
+		if len(m.Children) > 0 {
+			sort.Slice(m.Children, func(i, j int) bool {
+				return m.Children[i].OrderNum < m.Children[j].OrderNum
+			})
+		}
+	}
+
+	// 对根菜单排序
+	sort.Slice(rootMenus, func(i, j int) bool {
+		return rootMenus[i].OrderNum < rootMenus[j].OrderNum
+	})
 
 	return rootMenus
 }

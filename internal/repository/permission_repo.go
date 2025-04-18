@@ -12,7 +12,7 @@ type PermissionRepo struct {
 }
 
 // NewPermissionRepo 创建权限仓库
-func NewPermissionRepo(db *gorm.DB) PermissionRepository {
+func NewPermissionRepo(db *gorm.DB) *PermissionRepo {
 	return &PermissionRepo{DB: db}
 }
 

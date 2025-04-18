@@ -104,18 +104,21 @@ func NewRouter(db database.DB) *gin.Engine {
 	sysUserRepo := repository.NewSysUserRepo(gormDB)
 	permissionRepo := repository.NewPermissionRepo(gormDB)
 	operationLogRepo := repository.NewOperationLogRepo(gormDB)
+	userRepo := repository.NewUserRepository(gormDB)
+	fileRepo := repository.NewFileRepo(gormDB)
 
 	// 创建服务实例
 	casbinService := services.NewCasbinService(db)
 	roleService := services.NewRoleService(roleRepo, casbinService)
 	menuService := services.NewMenuService(menuRepo, casbinService)
-	sysUserService := services.NewSysUserService(sysUserRepo, roleService)
+	sysUserService := services.NewSysUserService(sysUserRepo, userRepo, roleService)
 	permissionService := services.NewPermissionService(permissionRepo)
 	operationLogService := services.NewOperationLogService(operationLogRepo)
 	systemService := services.NewSystemService(db)
+	userService := services.NewUserService(userRepo)
 
 	// 初始化控制器
-	userController := controller.NewUserController(sysUserService)
+	userController := controller.NewUserController(sysUserService, userService)
 	adminController := controller.NewAdminController(sysUserService)
 	roleController := controller.NewRoleController(roleService, menuService)
 	menuController := controller.NewMenuController(menuService)
@@ -125,7 +128,7 @@ func NewRouter(db database.DB) *gin.Engine {
 
 	var fileController *controller.FileController
 	if stg != nil {
-		fileController = controller.NewFileController(stg)
+		fileController = controller.NewFileController(stg, fileRepo)
 	}
 
 	// 设置API路由组

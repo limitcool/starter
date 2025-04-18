@@ -9,12 +9,12 @@ import (
 
 // MenuService 菜单服务
 type MenuService struct {
-	menuRepo      repository.MenuRepository
+	menuRepo      *repository.MenuRepo
 	casbinService *CasbinService
 }
 
 // NewMenuService 创建菜单服务
-func NewMenuService(menuRepo repository.MenuRepository, casbinService *CasbinService) *MenuService {
+func NewMenuService(menuRepo *repository.MenuRepo, casbinService *CasbinService) *MenuService {
 	return &MenuService{
 		menuRepo:      menuRepo,
 		casbinService: casbinService,

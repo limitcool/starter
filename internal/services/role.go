@@ -10,12 +10,12 @@ import (
 
 // RoleService 角色服务
 type RoleService struct {
-	roleRepo      repository.RoleRepository
+	roleRepo      *repository.RoleRepo
 	casbinService *CasbinService
 }
 
 // NewRoleService 创建角色服务
-func NewRoleService(roleRepo repository.RoleRepository, casbinService *CasbinService) *RoleService {
+func NewRoleService(roleRepo *repository.RoleRepo, casbinService *CasbinService) *RoleService {
 	return &RoleService{
 		roleRepo:      roleRepo,
 		casbinService: casbinService,
@@ -34,10 +34,8 @@ func (s *RoleService) UpdateRole(role *model.Role) error {
 
 // DeleteRole 删除角色
 func (s *RoleService) DeleteRole(id uint) error {
-	role := &model.Role{}
-
 	// 检查角色是否已分配给用户
-	isAssigned, err := role.IsAssignedToUser(id)
+	isAssigned, err := s.roleRepo.IsAssignedToUser(id)
 	if err != nil {
 		return err
 	}
@@ -46,12 +44,12 @@ func (s *RoleService) DeleteRole(id uint) error {
 	}
 
 	// 删除角色菜单关联
-	if err := role.DeleteRoleMenus(id); err != nil {
+	if err := s.roleRepo.DeleteRoleMenus(id); err != nil {
 		return err
 	}
 
 	// 查询角色信息
-	role, err = role.GetByID(id)
+	role, err := s.roleRepo.GetByID(id)
 	if err != nil {
 		return err
 	}
@@ -63,42 +61,24 @@ func (s *RoleService) DeleteRole(id uint) error {
 	}
 
 	// 删除角色
-	return role.Delete()
+	return s.roleRepo.Delete(id)
 }
 
 // GetRoleByID 根据ID获取角色
 func (s *RoleService) GetRoleByID(id uint) (*model.Role, error) {
-	role := &model.Role{}
-	return role.GetByID(id)
+	return s.roleRepo.GetByID(id)
 }
 
 // GetRoles 获取角色列表
 func (s *RoleService) GetRoles() ([]model.Role, error) {
-	role := &model.Role{}
-	return role.GetAll()
+	return s.roleRepo.GetAll()
 }
 
 // AssignRolesToUser 为用户分配角色
 func (s *RoleService) AssignRolesToUser(userID int64, roleIDs []uint) error {
-	userRole := &model.UserRole{}
-
-	// 删除原有的用户角色关联
-	if err := userRole.DeleteByUserID(userID); err != nil {
+	// 使用 roleRepo 的 AssignRolesToUser 方法
+	if err := s.roleRepo.AssignRolesToUser(userID, roleIDs); err != nil {
 		return err
-	}
-
-	// 添加新的用户角色关联
-	if len(roleIDs) > 0 {
-		var userRoles []model.UserRole
-		for _, roleID := range roleIDs {
-			userRoles = append(userRoles, model.UserRole{
-				UserID: userID,
-				RoleID: roleID,
-			})
-		}
-		if err := userRole.BatchCreate(userRoles); err != nil {
-			return err
-		}
 	}
 
 	// 更新Casbin中的用户角色
@@ -120,10 +100,9 @@ func (s *RoleService) AssignRolesToUser(userID int64, roleIDs []uint) error {
 
 	// 添加新角色
 	if len(roleIDs) > 0 {
-		role := &model.Role{}
 		for _, roleID := range roleIDs {
 			// 查询角色编码
-			roleObj, err := role.GetByID(roleID)
+			roleObj, err := s.roleRepo.GetByID(roleID)
 			if err != nil {
 				return err
 			}
@@ -141,14 +120,12 @@ func (s *RoleService) AssignRolesToUser(userID int64, roleIDs []uint) error {
 
 // GetUserRoleIDs 获取用户角色ID列表
 func (s *RoleService) GetUserRoleIDs(userID uint) ([]uint, error) {
-	userRole := &model.UserRole{}
-	return userRole.GetRoleIDsByUserID(userID)
+	return s.roleRepo.GetRoleIDsByUserID(userID)
 }
 
 // GetRoleMenuIDs 获取角色菜单ID列表
 func (s *RoleService) GetRoleMenuIDs(roleID uint) ([]uint, error) {
-	roleMenu := &model.RoleMenu{}
-	return roleMenu.GetMenuIDsByRoleID(roleID)
+	return s.roleRepo.GetMenuIDsByRoleID(roleID)
 }
 
 // 为角色设置权限策略
