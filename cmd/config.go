@@ -15,14 +15,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-// 全局配置实例
-var globalConfig *configs.Config
-
 // InitConfig 加载配置文件
 func InitConfig(cmd *cobra.Command, args []string) *configs.Config {
-	if globalConfig != nil {
-		return globalConfig
-	}
 
 	// 先设置基本日志格式，确保在配置读取前就使用统一格式
 	log.SetDefault(log.NewWithOptions(os.Stdout, log.Options{
@@ -69,7 +63,6 @@ func InitConfig(cmd *cobra.Command, args []string) *configs.Config {
 	if err := viper.Unmarshal(cfg); err != nil {
 		log.Fatal("Config unmarshal failed", "error", err)
 	}
-	globalConfig = cfg
 
 	return cfg
 }

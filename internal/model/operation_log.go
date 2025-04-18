@@ -4,12 +4,6 @@ import (
 	"time"
 )
 
-// OperationLogRepository 操作日志仓库接口
-type OperationLogRepository interface {
-	// 实现操作日志相关方法
-	Registry()
-}
-
 // OperationLog 操作记录模型
 type OperationLog struct {
 	BaseModel
@@ -47,9 +41,3 @@ func (OperationLog) TableName() string {
 // GetPageList
 // Delete
 // BatchDelete
-
-// Registry 初始化集合
-func (OperationLog) Registry() {
-	// 该方法已经移动到仓库层实现
-	// 请使用依赖注入的方式获取仓库实例
-}

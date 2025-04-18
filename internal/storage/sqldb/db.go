@@ -3,7 +3,6 @@ package sqldb
 import (
 	"database/sql"
 	"fmt"
-	"sync"
 
 	"github.com/glebarez/sqlite"
 	"github.com/limitcool/starter/configs"
@@ -14,11 +13,6 @@ import (
 	"github.com/charmbracelet/log"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-)
-
-// 全局变量
-var (
-	dbOnce sync.Once
 )
 
 func getDSN(c *configs.Config) string {
@@ -86,7 +80,7 @@ type gormLogWriter struct {
 }
 
 // Printf 实现Print接口供GORM日志使用
-func (w *gormLogWriter) Printf(format string, args ...interface{}) {
+func (w *gormLogWriter) Printf(format string, args ...any) {
 	// 将GORM日志输出到结构化日志
 	msg := fmt.Sprintf(format, args...)
 	w.logger.Info("GORM", "message", msg)
@@ -107,13 +101,7 @@ func getGormLogLevel(c *configs.Config) logger.LogLevel {
 
 // NewDB 创建数据库连接
 func NewDB(c configs.Config) *gorm.DB {
-	var db *gorm.DB
-	dbOnce.Do(func() {
-		db = newDbConn(&c)
-		// 不再设置全局实例
-		// setupInstance(&Component{db: db, Config: &c, enabled: c.Database.Enabled}) // 已移除，使用依赖注入代替
-	})
-	return db
+	return newDbConn(&c)
 }
 
 // func NewMysql(dsn string, c configs.Config) *gorm.DB {
