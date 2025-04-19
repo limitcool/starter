@@ -42,16 +42,17 @@ func (s *UserService) VerifyPassword(password, hashedPassword string) bool {
 func (s *UserService) Register(req v1.UserRegisterRequest, registerIP string) (*model.User, error) {
 	isExist, err := s.userRepo.IsExist(req.Username)
 	if err != nil {
-		return nil, errorx.ErrDatabaseQueryError.WithError(err)
+		return nil, errorx.WrapError(err, fmt.Sprintf("检查用户名 %s 是否存在失败", req.Username))
 	}
 	if isExist {
-		return nil, errorx.ErrUserAlreadyExists
+		existsErr := errorx.Errorf(errorx.ErrUserExists, "用户名 %s 已存在", req.Username)
+		return nil, errorx.WrapError(existsErr, "")
 	}
 
 	// 哈希密码
 	hashedPassword, err := crypto.HashPassword(req.Password)
 	if err != nil {
-		return nil, errorx.ErrInternal.WithError(err)
+		return nil, errorx.WrapError(err, "密码加密失败")
 	}
 
 	// 创建用户
@@ -69,7 +70,7 @@ func (s *UserService) Register(req v1.UserRegisterRequest, registerIP string) (*
 	}
 
 	if err := s.userRepo.Create(user); err != nil {
-		return nil, errorx.ErrDatabaseInsertError.WithError(err)
+		return nil, errorx.WrapError(err, fmt.Sprintf("创建用户 %s 失败", req.Username))
 	}
 
 	return user, nil
@@ -80,17 +81,25 @@ func (s *UserService) Login(username, password string, ip string) (*v1.LoginResp
 	// 获取用户
 	user, err := s.userRepo.GetByUsername(username)
 	if err != nil {
-		return nil, err
+		// 判断是否是用户不存在错误
+		if errorx.IsAppErr(err) && err.(*errorx.AppError).GetErrorCode() == errorx.ErrorUserNotFoundCode {
+			// 保持原始错误码，但添加业务上下文
+			return nil, err
+		}
+		// 其他错误添加业务上下文
+		return nil, errorx.WrapError(err, fmt.Sprintf("用户名 %s 登录失败", username))
 	}
 
 	// 检查用户是否启用
 	if !user.Enabled {
-		return nil, errorx.ErrUserDisabled
+		disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "用户 %s 已被禁用", username)
+		return nil, errorx.WrapError(disabledErr, "")
 	}
 
 	// 验证密码
 	if !s.VerifyPassword(password, user.Password) {
-		return nil, errorx.ErrUserPasswordError.WithMsg("密码错误")
+		passwordErr := errorx.Errorf(errorx.ErrUserPasswordError, "用户 %s 的密码错误", username)
+		return nil, errorx.WrapError(passwordErr, "")
 	}
 
 	// 更新最后登录时间和IP
@@ -99,7 +108,7 @@ func (s *UserService) Login(username, password string, ip string) (*v1.LoginResp
 		"last_ip":    ip,
 	}
 	if err := s.userRepo.UpdateFields(user.ID, fields); err != nil {
-		return nil, err
+		return nil, errorx.WrapError(err, fmt.Sprintf("更新用户 %s 的登录信息失败", username))
 	}
 
 	// 获取配置
@@ -152,7 +161,10 @@ func (s *UserService) UpdateUser(id uint, data map[string]any) error {
 	for k, v := range data {
 		fields[k] = v
 	}
-	return s.userRepo.UpdateFields(int64(id), fields)
+	if err := s.userRepo.UpdateFields(int64(id), fields); err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("更新用户ID %d 的信息失败", id))
+	}
+	return nil
 }
 
 // ChangePassword 修改密码
@@ -160,25 +172,29 @@ func (s *UserService) ChangePassword(id int64, oldPassword, newPassword string) 
 	// 获取用户
 	user, err := s.userRepo.GetByID(id)
 	if err != nil {
-		return err
+		return errorx.WrapError(err, fmt.Sprintf("获取用户ID %d 失败", id))
 	}
 
 	// 验证旧密码
 	if !s.VerifyPassword(oldPassword, user.Password) {
-		return errorx.ErrUserPasswordError.WithMsg("原密码错误")
+		passwordErr := errorx.Errorf(errorx.ErrUserPasswordError, "原密码错误")
+		return errorx.WrapError(passwordErr, "")
 	}
 
 	// 哈希新密码
 	hashedPassword, err := crypto.HashPassword(newPassword)
 	if err != nil {
-		return fmt.Errorf("密码加密失败: %w", err)
+		return errorx.WrapError(err, "密码加密失败")
 	}
 
 	// 更新密码
 	fields := map[string]any{
 		"password": hashedPassword,
 	}
-	return s.userRepo.UpdateFields(id, fields)
+	if err := s.userRepo.UpdateFields(id, fields); err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("更新用户ID %d 的密码失败", id))
+	}
+	return nil
 }
 
 // 该函数已移动到 controller/user.go 中的 UserInfo 方法

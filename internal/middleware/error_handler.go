@@ -1,19 +1,13 @@
 package middleware
 
 import (
-	"errors"
 	"fmt"
-	"net/http"
 	"runtime/debug"
-	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/pkg/errorx"
-	"github.com/limitcool/starter/internal/pkg/i18n"
-	"github.com/limitcool/starter/internal/services"
-	"gorm.io/gorm"
 )
 
 // ErrorHandler 全局错误处理中间件
@@ -59,98 +53,6 @@ func ErrorHandler() gin.HandlerFunc {
 
 // handleError 处理不同类型的错误
 func handleError(c *gin.Context, err error) {
-	// 获取当前语言
-	lang := getCurrentLanguage(c)
-
-	// 处理不同类型的错误
-	switch {
-	case errorx.IsAppErr(err):
-		// 已经是AppError类型，直接使用
-		appErr := err.(*errorx.AppError)
-
-		// 尝试翻译错误消息
-		message := i18n.T(appErr.GetI18nKey(), lang)
-		if message == appErr.GetI18nKey() {
-			// 如果翻译失败，使用原始错误消息
-			message = appErr.GetErrorMsg()
-		}
-
-		// 记录错误日志
-		logAppError(appErr)
-
-		// 返回错误响应
-		c.JSON(appErr.GetHttpStatus(), gin.H{
-			"code":    appErr.GetErrorCode(),
-			"message": message,
-			"data":    struct{}{},
-		})
-
-	case errors.Is(err, gorm.ErrRecordNotFound):
-		// 数据库记录未找到错误
-		appErr := errorx.ErrNotFound.WithError(err)
-		logAppError(appErr)
-
-		message := i18n.T(appErr.GetI18nKey(), lang)
-		c.JSON(http.StatusNotFound, gin.H{
-			"code":    appErr.GetErrorCode(),
-			"message": message,
-			"data":    struct{}{},
-		})
-
-	case isGormError(err):
-		// 其他GORM错误
-		appErr := errorx.ErrDatabase.WithError(err)
-		logAppError(appErr)
-
-		message := i18n.T(appErr.GetI18nKey(), lang)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    appErr.GetErrorCode(),
-			"message": message,
-			"data":    struct{}{},
-		})
-
-	default:
-		// 未知错误
-		appErr := errorx.ErrUnknown.WithError(err)
-		logAppError(appErr)
-
-		message := i18n.T(appErr.GetI18nKey(), lang)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    appErr.GetErrorCode(),
-			"message": message,
-			"data":    struct{}{},
-		})
-	}
-}
-
-// getCurrentLanguage 获取当前语言
-func getCurrentLanguage(c *gin.Context) string {
-	lang, exists := c.Get("lang")
-	if !exists {
-		return i18n.GetDefaultLanguage()
-	}
-	return lang.(string)
-}
-
-// logAppError 记录AppError类型的错误
-func logAppError(err *errorx.AppError) {
-	// 记录错误详情
-	log.Error("Application error",
-		"code", err.GetErrorCode(),
-		"message", err.GetErrorMsg(),
-		"i18n_key", err.GetI18nKey(),
-		"stack", err.GetStackTrace(),
-	)
-
-	// 记录错误到错误监控服务
-	services.NewErrorMonitorService().RecordError(err)
-}
-
-// isGormError 判断是否为GORM错误
-func isGormError(err error) bool {
-	errMsg := err.Error()
-	return strings.Contains(errMsg, "gorm") ||
-		strings.Contains(errMsg, "sql") ||
-		strings.Contains(errMsg, "database") ||
-		strings.Contains(errMsg, "constraint")
+	// 使用统一的错误响应函数
+	response.Error(c, err)
 }

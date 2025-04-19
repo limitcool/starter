@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/storage/database"
 	"gorm.io/gorm"
 )
 
@@ -15,26 +16,7 @@ type Component struct {
 	enabled bool
 }
 
-// Database 数据库接口
-type Database interface {
-	// DB 获取数据库连接
-	DB() *gorm.DB
-
-	// Close 关闭数据库连接
-	Close() error
-
-	// IsEnabled 检查数据库是否启用
-	IsEnabled() bool
-}
-
-// DB 数据库接口
-type DB interface {
-	// GetDB 获取数据库连接
-	GetDB() *gorm.DB
-
-	// Close 关闭数据库连接
-	Close() error
-}
+// Component 实现 database.Database 接口
 
 // NewComponent 创建数据库组件
 func NewComponent(cfg *configs.Config) *Component {

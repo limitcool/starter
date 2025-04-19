@@ -4,36 +4,36 @@ import (
 	"gorm.io/gorm"
 )
 
-// DB 数据库接口
-// 简化的接口，只包含必要的方法
-type DB interface {
-	// GetDB 获取数据库连接
-	GetDB() *gorm.DB
-
-	// Close 关闭数据库连接
-	Close() error
-}
+// 注意：我们使用 database.go 中定义的 Database 接口
+// 这里不再定义重复的 DB 接口
 
 // GormDB 基于GORM的数据库实现
 type GormDB struct {
-	DB *gorm.DB
+	db      *gorm.DB
+	enabled bool
 }
 
 // NewGormDB 创建GORM数据库实例
 func NewGormDB(db *gorm.DB) *GormDB {
-	return &GormDB{DB: db}
+	return &GormDB{db: db, enabled: true}
 }
 
-// GetDB 获取数据库连接
-func (g *GormDB) GetDB() *gorm.DB {
-	return g.DB
+// DB 获取数据库连接
+// 实现 Database 接口
+func (g *GormDB) DB() *gorm.DB {
+	return g.db
 }
 
 // Close 关闭数据库连接
 func (g *GormDB) Close() error {
-	sqlDB, err := g.DB.DB()
+	sqlDB, err := g.db.DB()
 	if err != nil {
 		return err
 	}
 	return sqlDB.Close()
+}
+
+// IsEnabled 检查数据库是否启用
+func (g *GormDB) IsEnabled() bool {
+	return g.enabled
 }

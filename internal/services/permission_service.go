@@ -2,7 +2,9 @@ package services
 
 import (
 	"path/filepath"
+	"strconv"
 
+	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/casbin"
@@ -84,35 +86,79 @@ func (s *PermissionService) DeletePermission(id uint64) error {
 
 // AssignPermissionToRole 为角色分配权限
 func (s *PermissionService) AssignPermissionToRole(roleID uint, permissionIDs []uint) error {
-	// 数据库层面的关联
-	err := s.permissionRepo.AssignPermissionToRole(roleID, permissionIDs)
-	if err != nil {
-		return err
-	}
-
 	// 获取角色
 	role, err := s.roleRepo.GetByID(roleID)
 	if err != nil {
 		return err
 	}
 
-	// 删除Casbin中的角色权限
-	_, err = s.casbinService.DeleteRole(role.Code)
-	if err != nil {
+	// 开始数据库事务
+	tx := s.permissionRepo.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 在事务中执行数据库操作
+	if err := tx.Where("role_id = ?", roleID).Delete(&model.RolePermission{}).Error; err != nil {
+		tx.Rollback()
 		return err
 	}
 
-	// 添加新的权限
-	for _, permID := range permissionIDs {
-		perm, err := s.permissionRepo.GetByID(permID)
-		if err != nil {
-			continue
+	// 添加新的角色权限关联
+	if len(permissionIDs) > 0 {
+		var rolePermissions []model.RolePermission
+		for _, permID := range permissionIDs {
+			rolePermissions = append(rolePermissions, model.RolePermission{
+				RoleID:       roleID,
+				PermissionID: permID,
+			})
+		}
+		if err := tx.Create(&rolePermissions).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// 提交数据库事务
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	// 使用 Casbin 事务批量更新权限策略
+	// 注意：这里我们使用 Casbin 的批量操作 API
+	// 1. 删除 Casbin 中的角色权限
+	_, err = s.casbinService.DeleteRole(role.Code)
+	if err != nil {
+		// 如果 Casbin 操作失败，记录错误但不回滚数据库事务
+		// 因为数据库事务已经提交，我们可以在后续的同步操作中修复 Casbin 状态
+		log.Error("删除 Casbin 角色权限失败", "error", err)
+		// 这里可以添加重试逻辑或触发异步修复任务
+	}
+
+	// 2. 批量添加新的权限策略
+	if len(permissionIDs) > 0 {
+		// 准备批量添加的策略
+		var policies [][]string
+		for _, permID := range permissionIDs {
+			perm, err := s.permissionRepo.GetByID(permID)
+			if err != nil {
+				log.Warn("获取权限信息失败", "permission_id", permID, "error", err)
+				continue
+			}
+
+			// 添加策略 [role.Code, perm.Code, "*"]
+			policies = append(policies, []string{role.Code, perm.Code, "*"})
 		}
 
-		// 添加到Casbin
-		_, err = s.casbinService.AddPermissionForRole(role.Code, perm.Code, "*")
-		if err != nil {
-			return err
+		// 批量添加策略
+		if len(policies) > 0 {
+			success, err := s.casbinService.AddPolicies(policies)
+			if err != nil || !success {
+				log.Error("批量添加 Casbin 权限策略失败", "error", err)
+				// 这里可以添加重试逻辑或触发异步修复任务
+			}
 		}
 	}
 
@@ -142,24 +188,76 @@ func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) err
 		return err
 	}
 
-	// 删除当前角色
-	for _, role := range currentRoles {
-		_, err := s.casbinService.DeleteRoleForUser(userID, role)
-		if err != nil {
+	// 将 userID 转换为 int64 用于数据库操作
+	userIDInt, err := strconv.ParseInt(userID, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	// 开始数据库事务
+	tx := s.roleRepo.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 在事务中删除原有的用户角色关联
+	if err := tx.Where("user_id = ?", userIDInt).Delete(&model.UserRole{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 添加新的用户角色关联
+	if len(roleIDs) > 0 {
+		var userRoles []model.UserRole
+		for _, roleID := range roleIDs {
+			userRoles = append(userRoles, model.UserRole{
+				UserID: userIDInt,
+				RoleID: roleID,
+			})
+		}
+		if err := tx.Create(&userRoles).Error; err != nil {
+			tx.Rollback()
 			return err
 		}
 	}
 
-	// 添加新角色
-	for _, roleID := range roleIDs {
-		role, err := s.roleRepo.GetByID(roleID)
-		if err != nil {
-			continue
+	// 提交数据库事务
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	// 使用 Casbin 批量操作 API 更新权限
+	// 1. 批量删除当前角色
+	if len(currentRoles) > 0 {
+		success, err := s.casbinService.DeleteRolesForUser(userID)
+		if err != nil || !success {
+			log.Error("批量删除用户角色失败", "error", err)
+			// 这里可以添加重试逻辑或触发异步修复任务
+		}
+	}
+
+	// 2. 批量添加新角色
+	if len(roleIDs) > 0 {
+		// 准备批量添加的角色
+		var roleCodes []string
+		for _, roleID := range roleIDs {
+			role, err := s.roleRepo.GetByID(roleID)
+			if err != nil {
+				log.Warn("获取角色信息失败", "role_id", roleID, "error", err)
+				continue
+			}
+			roleCodes = append(roleCodes, role.Code)
 		}
 
-		_, err = s.casbinService.AddRoleForUser(userID, role.Code)
-		if err != nil {
-			return err
+		// 批量添加角色
+		if len(roleCodes) > 0 {
+			success, err := s.casbinService.AddRolesForUser(userID, roleCodes)
+			if err != nil || !success {
+				log.Error("批量添加用户角色失败", "error", err)
+				// 这里可以添加重试逻辑或触发异步修复任务
+			}
 		}
 	}
 

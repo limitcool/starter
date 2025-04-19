@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	v1 "github.com/limitcool/starter/internal/api/v1"
@@ -24,22 +25,69 @@ type UserController struct {
 
 // UserLogin 普通用户登录
 func (ctrl *UserController) UserLogin(ctx *gin.Context) {
+	// 记录请求开始
+	log.Info("UserLogin 开始处理登录请求",
+		"client_ip", ctx.ClientIP(),
+		"user_agent", ctx.Request.UserAgent())
+
 	var req v1.LoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		response.Error(ctx, errorx.ErrInvalidParams)
+		// 记录参数验证错误
+		log.Warn("UserLogin 请求参数验证失败",
+			"error", err,
+			"client_ip", ctx.ClientIP())
+		response.Error(ctx, errorx.ErrInvalidParams.WithError(err))
 		return
 	}
 
 	// 获取客户端IP地址
 	clientIP := ctx.ClientIP()
+
+	// 记录尝试登录信息
+	log.Info("UserLogin 尝试登录",
+		"username", req.Username,
+		"ip", clientIP)
+
 	tokenResponse, err := ctrl.userService.Login(req.Username, req.Password, clientIP)
 	if err != nil {
-		logger.LogError("UserLogin 登录失败", err,
-			"username", req.Username,
-			"ip", clientIP)
+		// 根据错误类型记录不同级别的日志
+		if errorx.IsAppErr(err) {
+			appErr := err.(*errorx.AppError)
+			errCode := appErr.GetErrorCode()
+
+			// 如果是用户不存在或密码错误，记录为警告
+			if errCode == errorx.ErrorUserNotFoundCode || errCode == errorx.ErrorUserPasswordErrorCode {
+				log.Warn("UserLogin 登录失败",
+					"error", err,
+					"username", req.Username,
+					"ip", clientIP,
+					"error_code", errCode)
+			} else {
+				// 其他错误记录为错误
+				log.Error("UserLogin 登录失败",
+					"error", err,
+					"username", req.Username,
+					"ip", clientIP,
+					"error_code", errCode)
+			}
+		} else {
+			// 非AppError类型的错误记录为错误
+			log.Error("UserLogin 登录失败",
+				"error", err,
+				"username", req.Username,
+				"ip", clientIP)
+		}
+
+		// 返回错误响应
 		response.Error(ctx, err)
 		return
 	}
+
+	// 记录登录成功
+	log.Info("UserLogin 登录成功",
+		"username", req.Username,
+		"access_token", tokenResponse.AccessToken[:10]+"...", // 只显示令牌前10个字符
+		"ip", clientIP)
 
 	response.Success(ctx, tokenResponse)
 }
@@ -83,7 +131,7 @@ func (ctrl *UserController) UserChangePassword(c *gin.Context) {
 		if errorx.IsAppErr(err) {
 			response.Error(c, err)
 		} else {
-			response.Error(c, errorx.ErrDatabaseQueryError)
+			response.Error(c, errorx.ErrDatabaseQuery)
 		}
 		return
 	}

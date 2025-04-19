@@ -18,15 +18,19 @@ import (
 
 // FileService 文件服务
 type FileService struct {
-	storage  *storage.Storage
-	fileRepo *repository.FileRepo
+	storage     *storage.Storage
+	fileRepo    *repository.FileRepo
+	userRepo    *repository.UserRepo
+	sysUserRepo *repository.SysUserRepo
 }
 
 // NewFileService 创建文件服务
-func NewFileService(storage *storage.Storage, fileRepo *repository.FileRepo) *FileService {
+func NewFileService(storage *storage.Storage, fileRepo *repository.FileRepo, userRepo *repository.UserRepo, sysUserRepo *repository.SysUserRepo) *FileService {
 	return &FileService{
-		storage:  storage,
-		fileRepo: fileRepo,
+		storage:     storage,
+		fileRepo:    fileRepo,
+		userRepo:    userRepo,
+		sysUserRepo: sysUserRepo,
 	}
 }
 
@@ -66,13 +70,13 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 	// 上传文件到存储
 	err = s.storage.Put(storagePath, file)
 	if err != nil {
-		return nil, errorx.ErrFileStroage.WithError(err)
+		return nil, errorx.WrapError(err, fmt.Sprintf("上传文件到存储失败: %s", storagePath))
 	}
 
 	// 获取文件访问URL
 	fileURL, err := s.storage.GetURL(storagePath)
 	if err != nil {
-		return nil, errorx.ErrFileStroage.WithError(err)
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取文件访问URL失败: %s", storagePath))
 	}
 
 	// 如果未指定用户类型，默认为系统用户
@@ -118,7 +122,7 @@ func (s *FileService) GetFile(id string, currentUserID int64, currentUserType en
 		if file.IsPublic || file.Type == model.FileTypeImage || file.Type == model.FileTypeDocument {
 			return file, nil
 		}
-		return nil, errorx.ErrAccessDenied.WithMsg("您无权访问此文件")
+		return nil, errorx.Errorf(errorx.ErrAccessDenied, "您无权访问此文件")
 	}
 
 	// 系统用户可以访问所有文件
@@ -142,7 +146,7 @@ func (s *FileService) GetFile(id string, currentUserID int64, currentUserType en
 		return file, nil
 	}
 
-	return nil, errorx.ErrAccessDenied.WithMsg("您无权访问此文件")
+	return nil, errorx.Errorf(errorx.ErrAccessDenied, "您无权访问此文件")
 }
 
 // DeleteFile 删除文件
@@ -154,17 +158,17 @@ func (s *FileService) DeleteFile(id string, currentUserID int64, currentUserType
 
 	// 权限检查：系统用户可以删除所有文件，普通用户只能删除自己上传的文件
 	if currentUserType == enum.UserTypeUser && (file.UploadedByType != uint8(enum.UserTypeUser) || file.UploadedBy != currentUserID) {
-		return errorx.ErrAccessDenied.WithMsg("您无权删除此文件")
+		return errorx.Errorf(errorx.ErrAccessDenied, "您无权删除此文件")
 	}
 
 	// 删除存储中的文件
 	if err := s.storage.Delete(file.Path); err != nil {
-		return errorx.ErrFileStroage.WithError(err)
+		return errorx.WrapError(err, fmt.Sprintf("删除存储中的文件失败: %s", file.Path))
 	}
 
 	// 从数据库中删除记录
 	if err := s.fileRepo.Delete(id); err != nil {
-		return errorx.ErrDatabase.WithError(err)
+		return errorx.WrapError(err, fmt.Sprintf("从数据库中删除文件记录失败: id=%s", id))
 	}
 
 	return nil
@@ -181,7 +185,7 @@ func (s *FileService) GetFileContent(id string, currentUserID int64, currentUser
 	// 获取文件流
 	fileStream, err := s.storage.GetStream(file.Path)
 	if err != nil {
-		return nil, "", errorx.ErrFileStroage.WithError(err)
+		return nil, "", errorx.WrapError(err, fmt.Sprintf("获取文件流失败: %s", file.Path))
 	}
 
 	return fileStream, file.MimeType, nil
@@ -201,7 +205,7 @@ func (s *FileService) UpdateUserAvatar(userID int64, fileHeader *multipart.FileH
 	}
 
 	// 更新用户头像
-	if err := s.fileRepo.UpdateUserAvatar(userID, file.ID); err != nil {
+	if err := s.userRepo.UpdateAvatar(userID, file.ID); err != nil {
 		return "", err
 	}
 
@@ -222,7 +226,7 @@ func (s *FileService) UpdateSysUserAvatar(userID int64, fileHeader *multipart.Fi
 	}
 
 	// 更新系统用户头像
-	if err := s.fileRepo.UpdateSysUserAvatar(userID, file.ID); err != nil {
+	if err := s.sysUserRepo.UpdateAvatar(userID, file.ID); err != nil {
 		return "", err
 	}
 

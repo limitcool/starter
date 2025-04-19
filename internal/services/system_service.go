@@ -7,12 +7,12 @@ import (
 
 // SystemService 系统服务
 type SystemService struct {
-	db     database.DB
+	db     database.Database
 	config *configs.Config
 }
 
 // NewSystemService 创建系统服务
-func NewSystemService(db database.DB, config *configs.Config) *SystemService {
+func NewSystemService(db database.Database, config *configs.Config) *SystemService {
 	return &SystemService{
 		db:     db,
 		config: config,

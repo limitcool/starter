@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"gorm.io/gorm"
@@ -20,29 +23,51 @@ func NewPermissionRepo(db *gorm.DB) *PermissionRepo {
 func (r *PermissionRepo) GetByID(id uint) (*model.Permission, error) {
 	var permission model.Permission
 	err := r.DB.First(&permission, id).Error
-	return &permission, err
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		notFoundErr := errorx.Errorf(errorx.ErrNotFound, "权限ID %d 不存在", id)
+		return nil, errorx.WrapError(notFoundErr, "")
+	}
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询权限失败: id=%d", id))
+	}
+	return &permission, nil
 }
 
 // GetAll 获取所有权限
 func (r *PermissionRepo) GetAll() ([]model.Permission, error) {
 	var permissions []model.Permission
 	err := r.DB.Find(&permissions).Error
-	return permissions, err
+	if err != nil {
+		return nil, errorx.WrapError(err, "查询所有权限失败")
+	}
+	return permissions, nil
 }
 
 // Create 创建权限
 func (r *PermissionRepo) Create(permission *model.Permission) error {
-	return r.DB.Create(permission).Error
+	err := r.DB.Create(permission).Error
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("创建权限失败: name=%s", permission.Name))
+	}
+	return nil
 }
 
 // Update 更新权限
 func (r *PermissionRepo) Update(permission *model.Permission) error {
-	return r.DB.Model(&model.Permission{}).Where("id = ?", permission.ID).Updates(permission).Error
+	err := r.DB.Model(&model.Permission{}).Where("id = ?", permission.ID).Updates(permission).Error
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("更新权限失败: id=%d, name=%s", permission.ID, permission.Name))
+	}
+	return nil
 }
 
 // Delete 删除权限
 func (r *PermissionRepo) Delete(id uint) error {
-	return r.DB.Delete(&model.Permission{}, id).Error
+	err := r.DB.Delete(&model.Permission{}, id).Error
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("删除权限失败: id=%d", id))
+	}
+	return nil
 }
 
 // GetByRoleID 获取角色的权限列表
@@ -54,7 +79,10 @@ func (r *PermissionRepo) GetByRoleID(roleID uint) ([]model.Permission, error) {
 		Where("sys_role_permission.role_id = ?", roleID).
 		Find(&permissions).Error
 
-	return permissions, err
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色权限失败: roleID=%d", roleID))
+	}
+	return permissions, nil
 }
 
 // GetByUserID 获取用户的权限列表

@@ -12,8 +12,6 @@ import (
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
-	"github.com/limitcool/starter/internal/pkg/storage"
-	"github.com/limitcool/starter/internal/repository"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/spf13/cast"
 )
@@ -24,9 +22,9 @@ type FileController struct {
 }
 
 // NewFileController 创建文件控制器
-func NewFileController(storage *storage.Storage, fileRepo *repository.FileRepo) *FileController {
+func NewFileController(fileService *services.FileService) *FileController {
 	return &FileController{
-		fileService: services.NewFileService(storage, fileRepo),
+		fileService: fileService,
 	}
 }
 
@@ -191,7 +189,7 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 	c.Status(http.StatusOK)
 	_, err = io.Copy(c.Writer, fileStream)
 	if err != nil {
-		response.Error(c, errorx.ErrFileStroage)
+		response.Error(c, errorx.WrapError(err, "写入文件流失败"))
 		return
 	}
 }

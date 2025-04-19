@@ -1,24 +1,23 @@
 // Package response 提供API响应相关的功能
-// 此包整合了以前 internal/pkg/apiresponse 包的功能，并增加了分页支持
 package response
 
 import (
-	"bytes"
-	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/pkg/errorx"
-	"github.com/limitcool/starter/internal/pkg/i18n"
-	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
 // Response API标准响应结构
 type Response[T any] struct {
-	Code    int    `json:"code"`    // 错误码
-	Message string `json:"message"` // 提示信息
-	Data    T      `json:"data"`    // 数据
+	Code    int    `json:"code"`                 // 错误码
+	Msg     string `json:"message"`              // 提示信息
+	Data    T      `json:"data"`                 // 数据
+	ReqID   string `json:"request_id,omitempty"` // 请求ID
+	Time    int64  `json:"timestamp,omitempty"`  // 时间戳
+	TraceID string `json:"trace_id,omitempty"`   // 链路追踪ID
 }
 
 // PageResult 分页结果
@@ -41,29 +40,39 @@ func NewPageResult[T any](list T, total int64, page, pageSize int) *PageResult[T
 
 // Success 返回成功响应
 func Success[T any](c *gin.Context, data T, msg ...string) {
-	message := errorx.ErrSuccess.GetErrorMsg()
+	message := "success"
 	if len(msg) > 0 {
 		message = msg[0]
 	}
 
+	// 获取请求ID
+	requestID := getRequestID(c)
+
 	c.JSON(http.StatusOK, Response[T]{
-		Code:    0, // 成功码为0
-		Message: message,
-		Data:    data,
+		Code:  0, // 成功码为0
+		Msg:   message,
+		Data:  data,
+		ReqID: requestID,
+		Time:  time.Now().Unix(),
 	})
 }
 
 // SuccessNoData 返回无数据的成功响应
 func SuccessNoData(c *gin.Context, msg ...string) {
-	message := errorx.ErrSuccess.GetErrorMsg()
+	message := "success"
 	if len(msg) > 0 {
 		message = msg[0]
 	}
 
+	// 获取请求ID
+	requestID := getRequestID(c)
+
 	c.JSON(http.StatusOK, Response[struct{}]{
-		Code:    0, // 成功码为0
-		Message: message,
-		Data:    struct{}{},
+		Code:  0, // 成功码为0
+		Msg:   message,
+		Data:  struct{}{},
+		ReqID: requestID,
+		Time:  time.Now().Unix(),
 	})
 }
 
@@ -73,90 +82,55 @@ func Error(c *gin.Context, err error, msg ...string) {
 		httpStatus int
 		errorCode  int
 		message    string
-		i18nKey    string
 	)
 
-	// 检查是否需要显示堆栈
-	showStackTrace := logger.ShouldShowStackTrace(log.DebugLevel)
+	// 尝试使用错误链推导错误码
+	err = errorx.WrapError(err, "")
 
-	// 尝试处理数据库错误
-	dbErr := errorx.HandleDBError(err)
-	if dbErr != err {
-		// 如果错误被处理了，使用处理后的错误
-		err = dbErr
-	}
-
-	// 类型断言获取错误信息
-	var appErr *errorx.AppError
-	if ae, ok := err.(*errorx.AppError); ok {
-		appErr = ae
+	// 获取错误信息
+	if appErr, ok := err.(*errorx.AppError); ok {
+		// 如果是 AppError类型，直接使用其属性
 		message = appErr.GetErrorMsg()
 		httpStatus = getHttpStatus(appErr)
 		errorCode = appErr.GetErrorCode()
-		i18nKey = appErr.GetI18nKey()
-
-		// 根据配置决定是否记录堆栈
-		if showStackTrace {
-			// 在开发环境中记录完整错误（包含堆栈）
-			log.Debug("API error details", "err", fmt.Sprintf("%+v", appErr))
-		} else {
-			// 不记录堆栈，只记录基本错误信息
-			log.Debug("API error details",
-				"err_code", errorCode,
-				"err_msg", message,
-				"i18n_key", i18nKey)
-		}
 	} else {
-		// 将非AppError类型的错误转换为AppError
-		appErr = errorx.ErrUnknown.WithError(err)
+		// 如果不是 AppError类型，使用默认值
 		message = err.Error()
 		httpStatus = http.StatusInternalServerError
 		errorCode = errorx.ErrorUnknownCode
-		i18nKey = "error.unknown"
-
-		// 记录原始错误，对于非AppError类型
-		logFields := []any{"err_code", errorCode, "err_msg", message, "i18n_key", i18nKey}
-
-		// 根据配置决定是否记录堆栈
-		if showStackTrace {
-			// 尝试使用Formatter接口获取堆栈
-			if formatter, ok := err.(fmt.Formatter); ok {
-				var buf bytes.Buffer
-				_, _ = fmt.Fprintf(&buf, "%+v", formatter)
-				logFields = append(logFields, "stack", "\n"+buf.String())
-			}
-		}
-
-		log.Debug("API error details", logFields...)
 	}
-
-	// 记录错误到日志
-	log.Error("API error occurred",
-		"code", appErr.GetErrorCode(),
-		"message", appErr.GetErrorMsg(),
-		"i18n_key", appErr.GetI18nKey())
 
 	// 允许调用方覆盖原始错误消息
 	if len(msg) > 0 {
 		message = msg[0]
-	} else {
-		// 尝试获取国际化的消息
-		lang, exists := c.Get("lang")
-		if exists && i18nKey != "" {
-			// 使用i18n翻译消息
-			langStr := lang.(string)
-			translatedMsg := i18n.T(i18nKey, langStr)
-			if translatedMsg != i18nKey { // 确保翻译成功
-				message = translatedMsg
-			}
-		}
 	}
+
+	// 获取请求ID
+	requestID := getRequestID(c)
+
+	// 获取链路追踪ID
+	traceID := getTraceIDFromContext(c)
+
+	// 记录错误到日志
+	log.Error("API error occurred",
+		"code", errorCode,
+		"message", message,
+		"trace_id", traceID,
+		"request_id", requestID,
+		"path", c.Request.URL.Path,
+		"method", c.Request.Method,
+		"client_ip", c.ClientIP(),
+		"error_chain", errorx.FormatErrorChain(err),
+	)
 
 	// 统一响应结构
 	c.JSON(httpStatus, Response[struct{}]{
 		Code:    errorCode,
-		Message: message,
+		Msg:     message,
 		Data:    struct{}{},
+		ReqID:   requestID,
+		Time:    time.Now().Unix(),
+		TraceID: traceID,
 	})
 }
 
@@ -166,4 +140,44 @@ func getHttpStatus(err *errorx.AppError) int {
 		return http.StatusInternalServerError
 	}
 	return err.GetHttpStatus()
+}
+
+// getRequestID 获取请求ID，如果不存在则生成新的
+func getRequestID(c *gin.Context) string {
+	// 先从请求头部获取
+	reqID := c.GetHeader("X-Request-ID")
+	if reqID != "" {
+		return reqID
+	}
+
+	// 如果上下文中已经有请求ID，则使用它
+	if id, exists := c.Get("request_id"); exists {
+		if strID, ok := id.(string); ok && strID != "" {
+			return strID
+		}
+	}
+
+	// 生成新的请求ID
+	newID := time.Now().UnixNano()
+	// 将请求ID存储到上下文中
+	c.Set("request_id", newID)
+	return time.Now().Format("20060102150405") + "-" + c.ClientIP()
+}
+
+// getTraceIDFromContext 从上下文中获取链路追踪ID
+func getTraceIDFromContext(c *gin.Context) string {
+	// 先从上下文中获取
+	if traceID, exists := c.Get("trace_id"); exists {
+		if strID, ok := traceID.(string); ok && strID != "" {
+			return strID
+		}
+	}
+
+	// 如果上下文中没有，尝试从请求头中获取
+	traceID := c.GetHeader("X-Trace-ID")
+	if traceID != "" {
+		return traceID
+	}
+
+	return ""
 }

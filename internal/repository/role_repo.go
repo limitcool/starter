@@ -1,7 +1,11 @@
 package repository
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"gorm.io/gorm"
 )
 
@@ -19,48 +23,84 @@ func NewRoleRepo(db *gorm.DB) *RoleRepo {
 func (r *RoleRepo) GetByID(id uint) (*model.Role, error) {
 	var role model.Role
 	err := r.DB.Where("id = ?", id).First(&role).Error
-	return &role, err
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		notFoundErr := errorx.Errorf(errorx.ErrNotFound, "角色ID %d 不存在", id)
+		return nil, errorx.WrapError(notFoundErr, "")
+	}
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: id=%d", id))
+	}
+	return &role, nil
 }
 
 // GetByCode 根据编码获取角色
 func (r *RoleRepo) GetByCode(code string) (*model.Role, error) {
 	var role model.Role
 	err := r.DB.Where("code = ?", code).First(&role).Error
-	return &role, err
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		notFoundErr := errorx.Errorf(errorx.ErrNotFound, "角色编码 %s 不存在", code)
+		return nil, errorx.WrapError(notFoundErr, "")
+	}
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: code=%s", code))
+	}
+	return &role, nil
 }
 
 // GetAll 获取所有角色
 func (r *RoleRepo) GetAll() ([]model.Role, error) {
 	var roles []model.Role
 	err := r.DB.Order("sort").Find(&roles).Error
-	return roles, err
+	if err != nil {
+		return nil, errorx.WrapError(err, "查询所有角色失败")
+	}
+	return roles, nil
 }
 
 // Create 创建角色
 func (r *RoleRepo) Create(role *model.Role) error {
-	return r.DB.Create(role).Error
+	err := r.DB.Create(role).Error
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("创建角色失败: name=%s, code=%s", role.Name, role.Code))
+	}
+	return nil
 }
 
 // Update 更新角色
 func (r *RoleRepo) Update(role *model.Role) error {
-	return r.DB.Model(&model.Role{}).Where("id = ?", role.ID).Updates(role).Error
+	err := r.DB.Model(&model.Role{}).Where("id = ?", role.ID).Updates(role).Error
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("更新角色失败: id=%d, name=%s, code=%s", role.ID, role.Name, role.Code))
+	}
+	return nil
 }
 
 // Delete 删除角色
 func (r *RoleRepo) Delete(id uint) error {
-	return r.DB.Delete(&model.Role{}, id).Error
+	err := r.DB.Delete(&model.Role{}, id).Error
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("删除角色失败: id=%d", id))
+	}
+	return nil
 }
 
 // IsAssignedToUser 检查角色是否已分配给用户
 func (r *RoleRepo) IsAssignedToUser(id uint) (bool, error) {
 	var count int64
 	err := r.DB.Model(&model.UserRole{}).Where("role_id = ?", id).Count(&count).Error
-	return count > 0, err
+	if err != nil {
+		return false, errorx.WrapError(err, fmt.Sprintf("检查角色是否已分配给用户失败: roleID=%d", id))
+	}
+	return count > 0, nil
 }
 
 // DeleteRoleMenus 删除角色的菜单关联
 func (r *RoleRepo) DeleteRoleMenus(roleID uint) error {
-	return r.DB.Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error
+	err := r.DB.Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("删除角色的菜单关联失败: roleID=%d", roleID))
+	}
+	return nil
 }
 
 // GetMenuIDsByRoleID 获取角色菜单ID列表
@@ -68,7 +108,7 @@ func (r *RoleRepo) GetMenuIDsByRoleID(roleID uint) ([]uint, error) {
 	var roleMenus []model.RoleMenu
 	err := r.DB.Where("role_id = ?", roleID).Find(&roleMenus).Error
 	if err != nil {
-		return nil, err
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取角色菜单ID列表失败: roleID=%d", roleID))
 	}
 
 	var menuIDs []uint
@@ -84,7 +124,7 @@ func (r *RoleRepo) GetRoleIDsByUserID(userID uint) ([]uint, error) {
 	var userRoles []model.UserRole
 	err := r.DB.Where("user_id = ?", userID).Find(&userRoles).Error
 	if err != nil {
-		return nil, err
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取用户角色ID列表失败: userID=%d", userID))
 	}
 
 	var roleIDs []uint
@@ -108,7 +148,7 @@ func (r *RoleRepo) AssignRolesToUser(userID int64, roleIDs []uint) error {
 	// 删除原有的用户角色关联
 	if err := tx.Where("user_id = ?", userID).Delete(&model.UserRole{}).Error; err != nil {
 		tx.Rollback()
-		return err
+		return errorx.WrapError(err, fmt.Sprintf("删除原有的用户角色关联失败: userID=%d", userID))
 	}
 
 	// 添加新的用户角色关联
@@ -122,21 +162,32 @@ func (r *RoleRepo) AssignRolesToUser(userID int64, roleIDs []uint) error {
 		}
 		if err := tx.Create(&userRoles).Error; err != nil {
 			tx.Rollback()
-			return err
+			return errorx.WrapError(err, fmt.Sprintf("创建用户角色关联失败: userID=%d, roleIDs=%v", userID, roleIDs))
 		}
 	}
 
-	return tx.Commit().Error
+	if err := tx.Commit().Error; err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("提交事务失败: 为用户分配角色, userID=%d, roleIDs=%v", userID, roleIDs))
+	}
+	return nil
 }
 
 // BatchCreateRoleMenus 批量创建角色菜单关联
 func (r *RoleRepo) BatchCreateRoleMenus(roleMenus []model.RoleMenu) error {
-	return r.DB.Create(&roleMenus).Error
+	err := r.DB.Create(&roleMenus).Error
+	if err != nil {
+		return errorx.WrapError(err, "批量创建角色菜单关联失败")
+	}
+	return nil
 }
 
 // DeleteUserRolesByUserID 删除用户的角色关联
 func (r *RoleRepo) DeleteUserRolesByUserID(userID int64) error {
-	return r.DB.Where("user_id = ?", userID).Delete(&model.UserRole{}).Error
+	err := r.DB.Where("user_id = ?", userID).Delete(&model.UserRole{}).Error
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("删除用户的角色关联失败: userID=%d", userID))
+	}
+	return nil
 }
 
 // AssignMenusToRole 为角色分配菜单
@@ -152,7 +203,7 @@ func (r *RoleRepo) AssignMenusToRole(roleID uint, menuIDs []uint) error {
 	// 删除原有的角色菜单关联
 	if err := tx.Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error; err != nil {
 		tx.Rollback()
-		return err
+		return errorx.WrapError(err, fmt.Sprintf("删除原有的角色菜单关联失败: roleID=%d", roleID))
 	}
 
 	// 添加新的角色菜单关联
@@ -166,11 +217,14 @@ func (r *RoleRepo) AssignMenusToRole(roleID uint, menuIDs []uint) error {
 		}
 		if err := tx.Create(&roleMenus).Error; err != nil {
 			tx.Rollback()
-			return err
+			return errorx.WrapError(err, fmt.Sprintf("创建角色菜单关联失败: roleID=%d, menuIDs=%v", roleID, menuIDs))
 		}
 	}
 
-	return tx.Commit().Error
+	if err := tx.Commit().Error; err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("提交事务失败: 为角色分配菜单, roleID=%d, menuIDs=%v", roleID, menuIDs))
+	}
+	return nil
 }
 
 // GetRolesByMenuID 获取拥有指定菜单的所有角色
@@ -179,7 +233,7 @@ func (r *RoleRepo) GetRolesByMenuID(menuID uint) ([]*model.Role, error) {
 	var roleMenus []model.RoleMenu
 	err := r.DB.Where("menu_id = ?", menuID).Find(&roleMenus).Error
 	if err != nil {
-		return nil, err
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询菜单关联的角色失败: menuID=%d", menuID))
 	}
 
 	// 提取角色ID
@@ -195,5 +249,8 @@ func (r *RoleRepo) GetRolesByMenuID(menuID uint) ([]*model.Role, error) {
 	// 查询角色
 	var roles []*model.Role
 	err = r.DB.Where("id IN ?", roleIDs).Find(&roles).Error
-	return roles, err
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: roleIDs=%v", roleIDs))
+	}
+	return roles, nil
 }

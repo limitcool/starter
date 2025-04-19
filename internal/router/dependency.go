@@ -65,12 +65,12 @@ func initRepositories(db *gorm.DB) *Repositories {
 }
 
 // initServices 初始化服务层
-func initServices(repos *Repositories, casbinService casbin.Service, db database.DB, config *configs.Config) *Services {
+func initServices(repos *Repositories, casbinService casbin.Service, db database.Database, config *configs.Config) *Services {
 	// 创建服务
 	svcs := &Services{
 		CasbinService:       casbinService,
 		RoleService:         services.NewRoleService(repos.RoleRepo, casbinService),
-		MenuService:         services.NewMenuService(repos.MenuRepo, casbinService),
+		MenuService:         services.NewMenuService(repos.MenuRepo, repos.RoleRepo, casbinService),
 		PermissionService:   services.NewPermissionService(repos.PermissionRepo, repos.RoleRepo, repos.MenuRepo, casbinService, config),
 		OperationLogService: services.NewOperationLogService(repos.OperationLogRepo),
 		SystemService:       services.NewSystemService(db, config),
@@ -107,9 +107,12 @@ func initControllers(svcs *Services, repos *Repositories, stg *storage.Storage) 
 		APIController:          controller.NewAPIController(svcs.APIService, svcs.MenuAPIService),
 	}
 
-	// 如果存储组件可用，创建文件控制器
+	// 如果存储组件可用，创建文件服务和控制器
 	if stg != nil {
-		controllers.FileController = controller.NewFileController(stg, repos.FileRepo)
+		// 创建文件服务
+		fileService := services.NewFileService(stg, repos.FileRepo, repos.UserRepo, repos.SysUserRepo)
+		// 创建文件控制器
+		controllers.FileController = controller.NewFileController(fileService)
 	}
 
 	return controllers

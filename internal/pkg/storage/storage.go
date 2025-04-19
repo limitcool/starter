@@ -50,13 +50,13 @@ func New(config Config) (*Storage, error) {
 		// 确保本地存储路径存在
 		err = os.MkdirAll(config.Path, os.ModePerm)
 		if err != nil {
-			return nil, errorx.ErrFileStroage.WithError(err)
+			return nil, errorx.WrapError(err, fmt.Sprintf("创建存储路径失败: %s", config.Path))
 		}
 		ossStorage = filesystem.New(config.Path)
 	case StorageTypeS3:
 		// S3配置检查
 		if config.AccessKey == "" || config.SecretKey == "" || config.Bucket == "" {
-			return nil, errorx.ErrFileStroage.WithMsg("S3配置不完整")
+			return nil, errorx.Errorf(errorx.ErrFileStorage, "S3配置不完整")
 		}
 		ossStorage = s3.New(&s3.Config{
 			AccessID:  config.AccessKey,
@@ -66,7 +66,7 @@ func New(config Config) (*Storage, error) {
 			Endpoint:  config.Endpoint,
 		})
 	default:
-		return nil, errorx.ErrFileStroage.WithMsg("不支持的存储类型")
+		return nil, errorx.Errorf(errorx.ErrFileStorage, "不支持的存储类型: %s", config.Type)
 	}
 
 	return &Storage{
@@ -79,7 +79,7 @@ func New(config Config) (*Storage, error) {
 func (s *Storage) Put(path string, reader io.Reader) error {
 	_, err := s.oss.Put(path, reader)
 	if err != nil {
-		return errorx.ErrFileStroage.WithMsg("上传失败")
+		return errorx.WrapError(err, fmt.Sprintf("上传文件失败: %s", path))
 	}
 	return nil
 }
@@ -88,9 +88,7 @@ func (s *Storage) Put(path string, reader io.Reader) error {
 func (s *Storage) Get(path string) (*os.File, error) {
 	file, err := s.oss.Get(path)
 	if err != nil {
-
-		return nil, errorx.ErrFileStroage.WithError(err)
-
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取文件失败: %s", path))
 	}
 	return file, nil
 }
@@ -99,8 +97,7 @@ func (s *Storage) Get(path string) (*os.File, error) {
 func (s *Storage) GetStream(path string) (io.ReadCloser, error) {
 	stream, err := s.oss.GetStream(path)
 	if err != nil {
-		return nil, errorx.ErrFileStroage.WithMsg("获取流失败")
-
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取文件流失败: %s", path))
 	}
 	return stream, nil
 }
@@ -109,7 +106,7 @@ func (s *Storage) GetStream(path string) (io.ReadCloser, error) {
 func (s *Storage) Delete(path string) error {
 	err := s.oss.Delete(path)
 	if err != nil {
-		return errorx.ErrFileStroage.WithMsg("删除失败")
+		return errorx.WrapError(err, fmt.Sprintf("删除文件失败: %s", path))
 	}
 	return nil
 }
@@ -118,7 +115,7 @@ func (s *Storage) Delete(path string) error {
 func (s *Storage) List(path string) ([]*oss.Object, error) {
 	objects, err := s.oss.List(path)
 	if err != nil {
-		return nil, errorx.ErrFileStroage.WithMsg("列表失败")
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取文件列表失败: %s", path))
 	}
 	return objects, nil
 }
@@ -135,7 +132,7 @@ func (s *Storage) GetURL(path string) (string, error) {
 
 	url, err := s.oss.GetURL(normalizedPath)
 	if err != nil {
-		return "", errorx.ErrFileStroage.WithMsg("获取URL失败")
+		return "", errorx.WrapError(err, fmt.Sprintf("获取文件URL失败: %s", normalizedPath))
 	}
 
 	// 确保URL使用正斜杠

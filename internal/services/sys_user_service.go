@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/limitcool/starter/configs"
@@ -43,18 +44,19 @@ func (s *SysUserService) Login(username, password string, ip string) (*v1.LoginR
 	// 获取用户
 	user, err := s.sysUserRepo.GetByUsername(username)
 	if err != nil {
-		// AppError的WithError会自动捕获堆栈
-		return nil, errorx.ErrUserNotFound.WithError(err)
+		return nil, errorx.WrapError(err, fmt.Sprintf("用户名 %s 不存在", username))
 	}
 
 	// 检查用户是否启用
 	if !user.Enabled {
-		return nil, errorx.ErrUserDisabled
+		disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "用户 %s 已被禁用", username)
+		return nil, errorx.WrapError(disabledErr, "")
 	}
 
 	// 验证密码
 	if !s.VerifyPassword(password, user.Password) {
-		return nil, errorx.ErrUserPasswordError
+		passwordErr := errorx.Errorf(errorx.ErrUserPasswordError, "用户 %s 的密码错误", username)
+		return nil, errorx.WrapError(passwordErr, "")
 	}
 
 	// 更新最后登录时间和IP
@@ -63,8 +65,7 @@ func (s *SysUserService) Login(username, password string, ip string) (*v1.LoginR
 		"last_ip":    ip,
 	}
 	if err := s.sysUserRepo.UpdateFields(user.ID, fields); err != nil {
-		// 直接返回错误，错误会自动捕获堆栈
-		return nil, err
+		return nil, errorx.WrapError(err, fmt.Sprintf("更新用户 %s 的登录信息失败", username))
 	}
 
 	// 获取配置
@@ -89,14 +90,12 @@ func (s *SysUserService) Login(username, password string, ip string) (*v1.LoginR
 
 	accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 	if err != nil {
-		// AppError的WithError会自动捕获堆栈
-		return nil, errorx.ErrInternal.WithError(err)
+		return nil, errorx.WrapError(err, "生成访问令牌失败")
 	}
 
 	refreshToken, err := jwtpkg.GenerateTokenWithCustomClaims(refreshClaims, cfg.JwtAuth.RefreshSecret, time.Duration(cfg.JwtAuth.RefreshExpire)*time.Second)
 	if err != nil {
-		// AppError的WithError会自动捕获堆栈
-		return nil, errorx.ErrInternal.WithError(err)
+		return nil, errorx.WrapError(err, "生成刷新令牌失败")
 	}
 
 	return &v1.LoginResponse{
@@ -117,13 +116,13 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 	// 验证刷新令牌
 	claims, err := jwtpkg.ParseTokenWithCustomClaims(refreshToken, cfg.JwtAuth.RefreshSecret)
 	if err != nil {
-		// AppError的WithError会自动捕获堆栈
-		return nil, errorx.ErrUserTokenError.WithError(err)
+		return nil, errorx.WrapError(err, "验证刷新令牌失败")
 	}
 
 	// 检查令牌类型
 	if claims.TokenType != enum.TokenTypeRefresh.String() {
-		return nil, errorx.ErrUserTokenError.WithMsg("无效的令牌类型")
+		tokenErr := errorx.Errorf(errorx.ErrUserTokenError, "无效的令牌类型")
+		return nil, errorx.WrapError(tokenErr, "")
 	}
 
 	// 获取用户类型
@@ -139,15 +138,15 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 		user, err := s.sysUserRepo.GetByID(claims.UserID)
 		if err != nil {
 			if errorx.IsAppErr(err) {
-				return nil, err
+				return nil, errorx.WrapError(err, fmt.Sprintf("获取系统用户ID %d 失败", claims.UserID))
 			}
-			// AppError的WithError会自动捕获堆栈
-			return nil, errorx.ErrUserNotFound.WithError(err)
+			return nil, errorx.WrapError(err, fmt.Sprintf("获取系统用户ID %d 失败", claims.UserID))
 		}
 
 		// 检查用户是否启用
 		if !user.Enabled {
-			return nil, errorx.ErrUserDisabled
+			disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "系统用户ID %d 已被禁用", claims.UserID)
+			return nil, errorx.WrapError(disabledErr, "")
 		}
 
 		// 生成新的访问令牌
@@ -161,8 +160,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 
 		accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 		if err != nil {
-			// AppError的WithError会自动捕获堆栈
-			return nil, errorx.ErrInternal.WithError(err)
+			return nil, errorx.WrapError(err, "生成系统用户访问令牌失败")
 		}
 
 		loginResponse = &v1.LoginResponse{
@@ -179,14 +177,15 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 		user, err := s.userRepo.GetByID(claims.UserID)
 		if err != nil {
 			if errorx.IsAppErr(err) {
-				return nil, err
+				return nil, errorx.WrapError(err, fmt.Sprintf("获取普通用户ID %d 失败", claims.UserID))
 			}
-			return nil, errorx.ErrUserNotFound.WithError(err)
+			return nil, errorx.WrapError(err, fmt.Sprintf("获取普通用户ID %d 失败", claims.UserID))
 		}
 
 		// 检查用户状态
 		if !user.Enabled {
-			return nil, errorx.ErrUserDisabled
+			disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "普通用户ID %d 已被禁用", claims.UserID)
+			return nil, errorx.WrapError(disabledErr, "")
 		}
 
 		// 生成新的访问令牌
@@ -200,7 +199,7 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 
 		accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
 		if err != nil {
-			return nil, errorx.ErrInternal.WithError(err)
+			return nil, errorx.WrapError(err, "生成普通用户访问令牌失败")
 		}
 
 		loginResponse = &v1.LoginResponse{
@@ -213,7 +212,8 @@ func (s *SysUserService) RefreshToken(refreshToken string) (*v1.LoginResponse, e
 		}
 
 	default:
-		return nil, errorx.ErrUserTokenError.WithMsg("无效的用户类型")
+		tokenErr := errorx.Errorf(errorx.ErrUserTokenError, "无效的用户类型: %s", userType)
+		return nil, errorx.WrapError(tokenErr, "")
 	}
 
 	return loginResponse, nil

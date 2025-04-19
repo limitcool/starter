@@ -15,12 +15,13 @@ import (
 )
 
 // SetupRouter 初始化并返回一个配置完整的Gin路由引擎
-func SetupRouter(db database.DB, config *configs.Config) *gin.Engine {
+func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 	// 创建不带默认中间件的路由
 	r := gin.New()
 
 	// 添加全局中间件
-	r.Use(middleware.ErrorHandler()) // 添加全局错误处理中间件
+	r.Use(middleware.RequestContext()) // 添加请求上下文中间件
+	r.Use(middleware.ErrorHandler())   // 添加全局错误处理中间件
 	r.Use(middleware.LoggerWithCharmbracelet())
 	r.Use(gin.Recovery())
 	r.Use(middleware.Cors())
@@ -32,7 +33,7 @@ func SetupRouter(db database.DB, config *configs.Config) *gin.Engine {
 	var casbinService casbin.Service
 	if config.Casbin.Enabled {
 		// 创建Casbin服务
-		casbinService = casbin.NewService(db.GetDB(), config)
+		casbinService = casbin.NewService(db.DB(), config)
 		// 初始化
 		if err := casbinService.Initialize(); err != nil {
 			log.Warn("初始化Casbin服务失败", "err", err)
@@ -95,7 +96,7 @@ func SetupRouter(db database.DB, config *configs.Config) *gin.Engine {
 	// 使用传入的数据库实例创建服务
 
 	// 获取数据库连接
-	gormDB := db.GetDB()
+	gormDB := db.DB()
 
 	// 不再使用旧的Casbin服务
 	// 我们已经创建了新的Casbin服务

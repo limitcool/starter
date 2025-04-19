@@ -15,13 +15,13 @@ import (
 type Service interface {
 	// 初始化
 	Initialize() error
-	
+
 	// 获取执行器
 	GetEnforcer() *casbin.Enforcer
-	
+
 	// 权限检查
 	CheckPermission(sub, obj, act string) (bool, error)
-	
+
 	// 角色管理
 	AddRoleForUser(userID, role string) (bool, error)
 	DeleteRoleForUser(userID, role string) (bool, error)
@@ -30,12 +30,20 @@ type Service interface {
 	GetUsersForRole(role string) ([]string, error)
 	GetAllRoles() ([]string, error)
 	DeleteRole(role string) (bool, error)
-	
+
+	// 批量角色管理
+	AddRolesForUser(userID string, roles []string) (bool, error)
+	DeleteRolesForUser(userID string) (bool, error)
+
 	// 权限管理
 	AddPermissionForRole(role, obj, act string) (bool, error)
 	DeletePermissionForRole(role, obj, act string) (bool, error)
 	GetPermissionsForUser(userID string) ([][]string, error)
 	GetPermissionsForRole(role string) ([][]string, error)
+
+	// 批量权限管理
+	AddPolicies(policies [][]string) (bool, error)
+	RemovePolicies(policies [][]string) (bool, error)
 }
 
 // DefaultService Casbin服务默认实现
@@ -125,17 +133,17 @@ func (s *DefaultService) GetEnforcer() *casbin.Enforcer {
 func (s *DefaultService) CheckPermission(sub, obj, act string) (bool, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	if s.enforcer == nil {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("检查权限", "subject", sub, "object", obj, "action", act)
 	result, err := s.enforcer.Enforce(sub, obj, act)
 	if err != nil {
 		return false, fmt.Errorf("权限检查失败: %w", err)
 	}
-	
+
 	return result, nil
 }
 
@@ -143,11 +151,11 @@ func (s *DefaultService) CheckPermission(sub, obj, act string) (bool, error) {
 func (s *DefaultService) AddRoleForUser(userID string, role string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	if s.enforcer == nil {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("为用户添加角色", "user", userID, "role", role)
 	return s.enforcer.AddGroupingPolicy(userID, role)
 }
@@ -156,11 +164,11 @@ func (s *DefaultService) AddRoleForUser(userID string, role string) (bool, error
 func (s *DefaultService) DeleteRoleForUser(userID string, role string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	if s.enforcer == nil {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("删除用户角色", "user", userID, "role", role)
 	return s.enforcer.RemoveGroupingPolicy(userID, role)
 }
@@ -169,11 +177,11 @@ func (s *DefaultService) DeleteRoleForUser(userID string, role string) (bool, er
 func (s *DefaultService) AddPermissionForRole(role string, obj string, act string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	if s.enforcer == nil {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("为角色添加权限", "role", role, "object", obj, "action", act)
 	return s.enforcer.AddPolicy(role, obj, act)
 }
@@ -182,11 +190,11 @@ func (s *DefaultService) AddPermissionForRole(role string, obj string, act strin
 func (s *DefaultService) DeletePermissionForRole(role string, obj string, act string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	if s.enforcer == nil {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("删除角色权限", "role", role, "object", obj, "action", act)
 	return s.enforcer.RemovePolicy(role, obj, act)
 }
@@ -195,11 +203,11 @@ func (s *DefaultService) DeletePermissionForRole(role string, obj string, act st
 func (s *DefaultService) GetRolesForUser(userID string) ([]string, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	if s.enforcer == nil {
 		return nil, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("获取用户角色", "user", userID)
 	return s.enforcer.GetRolesForUser(userID)
 }
@@ -208,11 +216,11 @@ func (s *DefaultService) GetRolesForUser(userID string) ([]string, error) {
 func (s *DefaultService) HasRoleForUser(userID string, role string) (bool, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	if s.enforcer == nil {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("检查用户角色", "user", userID, "role", role)
 	return s.enforcer.HasRoleForUser(userID, role)
 }
@@ -221,11 +229,11 @@ func (s *DefaultService) HasRoleForUser(userID string, role string) (bool, error
 func (s *DefaultService) GetUsersForRole(role string) ([]string, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	if s.enforcer == nil {
 		return nil, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("获取角色用户", "role", role)
 	return s.enforcer.GetUsersForRole(role)
 }
@@ -234,11 +242,11 @@ func (s *DefaultService) GetUsersForRole(role string) ([]string, error) {
 func (s *DefaultService) GetPermissionsForUser(userID string) ([][]string, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	if s.enforcer == nil {
 		return nil, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("获取用户权限", "user", userID)
 	permissions, err := s.enforcer.GetImplicitPermissionsForUser(userID)
 	if err != nil {
@@ -251,11 +259,11 @@ func (s *DefaultService) GetPermissionsForUser(userID string) ([][]string, error
 func (s *DefaultService) GetPermissionsForRole(role string) ([][]string, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	if s.enforcer == nil {
 		return nil, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("获取角色权限", "role", role)
 	permissions, err := s.enforcer.GetFilteredPolicy(0, role)
 	if err != nil {
@@ -268,11 +276,11 @@ func (s *DefaultService) GetPermissionsForRole(role string) ([][]string, error) 
 func (s *DefaultService) GetAllRoles() ([]string, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	
+
 	if s.enforcer == nil {
 		return nil, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("获取所有角色")
 	roles, err := s.enforcer.GetAllRoles()
 	if err != nil {
@@ -285,13 +293,13 @@ func (s *DefaultService) GetAllRoles() ([]string, error) {
 func (s *DefaultService) DeleteRole(role string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	
+
 	if s.enforcer == nil {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
-	
+
 	log.Debug("删除角色", "role", role)
-	
+
 	// 删除角色所有权限
 	_, err := s.enforcer.RemoveFilteredPolicy(0, role)
 	if err != nil {
@@ -306,4 +314,90 @@ func (s *DefaultService) DeleteRole(role string) (bool, error) {
 
 	log.Info("角色删除成功", "role", role)
 	return true, nil
+}
+
+// AddRolesForUser 为用户批量添加角色
+func (s *DefaultService) AddRolesForUser(userID string, roles []string) (bool, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.enforcer == nil {
+		return false, fmt.Errorf("Casbin enforcer 未初始化")
+	}
+
+	log.Debug("为用户批量添加角色", "user", userID, "roles", roles)
+
+	// 准备批量添加的角色策略
+	var rules [][]string
+	for _, role := range roles {
+		rules = append(rules, []string{userID, role})
+	}
+
+	// 批量添加角色
+	success, err := s.enforcer.AddGroupingPolicies(rules)
+	if err != nil {
+		return false, fmt.Errorf("批量添加用户角色失败: %w", err)
+	}
+
+	return success, nil
+}
+
+// DeleteRolesForUser 删除用户所有角色
+func (s *DefaultService) DeleteRolesForUser(userID string) (bool, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.enforcer == nil {
+		return false, fmt.Errorf("Casbin enforcer 未初始化")
+	}
+
+	log.Debug("删除用户所有角色", "user", userID)
+
+	// 删除用户所有角色
+	success, err := s.enforcer.DeleteRolesForUser(userID)
+	if err != nil {
+		return false, fmt.Errorf("删除用户角色失败: %w", err)
+	}
+
+	return success, nil
+}
+
+// AddPolicies 批量添加权限策略
+func (s *DefaultService) AddPolicies(policies [][]string) (bool, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.enforcer == nil {
+		return false, fmt.Errorf("Casbin enforcer 未初始化")
+	}
+
+	log.Debug("批量添加权限策略", "count", len(policies))
+
+	// 批量添加策略
+	success, err := s.enforcer.AddPolicies(policies)
+	if err != nil {
+		return false, fmt.Errorf("批量添加权限策略失败: %w", err)
+	}
+
+	return success, nil
+}
+
+// RemovePolicies 批量删除权限策略
+func (s *DefaultService) RemovePolicies(policies [][]string) (bool, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.enforcer == nil {
+		return false, fmt.Errorf("Casbin enforcer 未初始化")
+	}
+
+	log.Debug("批量删除权限策略", "count", len(policies))
+
+	// 批量删除策略
+	success, err := s.enforcer.RemovePolicies(policies)
+	if err != nil {
+		return false, fmt.Errorf("批量删除权限策略失败: %w", err)
+	}
+
+	return success, nil
 }
