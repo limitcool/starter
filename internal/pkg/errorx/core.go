@@ -201,22 +201,50 @@ func GetHttpStatus(err error) int {
 
 // IsAppErr 检查错误是否是应用程序错误
 func IsAppErr(err error) bool {
-	_, ok := err.(*AppError)
-	return ok
+	var appErr *AppError
+	return errors.As(err, &appErr)
 }
 
 // Is 检查错误是否是特定的应用程序错误
+// 实现 errors.Is 接口
+func (e *AppError) Is(target error) bool {
+	if target == nil {
+		return false
+	}
+
+	// 如果目标错误也是 AppError，检查错误码
+	if targetErr, ok := target.(*AppError); ok {
+		return e.code == targetErr.code
+	}
+
+	return false
+}
+
+// IsAppError 检查错误是否是特定的应用程序错误
+// 兼容旧版的 Is 函数
 func Is(err error, target *AppError) bool {
 	if err == nil || target == nil {
 		return false
 	}
 
-	// 如果是 AppError，检查错误码
-	if appErr, ok := err.(*AppError); ok {
-		return appErr.code == target.code
+	return errors.Is(err, target)
+}
+
+// As 实现 errors.As 接口
+func (e *AppError) As(target any) bool {
+	if target == nil {
+		return false
 	}
 
-	return false
+	// 尝试将目标转换为 *AppError 指针
+	appErrPtr, ok := target.(**AppError)
+	if !ok {
+		return false
+	}
+
+	// 设置目标为当前错误
+	*appErrPtr = e
+	return true
 }
 
 // 默认最大堆栈帧数

@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/bwmarrin/snowflake"
-	"github.com/charmbracelet/log"
 	"github.com/google/uuid"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -21,7 +21,7 @@ func GenerateSnowflakeID() int64 {
 	// 创建雪花ID节点
 	node, err := snowflake.NewNode(1) // 使用节点ID 1
 	if err != nil {
-		log.Error("Failed to create snowflake node", "error", err)
+		logger.Error("Failed to create snowflake node", "error", err)
 		return time.Now().UnixNano() // 备用方案：使用时间戳
 	}
 
@@ -33,7 +33,7 @@ func GenerateSnowflakeID() int64 {
 	const maxSafeInt = 9007199254740991 // 2^53-1
 	if id > maxSafeInt {
 		id = id % maxSafeInt
-		log.Info("Snowflake ID exceeds JavaScript safe integer range, taking modulo", "original_id", id, "new_id", id)
+		logger.Info("Snowflake ID exceeds JavaScript safe integer range, taking modulo", "original_id", id, "new_id", id)
 	}
 
 	return id
@@ -79,7 +79,7 @@ type UUIDModel struct {
 func (m *SnowflakeModel) BeforeCreate(tx *gorm.DB) error {
 	if m.ID == 0 {
 		m.ID = GenerateSnowflakeID()
-		log.Info("Generated snowflake ID", "id", m.ID)
+		logger.Info("Generated snowflake ID", "id", m.ID)
 	}
 	return nil
 }

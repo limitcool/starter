@@ -6,8 +6,8 @@ import (
 
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -70,22 +70,22 @@ func NewService(db *gorm.DB, config *configs.Config) Service {
 // Initialize 初始化Casbin服务
 func (s *DefaultService) Initialize() error {
 	if s.db == nil {
-		log.Error("数据库连接未初始化")
+		logger.Error("数据库连接未初始化")
 		return fmt.Errorf("数据库连接未初始化")
 	}
 
 	// 如果权限系统未启用，直接返回
 	if s.config != nil && !s.config.Casbin.Enabled {
-		log.Info("Casbin权限系统未启用")
+		logger.Info("Casbin权限系统未启用")
 		return nil
 	}
 
-	log.Info("初始化Casbin服务")
+	logger.Info("初始化Casbin服务")
 
 	// 使用gorm适配器
 	adapter, err := gormadapter.NewAdapterByDB(s.db)
 	if err != nil {
-		log.Error("创建Casbin适配器失败", "error", err)
+		logger.Error("创建Casbin适配器失败", "error", err)
 		return fmt.Errorf("创建Casbin适配器失败: %w", err)
 	}
 
@@ -95,19 +95,19 @@ func (s *DefaultService) Initialize() error {
 		modelPath = s.config.Casbin.ModelPath
 	}
 
-	log.Debug("加载Casbin模型", "path", modelPath)
+	logger.Debug("加载Casbin模型", "path", modelPath)
 
 	// 创建enforcer
 	e, err := casbin.NewEnforcer(modelPath, adapter)
 	if err != nil {
-		log.Error("创建Casbin Enforcer失败", "error", err)
+		logger.Error("创建Casbin Enforcer失败", "error", err)
 		return fmt.Errorf("创建Casbin Enforcer失败: %w", err)
 	}
 
 	// 加载策略
-	log.Debug("加载Casbin策略")
+	logger.Debug("加载Casbin策略")
 	if err := e.LoadPolicy(); err != nil {
-		log.Error("加载Casbin策略失败", "error", err)
+		logger.Error("加载Casbin策略失败", "error", err)
 		return fmt.Errorf("加载Casbin策略失败: %w", err)
 	}
 
@@ -118,7 +118,7 @@ func (s *DefaultService) Initialize() error {
 	s.enforcer = e
 	s.mutex.Unlock()
 
-	log.Info("Casbin服务初始化成功")
+	logger.Info("Casbin服务初始化成功")
 	return nil
 }
 
@@ -138,7 +138,7 @@ func (s *DefaultService) CheckPermission(sub, obj, act string) (bool, error) {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("检查权限", "subject", sub, "object", obj, "action", act)
+	logger.Debug("检查权限", "subject", sub, "object", obj, "action", act)
 	result, err := s.enforcer.Enforce(sub, obj, act)
 	if err != nil {
 		return false, fmt.Errorf("权限检查失败: %w", err)
@@ -156,7 +156,7 @@ func (s *DefaultService) AddRoleForUser(userID string, role string) (bool, error
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("为用户添加角色", "user", userID, "role", role)
+	logger.Debug("为用户添加角色", "user", userID, "role", role)
 	return s.enforcer.AddGroupingPolicy(userID, role)
 }
 
@@ -169,7 +169,7 @@ func (s *DefaultService) DeleteRoleForUser(userID string, role string) (bool, er
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("删除用户角色", "user", userID, "role", role)
+	logger.Debug("删除用户角色", "user", userID, "role", role)
 	return s.enforcer.RemoveGroupingPolicy(userID, role)
 }
 
@@ -182,7 +182,7 @@ func (s *DefaultService) AddPermissionForRole(role string, obj string, act strin
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("为角色添加权限", "role", role, "object", obj, "action", act)
+	logger.Debug("为角色添加权限", "role", role, "object", obj, "action", act)
 	return s.enforcer.AddPolicy(role, obj, act)
 }
 
@@ -195,7 +195,7 @@ func (s *DefaultService) DeletePermissionForRole(role string, obj string, act st
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("删除角色权限", "role", role, "object", obj, "action", act)
+	logger.Debug("删除角色权限", "role", role, "object", obj, "action", act)
 	return s.enforcer.RemovePolicy(role, obj, act)
 }
 
@@ -208,7 +208,7 @@ func (s *DefaultService) GetRolesForUser(userID string) ([]string, error) {
 		return nil, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("获取用户角色", "user", userID)
+	logger.Debug("获取用户角色", "user", userID)
 	return s.enforcer.GetRolesForUser(userID)
 }
 
@@ -221,7 +221,7 @@ func (s *DefaultService) HasRoleForUser(userID string, role string) (bool, error
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("检查用户角色", "user", userID, "role", role)
+	logger.Debug("检查用户角色", "user", userID, "role", role)
 	return s.enforcer.HasRoleForUser(userID, role)
 }
 
@@ -234,7 +234,7 @@ func (s *DefaultService) GetUsersForRole(role string) ([]string, error) {
 		return nil, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("获取角色用户", "role", role)
+	logger.Debug("获取角色用户", "role", role)
 	return s.enforcer.GetUsersForRole(role)
 }
 
@@ -247,7 +247,7 @@ func (s *DefaultService) GetPermissionsForUser(userID string) ([][]string, error
 		return nil, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("获取用户权限", "user", userID)
+	logger.Debug("获取用户权限", "user", userID)
 	permissions, err := s.enforcer.GetImplicitPermissionsForUser(userID)
 	if err != nil {
 		return nil, fmt.Errorf("获取用户权限失败: %w", err)
@@ -264,7 +264,7 @@ func (s *DefaultService) GetPermissionsForRole(role string) ([][]string, error) 
 		return nil, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("获取角色权限", "role", role)
+	logger.Debug("获取角色权限", "role", role)
 	permissions, err := s.enforcer.GetFilteredPolicy(0, role)
 	if err != nil {
 		return nil, fmt.Errorf("获取角色权限失败: %w", err)
@@ -281,7 +281,7 @@ func (s *DefaultService) GetAllRoles() ([]string, error) {
 		return nil, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("获取所有角色")
+	logger.Debug("获取所有角色")
 	roles, err := s.enforcer.GetAllRoles()
 	if err != nil {
 		return nil, fmt.Errorf("获取所有角色失败: %w", err)
@@ -298,7 +298,7 @@ func (s *DefaultService) DeleteRole(role string) (bool, error) {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("删除角色", "role", role)
+	logger.Debug("删除角色", "role", role)
 
 	// 删除角色所有权限
 	_, err := s.enforcer.RemoveFilteredPolicy(0, role)
@@ -312,7 +312,7 @@ func (s *DefaultService) DeleteRole(role string) (bool, error) {
 		return false, fmt.Errorf("删除用户与角色关联失败: %w", err)
 	}
 
-	log.Info("角色删除成功", "role", role)
+	logger.Info("角色删除成功", "role", role)
 	return true, nil
 }
 
@@ -325,7 +325,7 @@ func (s *DefaultService) AddRolesForUser(userID string, roles []string) (bool, e
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("为用户批量添加角色", "user", userID, "roles", roles)
+	logger.Debug("为用户批量添加角色", "user", userID, "roles", roles)
 
 	// 准备批量添加的角色策略
 	var rules [][]string
@@ -351,7 +351,7 @@ func (s *DefaultService) DeleteRolesForUser(userID string) (bool, error) {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("删除用户所有角色", "user", userID)
+	logger.Debug("删除用户所有角色", "user", userID)
 
 	// 删除用户所有角色
 	success, err := s.enforcer.DeleteRolesForUser(userID)
@@ -371,7 +371,7 @@ func (s *DefaultService) AddPolicies(policies [][]string) (bool, error) {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("批量添加权限策略", "count", len(policies))
+	logger.Debug("批量添加权限策略", "count", len(policies))
 
 	// 批量添加策略
 	success, err := s.enforcer.AddPolicies(policies)
@@ -391,7 +391,7 @@ func (s *DefaultService) RemovePolicies(policies [][]string) (bool, error) {
 		return false, fmt.Errorf("Casbin enforcer 未初始化")
 	}
 
-	log.Debug("批量删除权限策略", "count", len(policies))
+	logger.Debug("批量删除权限策略", "count", len(policies))
 
 	// 批量删除策略
 	success, err := s.enforcer.RemovePolicies(policies)

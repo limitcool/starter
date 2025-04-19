@@ -5,8 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/charmbracelet/log"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/pkg/storage"
+	"github.com/limitcool/starter/pkg/logconfig"
 	"github.com/spf13/viper"
 )
 
@@ -63,21 +64,7 @@ func LoadConfig() *Config {
 				EnableTrace:  false,
 			},
 		},
-		Log: LogConfig{
-			Level:  "info",
-			Output: []string{"console"},
-			Format: LogFormatText,
-			FileConfig: FileLogConfig{
-				Path:       "logs",
-				MaxSize:    100,
-				MaxAge:     30,
-				MaxBackups: 10,
-				Compress:   false,
-			},
-			StackTraceEnabled: true,
-			StackTraceLevel:   "error",
-			MaxStackFrames:    64,
-		},
+		Log: logconfig.DefaultLogConfig(),
 		Casbin: Casbin{
 			Enabled:          true,
 			DefaultAllow:     false,
@@ -129,7 +116,8 @@ func LoadConfig() *Config {
 
 	// 检查配置文件是否存在
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Warn("配置文件不存在，使用默认配置", "path", configPath)
+		// 使用标准库日志，因为此时logger可能还未初始化
+		fmt.Printf("配置文件不存在，使用默认配置: %s\n", configPath)
 		return config
 	}
 
@@ -140,33 +128,31 @@ func LoadConfig() *Config {
 
 	// 读取配置文件
 	if err := v.ReadInConfig(); err != nil {
-		log.Error("读取配置文件失败", "error", err)
+		fmt.Printf("读取配置文件失败: %v\n", err)
 		return config
 	}
 
 	// 将配置文件内容解析到结构体
 	if err := v.Unmarshal(config); err != nil {
-		log.Error("解析配置文件失败", "error", err)
+		fmt.Printf("解析配置文件失败: %v\n", err)
 		return config
 	}
 
-	log.Info("配置加载成功", "path", v.ConfigFileUsed())
-
-	// 打印配置信息
-	printConfig(config)
+	fmt.Printf("配置加载成功: %s\n", v.ConfigFileUsed())
 
 	return config
 }
 
-// printConfig 打印配置信息
-func printConfig(config *Config) {
-	log.Info("应用配置", "name", config.App.Name, "port", config.App.Port)
-	log.Info("数据库配置", "enabled", config.Database.Enabled, "driver", config.Driver, "host", config.Database.Host, "port", config.Database.Port)
-	log.Info("MongoDB配置", "enabled", config.Mongo.Enabled)
-	log.Info("Redis配置", "enabled", config.Redis["default"].Enabled)
-	log.Info("Casbin配置", "enabled", config.Casbin.Enabled, "default_allow", config.Casbin.DefaultAllow)
-	log.Info("存储配置", "enabled", config.Storage.Enabled, "type", config.Storage.Type)
-	log.Info("国际化配置", "enabled", config.I18n.Enabled, "default", config.I18n.DefaultLanguage)
+// PrintConfig 打印配置信息
+func PrintConfig(config *Config) {
+	// 使用我们的统一logger
+	logger.Info("应用配置", "name", config.App.Name, "port", config.App.Port)
+	logger.Info("数据库配置", "enabled", config.Database.Enabled, "driver", config.Driver, "host", config.Database.Host, "port", config.Database.Port)
+	logger.Info("MongoDB配置", "enabled", config.Mongo.Enabled)
+	logger.Info("Redis配置", "enabled", config.Redis["default"].Enabled)
+	logger.Info("Casbin配置", "enabled", config.Casbin.Enabled, "default_allow", config.Casbin.DefaultAllow)
+	logger.Info("存储配置", "enabled", config.Storage.Enabled, "type", config.Storage.Type)
+	logger.Info("国际化配置", "enabled", config.I18n.Enabled, "default", config.I18n.DefaultLanguage)
 }
 
 // SaveConfig 保存配置到文件
@@ -197,7 +183,7 @@ func SaveConfig(config *Config, path string) error {
 		return fmt.Errorf("写入配置文件失败: %w", err)
 	}
 
-	log.Info("配置保存成功", "path", path)
+	logger.Info("配置保存成功", "path", path)
 	return nil
 }
 

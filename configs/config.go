@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/limitcool/starter/internal/pkg/storage"
+	"github.com/limitcool/starter/pkg/logconfig"
 )
 
 type DBDriver string
@@ -17,16 +18,6 @@ const (
 	DriverMongo    DBDriver = "mongo"
 )
 
-// LogFormat 日志格式类型
-type LogFormat string
-
-const (
-	// LogFormatText 普通文本格式
-	LogFormatText LogFormat = "text"
-	// LogFormatJSON 结构化JSON格式
-	LogFormatJSON LogFormat = "json"
-)
-
 type Config struct {
 	App      App
 	Driver   DBDriver
@@ -34,11 +25,11 @@ type Config struct {
 	JwtAuth  JwtAuth
 	Mongo    Mongo
 	Redis    map[string]Redis
-	Log      LogConfig
-	Casbin   Casbin  // 权限系统配置
-	Storage  Storage // 文件存储配置
-	Admin    Admin   // 管理员配置
-	I18n     I18n    // 国际化配置
+	Log      logconfig.LogConfig // 使用 pkg/logconfig 中的 LogConfig
+	Casbin   Casbin             // 权限系统配置
+	Storage  Storage            // 文件存储配置
+	Admin    Admin              // 管理员配置
+	I18n     I18n               // 国际化配置
 }
 
 // Config app config
@@ -96,26 +87,6 @@ type Redis struct {
 	PoolSize     int
 	PoolTimeout  time.Duration
 	EnableTrace  bool
-}
-
-// LogConfig 日志配置
-type LogConfig struct {
-	Level             string        // 日志级别: debug, info, warn, error
-	Output            []string      // 输出方式: console, file
-	Format            LogFormat     // 日志格式: text, json
-	FileConfig        FileLogConfig // 文件输出配置
-	StackTraceEnabled bool          // 是否启用堆栈跟踪
-	StackTraceLevel   string        // 记录堆栈的最低日志级别: debug, info, warn, error
-	MaxStackFrames    int           // 堆栈帧最大数量，0表示不限制
-}
-
-// FileLogConfig 文件日志配置
-type FileLogConfig struct {
-	Path       string // 日志文件路径
-	MaxSize    int    // 每个日志文件的最大大小（MB）
-	MaxAge     int    // 日志文件保留天数
-	MaxBackups int    // 保留的旧日志文件最大数量
-	Compress   bool   // 是否压缩旧日志文件
 }
 
 // Casbin 权限系统配置

@@ -3,12 +3,12 @@ package controller
 import (
 	"strconv"
 
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/services"
 )
 
@@ -161,7 +161,7 @@ func (pc *PermissionController) GetUserMenus(c *gin.Context) {
 	// 获取用户菜单
 	menus, err := pc.permissionService.GetUserMenus(strconv.FormatUint(userID, 10))
 	if err != nil {
-		log.Error("获取用户菜单失败", "error", err)
+		logger.Error("获取用户菜单失败", "error", err)
 		response.Error(c, err)
 		return
 	}

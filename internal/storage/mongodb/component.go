@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -41,11 +41,11 @@ func (m *Component) Name() string {
 // Initialize 初始化MongoDB连接
 func (m *Component) Initialize() error {
 	if !m.enabled {
-		log.Info("MongoDB component disabled")
+		logger.Info("MongoDB component disabled")
 		return nil
 	}
 
-	log.Info("Initializing MongoDB component")
+	logger.Info("Initializing MongoDB component")
 
 	ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
 	defer cancel()
@@ -77,18 +77,18 @@ func (m *Component) Initialize() error {
 	// 不再设置兼容性全局变量
 	// Mongo = client // 已移除，使用依赖注入代替
 
-	log.Info("MongoDB component initialized successfully")
+	logger.Info("MongoDB component initialized successfully")
 	return nil
 }
 
 // Cleanup 清理MongoDB资源
 func (m *Component) Cleanup() {
 	if m.client != nil {
-		log.Info("Closing MongoDB connection")
+		logger.Info("Closing MongoDB connection")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := m.client.Disconnect(ctx); err != nil {
-			log.Error("Error disconnecting from MongoDB", "error", err)
+			logger.Error("Error disconnecting from MongoDB", "error", err)
 		}
 	}
 }

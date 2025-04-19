@@ -5,12 +5,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/jwt"
+	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
 // 上下文键类型
@@ -65,7 +65,7 @@ func JWTAuth(config *configs.Config) gin.HandlerFunc {
 
 		// 如果没有token,返回错误并中止
 		if token == "" {
-			log.Error("No authentication token provided")
+			logger.Error("No authentication token provided")
 			response.Error(c, errorx.ErrUserNoLogin)
 			c.Abort()
 			return
@@ -74,7 +74,7 @@ func JWTAuth(config *configs.Config) gin.HandlerFunc {
 		// 解析token
 		claims, err := jwt.ParseToken(token, config.JwtAuth.AccessSecret)
 		if err != nil {
-			log.Error("Authentication token parse failed", "error", err)
+			logger.Error("Authentication token parse failed", "error", err)
 			response.Error(c, errorx.ErrUserTokenError)
 			c.Abort()
 			return

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/limitcool/starter/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -30,5 +31,9 @@ func init() {
 	rootCmd.PersistentFlags().StringP("config", "c", "", "Configuration file path")
 
 	// 设置版本信息
-	rootCmd.Version = "1.0.0"
+	verInfo := version.GetVersion()
+	rootCmd.Version = verInfo.Version
+
+	// 自定义版本模板
+	rootCmd.SetVersionTemplate(fmt.Sprintf("{{.Name}} %s\n\n%s", verInfo.Version, verInfo.String()))
 }

@@ -6,8 +6,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -64,7 +64,7 @@ func (m *Migrator) Initialize() error {
 		return fmt.Errorf("创建迁移表失败: %w", err)
 	}
 
-	log.Info("迁移系统初始化完成")
+	logger.Info("迁移系统初始化完成")
 	return nil
 }
 
@@ -99,7 +99,7 @@ func (m *Migrator) Migrate() error {
 	// 执行未运行的迁移
 	for _, migration := range m.migrations {
 		if _, ok := ranVersions[migration.Version]; !ok {
-			log.Info("执行迁移", "version", migration.Version, "name", migration.Name)
+			logger.Info("执行迁移", "version", migration.Version, "name", migration.Name)
 
 			// 开始事务
 			tx := m.db.Begin()
@@ -130,7 +130,7 @@ func (m *Migrator) Migrate() error {
 				return fmt.Errorf("提交事务失败: %w", err)
 			}
 
-			log.Info("迁移完成", "version", migration.Version, "name", migration.Name)
+			logger.Info("迁移完成", "version", migration.Version, "name", migration.Name)
 		}
 	}
 
@@ -165,11 +165,11 @@ func (m *Migrator) Rollback() error {
 	for _, migration := range lastMigrations {
 		migrationEntry, ok := migrationsMap[migration.Version]
 		if !ok || migrationEntry.Down == nil {
-			log.Warn("没有找到回滚函数", "version", migration.Version, "name", migration.Name)
+			logger.Warn("没有找到回滚函数", "version", migration.Version, "name", migration.Name)
 			continue
 		}
 
-		log.Info("回滚迁移", "version", migration.Version, "name", migration.Name)
+		logger.Info("回滚迁移", "version", migration.Version, "name", migration.Name)
 
 		// 开始事务
 		tx := m.db.Begin()
@@ -194,7 +194,7 @@ func (m *Migrator) Rollback() error {
 			return fmt.Errorf("提交事务失败: %w", err)
 		}
 
-		log.Info("回滚完成", "version", migration.Version, "name", migration.Name)
+		logger.Info("回滚完成", "version", migration.Version, "name", migration.Name)
 	}
 
 	return nil
@@ -222,11 +222,11 @@ func (m *Migrator) Reset() error {
 	for _, migration := range allMigrations {
 		migrationEntry, ok := migrationsMap[migration.Version]
 		if !ok || migrationEntry.Down == nil {
-			log.Warn("没有找到回滚函数", "version", migration.Version, "name", migration.Name)
+			logger.Warn("没有找到回滚函数", "version", migration.Version, "name", migration.Name)
 			continue
 		}
 
-		log.Info("重置迁移", "version", migration.Version, "name", migration.Name)
+		logger.Info("重置迁移", "version", migration.Version, "name", migration.Name)
 
 		// 开始事务
 		tx := m.db.Begin()
@@ -251,7 +251,7 @@ func (m *Migrator) Reset() error {
 			return fmt.Errorf("提交事务失败: %w", err)
 		}
 
-		log.Info("重置完成", "version", migration.Version, "name", migration.Name)
+		logger.Info("重置完成", "version", migration.Version, "name", migration.Name)
 	}
 
 	return nil

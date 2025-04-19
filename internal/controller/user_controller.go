@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	v1 "github.com/limitcool/starter/internal/api/v1"
@@ -26,14 +25,14 @@ type UserController struct {
 // UserLogin 普通用户登录
 func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 	// 记录请求开始
-	log.Info("UserLogin 开始处理登录请求",
+	logger.Info("UserLogin 开始处理登录请求",
 		"client_ip", ctx.ClientIP(),
 		"user_agent", ctx.Request.UserAgent())
 
 	var req v1.LoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		// 记录参数验证错误
-		log.Warn("UserLogin 请求参数验证失败",
+		logger.Warn("UserLogin 请求参数验证失败",
 			"error", err,
 			"client_ip", ctx.ClientIP())
 		response.Error(ctx, errorx.ErrInvalidParams.WithError(err))
@@ -44,7 +43,7 @@ func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 	clientIP := ctx.ClientIP()
 
 	// 记录尝试登录信息
-	log.Info("UserLogin 尝试登录",
+	logger.Info("UserLogin 尝试登录",
 		"username", req.Username,
 		"ip", clientIP)
 
@@ -57,14 +56,14 @@ func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 
 			// 如果是用户不存在或密码错误，记录为警告
 			if errCode == errorx.ErrorUserNotFoundCode || errCode == errorx.ErrorUserPasswordErrorCode {
-				log.Warn("UserLogin 登录失败",
+				logger.Warn("UserLogin 登录失败",
 					"error", err,
 					"username", req.Username,
 					"ip", clientIP,
 					"error_code", errCode)
 			} else {
 				// 其他错误记录为错误
-				log.Error("UserLogin 登录失败",
+				logger.Error("UserLogin 登录失败",
 					"error", err,
 					"username", req.Username,
 					"ip", clientIP,
@@ -72,7 +71,7 @@ func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 			}
 		} else {
 			// 非AppError类型的错误记录为错误
-			log.Error("UserLogin 登录失败",
+			logger.Error("UserLogin 登录失败",
 				"error", err,
 				"username", req.Username,
 				"ip", clientIP)
@@ -84,7 +83,7 @@ func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 	}
 
 	// 记录登录成功
-	log.Info("UserLogin 登录成功",
+	logger.Info("UserLogin 登录成功",
 		"username", req.Username,
 		"access_token", tokenResponse.AccessToken[:10]+"...", // 只显示令牌前10个字符
 		"ip", clientIP)

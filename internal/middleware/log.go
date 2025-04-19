@@ -3,14 +3,12 @@ package middleware
 import (
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
-// LoggerWithCharmbracelet creates a custom Gin middleware that uses charmbracelet/log for logging.
-func LoggerWithCharmbracelet() gin.HandlerFunc {
-	logger := log.Default()
-
+// LoggerMiddleware creates a custom Gin middleware that uses our unified logger for logging.
+func LoggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		startTime := time.Now()
 		c.Next()
@@ -25,7 +23,7 @@ func LoggerWithCharmbracelet() gin.HandlerFunc {
 		userAgent := c.Request.UserAgent()
 		referer := c.Request.Referer()
 
-		fields := []interface{}{
+		fields := []any{
 			"status", statusCode,
 			"method", method,
 			"path", path,

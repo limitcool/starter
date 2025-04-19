@@ -4,9 +4,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/pkg/i18n"
+	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
 // Component 定义应用组件接口
@@ -45,28 +45,28 @@ func (m *ComponentManager) Initialize() error {
 
 	// 初始化国际化组件
 	if m.config.I18n.Enabled {
-		log.Info("Initializing internationalization component...")
+		logger.Info("Initializing internationalization component...")
 		err := initI18n(m.config.I18n)
 		if err != nil {
-			log.Error("Failed to initialize i18n component", "err", err)
+			logger.Error("Failed to initialize i18n component", "err", err)
 			return err
 		}
-		log.Info("Internationalization component initialized successfully")
+		logger.Info("Internationalization component initialized successfully")
 	}
 
 	// 初始化其他组件
 	for _, c := range m.components {
-		log.Info("Initializing component", "component", c.Name())
+		logger.Info("Initializing component", "component", c.Name())
 		if err := c.Initialize(); err != nil {
-			log.Error("Failed to initialize component", "component", c.Name(), "err", err)
+			logger.Error("Failed to initialize component", "component", c.Name(), "err", err)
 			return err
 		}
-		log.Info("Component initialized successfully", "component", c.Name())
+		logger.Info("Component initialized successfully", "component", c.Name())
 	}
 
 	// 记录初始化耗时
 	elapsedTime := time.Since(startTime)
-	log.Info("All components initialized", "duration", elapsedTime)
+	logger.Info("All components initialized", "duration", elapsedTime)
 
 	return nil
 }

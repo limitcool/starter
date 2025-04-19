@@ -3,10 +3,10 @@ package migration
 import (
 	"fmt"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -82,7 +82,7 @@ func RegisterRoleMigrations(migrator *Migrator) {
 
 			// 已存在则不重复创建
 			if count > 0 {
-				log.Info("管理员角色已存在，跳过创建")
+				logger.Info("管理员角色已存在，跳过创建")
 				return nil
 			}
 
@@ -99,7 +99,7 @@ func RegisterRoleMigrations(migrator *Migrator) {
 				return err
 			}
 
-			log.Info("管理员角色创建成功")
+			logger.Info("管理员角色创建成功")
 			return nil
 		},
 		Down: func(tx *gorm.DB) error {
@@ -138,7 +138,7 @@ func RegisterPermissionMigrations(migrator *Migrator) {
 		Up: func(tx *gorm.DB) error {
 			// 检查表是否存在
 			if tx.Migrator().HasTable("casbin_rule") {
-				log.Info("casbin_rule表已存在，跳过创建")
+				logger.Info("casbin_rule表已存在，跳过创建")
 				return nil
 			}
 
@@ -160,7 +160,7 @@ func RegisterPermissionMigrations(migrator *Migrator) {
 				return fmt.Errorf("创建Casbin规则表失败: %w", err)
 			}
 
-			log.Info("Casbin规则表创建成功")
+			logger.Info("Casbin规则表创建成功")
 			return nil
 		},
 		Down: func(tx *gorm.DB) error {
@@ -214,14 +214,14 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 
 			// 已存在则不重复创建
 			if count > 0 {
-				log.Info("基础菜单已存在，跳过创建")
+				logger.Info("基础菜单已存在，跳过创建")
 				return nil
 			}
 
 			// 获取管理员角色
 			var adminRole model.Role
 			if err := tx.Where("code = ?", "admin").First(&adminRole).Error; err != nil {
-				log.Error("获取管理员角色失败，跳过菜单创建", "error", err)
+				logger.Error("获取管理员角色失败，跳过菜单创建", "error", err)
 				return nil
 			}
 
@@ -314,7 +314,7 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 				}
 			}
 
-			log.Info("基础菜单创建成功")
+			logger.Info("基础菜单创建成功")
 			return nil
 		},
 		Down: func(tx *gorm.DB) error {
@@ -331,7 +331,7 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 			// 获取配置
 			cfg := migrator.config
 			if cfg == nil {
-				log.Warn("配置未初始化，使用默认管理员账号")
+				logger.Warn("配置未初始化，使用默认管理员账号")
 				cfg = &configs.Config{
 					Admin: configs.Admin{
 						Username: "admin",
@@ -364,7 +364,7 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 
 			// 已存在则跳过
 			if count > 0 {
-				log.Info("管理员用户已存在，跳过创建")
+				logger.Info("管理员用户已存在，跳过创建")
 				return nil
 			}
 
@@ -388,7 +388,7 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 				LastIP:       "",
 			}
 
-			log.Info("准备创建管理员用户",
+			logger.Info("准备创建管理员用户",
 				"username", sysUser.Username,
 				"nickname", sysUser.Nickname)
 
@@ -399,7 +399,7 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 			// 获取管理员角色ID
 			var role model.Role
 			if err := tx.Where("code = ?", "admin").First(&role).Error; err != nil {
-				log.Warn("获取管理员角色失败，跳过角色分配", "error", err)
+				logger.Warn("获取管理员角色失败，跳过角色分配", "error", err)
 				return nil
 			}
 
@@ -410,11 +410,11 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 			}
 
 			if err := tx.Create(userRole).Error; err != nil {
-				log.Warn("分配管理员角色失败", "error", err)
+				logger.Warn("分配管理员角色失败", "error", err)
 				return nil
 			}
 
-			log.Info("管理员用户创建成功",
+			logger.Info("管理员用户创建成功",
 				"username", username,
 				"nickname", nickname,
 				"id", sysUser.ID)

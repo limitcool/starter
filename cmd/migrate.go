@@ -3,8 +3,8 @@ package cmd
 import (
 	"os"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/internal/migration"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/storage/sqldb"
 	"github.com/spf13/cobra"
 )
@@ -65,15 +65,15 @@ func runMigration(cmd *cobra.Command, args []string) {
 
 	// 检查数据库是否启用
 	if !cfg.Database.Enabled {
-		log.Fatal("Database not enabled, please enable it in the configuration file")
+		logger.Fatal("Database not enabled, please enable it in the configuration file")
 	}
 
-	log.Info("Starting database migration process")
+	logger.Info("Starting database migration process")
 
 	// 初始化SQL组件
 	sqlComponent := sqldb.NewComponent(cfg)
 	if err := sqlComponent.Initialize(); err != nil {
-		log.Error("Failed to initialize SQL component", "error", err)
+		logger.Error("Failed to initialize SQL component", "error", err)
 		os.Exit(1)
 	}
 	defer sqlComponent.Cleanup()
@@ -81,17 +81,17 @@ func runMigration(cmd *cobra.Command, args []string) {
 	// 初始化迁移系统
 	migrator, err := migration.InitializeSimpleMigrator(sqlComponent.DB(), cfg)
 	if err != nil {
-		log.Error("Failed to initialize migration system", "error", err)
+		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
 	}
 
 	// 检查是否需要重置数据库
 	fresh, _ := cmd.Flags().GetBool("fresh")
 	if fresh {
-		log.Warn("Preparing to clear and rebuild the database...")
+		logger.Warn("Preparing to clear and rebuild the database...")
 		if err := migrator.Reset(); err != nil {
 			if err.Error() != "No migrations to reset" {
-				log.Error("Failed to reset database", "error", err)
+				logger.Error("Failed to reset database", "error", err)
 				os.Exit(1)
 			}
 		}
@@ -99,11 +99,11 @@ func runMigration(cmd *cobra.Command, args []string) {
 
 	// 执行迁移
 	if err := migrator.Migrate(); err != nil {
-		log.Error("Database migration failed", "error", err)
+		logger.Error("Database migration failed", "error", err)
 		os.Exit(1)
 	}
 
-	log.Info("Database migration completed successfully")
+	logger.Info("Database migration completed successfully")
 }
 
 // runMigrationRollback 回滚数据库迁移
@@ -116,15 +116,15 @@ func runMigrationRollback(cmd *cobra.Command, args []string) {
 
 	// 检查数据库是否启用
 	if !cfg.Database.Enabled {
-		log.Fatal("Database not enabled, please enable it in the configuration file")
+		logger.Fatal("Database not enabled, please enable it in the configuration file")
 	}
 
-	log.Info("Starting database migration rollback process")
+	logger.Info("Starting database migration rollback process")
 
 	// 初始化SQL组件
 	sqlComponent := sqldb.NewComponent(cfg)
 	if err := sqlComponent.Initialize(); err != nil {
-		log.Error("Failed to initialize SQL component", "error", err)
+		logger.Error("Failed to initialize SQL component", "error", err)
 		os.Exit(1)
 	}
 	defer sqlComponent.Cleanup()
@@ -132,17 +132,17 @@ func runMigrationRollback(cmd *cobra.Command, args []string) {
 	// 初始化迁移系统
 	migrator, err := migration.InitializeSimpleMigrator(sqlComponent.DB(), cfg)
 	if err != nil {
-		log.Error("Failed to initialize migration system", "error", err)
+		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
 	}
 
 	// 回滚迁移
 	if err := migrator.Rollback(); err != nil {
-		log.Error("Database migration rollback failed", "error", err)
+		logger.Error("Database migration rollback failed", "error", err)
 		os.Exit(1)
 	}
 
-	log.Info("Database migration rollback completed successfully")
+	logger.Info("Database migration rollback completed successfully")
 }
 
 // runMigrationStatus 显示迁移状态
@@ -155,13 +155,13 @@ func runMigrationStatus(cmd *cobra.Command, args []string) {
 
 	// 检查数据库是否启用
 	if !cfg.Database.Enabled {
-		log.Fatal("Database not enabled, please enable it in the configuration file")
+		logger.Fatal("Database not enabled, please enable it in the configuration file")
 	}
 
 	// 初始化SQL组件
 	sqlComponent := sqldb.NewComponent(cfg)
 	if err := sqlComponent.Initialize(); err != nil {
-		log.Error("Failed to initialize SQL component", "error", err)
+		logger.Error("Failed to initialize SQL component", "error", err)
 		os.Exit(1)
 	}
 	defer sqlComponent.Cleanup()
@@ -169,25 +169,25 @@ func runMigrationStatus(cmd *cobra.Command, args []string) {
 	// 初始化迁移系统
 	migrator, err := migration.InitializeSimpleMigrator(sqlComponent.DB(), cfg)
 	if err != nil {
-		log.Error("Failed to initialize migration system", "error", err)
+		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
 	}
 
 	// 获取迁移状态
 	status, err := migrator.Status()
 	if err != nil {
-		log.Error("Failed to get migration status", "error", err)
+		logger.Error("Failed to get migration status", "error", err)
 		os.Exit(1)
 	}
 
 	// 打印迁移状态
-	log.Info("Migration status:")
+	logger.Info("Migration status:")
 	for _, s := range status {
 		ran := "Not executed"
 		if s["ran"].(bool) {
 			ran = "Executed"
 		}
-		log.Info("Migration",
+		logger.Info("Migration",
 			"version", s["version"],
 			"name", s["name"],
 			"status", ran,
@@ -206,15 +206,15 @@ func runMigrationReset(cmd *cobra.Command, args []string) {
 
 	// 检查数据库是否启用
 	if !cfg.Database.Enabled {
-		log.Fatal("Database not enabled, please enable it in the configuration file")
+		logger.Fatal("Database not enabled, please enable it in the configuration file")
 	}
 
-	log.Info("Starting database migration reset process")
+	logger.Info("Starting database migration reset process")
 
 	// 初始化SQL组件
 	sqlComponent := sqldb.NewComponent(cfg)
 	if err := sqlComponent.Initialize(); err != nil {
-		log.Error("Failed to initialize SQL component", "error", err)
+		logger.Error("Failed to initialize SQL component", "error", err)
 		os.Exit(1)
 	}
 	defer sqlComponent.Cleanup()
@@ -222,15 +222,15 @@ func runMigrationReset(cmd *cobra.Command, args []string) {
 	// 初始化迁移系统
 	migrator, err := migration.InitializeSimpleMigrator(sqlComponent.DB(), cfg)
 	if err != nil {
-		log.Error("Failed to initialize migration system", "error", err)
+		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
 	}
 
 	// 重置迁移
 	if err := migrator.Reset(); err != nil {
-		log.Error("Database migration reset failed", "error", err)
+		logger.Error("Database migration reset failed", "error", err)
 		os.Exit(1)
 	}
 
-	log.Info("Database migration reset completed successfully")
+	logger.Info("Database migration reset completed successfully")
 }

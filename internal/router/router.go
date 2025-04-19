@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/controller"
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/pkg/casbin"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/pkg/storage"
 	"github.com/limitcool/starter/internal/storage/database"
 )
@@ -22,7 +22,7 @@ func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 	// 添加全局中间件
 	r.Use(middleware.RequestContext()) // 添加请求上下文中间件
 	r.Use(middleware.ErrorHandler())   // 添加全局错误处理中间件
-	r.Use(middleware.LoggerWithCharmbracelet())
+	r.Use(middleware.LoggerMiddleware())
 	r.Use(gin.Recovery())
 	r.Use(middleware.Cors())
 	r.Use(middleware.I18n(config))
@@ -36,7 +36,7 @@ func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 		casbinService = casbin.NewService(db.DB(), config)
 		// 初始化
 		if err := casbinService.Initialize(); err != nil {
-			log.Warn("初始化Casbin服务失败", "err", err)
+			logger.Warn("初始化Casbin服务失败", "err", err)
 		}
 	}
 
@@ -61,9 +61,9 @@ func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 		var err error
 		stg, err = storage.New(storageConfig)
 		if err != nil {
-			log.Error("Failed to initialize storage service", "err", err)
+			logger.Error("Failed to initialize storage service", "err", err)
 		} else {
-			log.Info("Storage service initialized successfully", "type", config.Storage.Type)
+			logger.Info("Storage service initialized successfully", "type", config.Storage.Type)
 		}
 	}
 
@@ -88,7 +88,7 @@ func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 			}
 		}
 
-		log.Info("Configuring local static file service", "path", config.Storage.Local.Path, "url_path", urlPath)
+		logger.Info("Configuring local static file service", "path", config.Storage.Local.Path, "url_path", urlPath)
 		// 使用StaticFS提供静态文件服务
 		r.StaticFS(urlPath, http.Dir(config.Storage.Local.Path))
 	}
@@ -255,7 +255,7 @@ func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 
 	// 打印所有注册的路由
 	routes := r.Routes()
-	log.Info("Registered routes:")
+	logger.Info("Registered routes:")
 	for _, route := range routes {
 		handlerName := route.Handler
 		parts := strings.Split(handlerName, "/")
@@ -265,7 +265,7 @@ func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 				handlerName = lastPart
 			}
 		}
-		log.Info("Route", "method", route.Method, "path", route.Path, "handler", handlerName)
+		logger.Info("Route", "method", route.Method, "path", route.Path, "handler", handlerName)
 	}
 
 	return r

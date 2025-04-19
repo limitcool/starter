@@ -3,9 +3,9 @@ package services
 import (
 	"fmt"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/casbin"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/repository"
 )
 
@@ -81,7 +81,7 @@ func (s *MenuAPIService) AssignAPIsToMenu(menuID uint, apiIDs []uint) error {
 		// 获取API
 		api, err := s.apiRepo.GetByID(apiID)
 		if err != nil {
-			log.Warn("获取API失败", "api_id", apiID, "error", err)
+			logger.Warn("获取API失败", "api_id", apiID, "error", err)
 			continue
 		}
 
@@ -134,11 +134,11 @@ func (s *MenuAPIService) AssignAPIsToMenu(menuID uint, apiIDs []uint) error {
 	if len(casbinPolicies) > 0 {
 		success, err := s.casbinService.AddPolicies(casbinPolicies)
 		if err != nil || !success {
-			log.Error("批量添加Casbin权限策略失败", "error", err)
+			logger.Error("批量添加Casbin权限策略失败", "error", err)
 			// 这里不回滚数据库事务，因为数据库事务已经提交
 			// 可以在后续的同步操作中修复Casbin状态
 		} else {
-			log.Info("批量添加Casbin权限策略成功", "count", len(casbinPolicies))
+			logger.Info("批量添加Casbin权限策略成功", "count", len(casbinPolicies))
 		}
 	}
 
@@ -196,7 +196,7 @@ func (s *MenuAPIService) AssignMenuToRole(roleID uint, menuIDs []uint) error {
 		// 获取菜单关联的所有API
 		apis, err := s.apiRepo.GetByMenuID(menuID)
 		if err != nil {
-			log.Warn("获取菜单API失败", "menu_id", menuID, "error", err)
+			logger.Warn("获取菜单API失败", "menu_id", menuID, "error", err)
 			continue
 		}
 
@@ -211,17 +211,17 @@ func (s *MenuAPIService) AssignMenuToRole(roleID uint, menuIDs []uint) error {
 		// 先删除该角色的所有权限
 		_, err := s.casbinService.DeleteRole(role.Code)
 		if err != nil {
-			log.Error("删除角色权限失败", "role", role.Code, "error", err)
+			logger.Error("删除角色权限失败", "role", role.Code, "error", err)
 			// 这里不回滚数据库事务，因为数据库事务已经提交
 		}
 
 		// 批量添加策略
 		success, err := s.casbinService.AddPolicies(casbinPolicies)
 		if err != nil || !success {
-			log.Error("批量添加Casbin权限策略失败", "role", role.Code, "error", err)
+			logger.Error("批量添加Casbin权限策略失败", "role", role.Code, "error", err)
 			// 这里不回滚数据库事务，因为数据库事务已经提交
 		} else {
-			log.Info("批量添加角色API权限成功", "role", role.Code, "count", len(casbinPolicies))
+			logger.Info("批量添加角色API权限成功", "role", role.Code, "count", len(casbinPolicies))
 		}
 	}
 
@@ -260,14 +260,14 @@ func (s *MenuAPIService) SyncMenuAPIPermissions() error {
 		// 获取菜单关联的所有API
 		apis, err := s.apiRepo.GetByMenuID(menu.ID)
 		if err != nil {
-			log.Warn("获取菜单API失败", "menu_id", menu.ID, "error", err)
+			logger.Warn("获取菜单API失败", "menu_id", menu.ID, "error", err)
 			continue
 		}
 
 		// 获取拥有该菜单的所有角色
 		roles, err := s.roleRepo.GetRolesByMenuID(menu.ID)
 		if err != nil {
-			log.Warn("获取菜单角色失败", "menu_id", menu.ID, "error", err)
+			logger.Warn("获取菜单角色失败", "menu_id", menu.ID, "error", err)
 			continue
 		}
 
@@ -318,21 +318,21 @@ func (s *MenuAPIService) SyncMenuAPIPermissions() error {
 		s.casbinService.GetEnforcer().ClearPolicy()
 		// 重新加载策略
 		if err := s.casbinService.GetEnforcer().LoadPolicy(); err != nil {
-			log.Error("加载Casbin策略失败", "error", err)
+			logger.Error("加载Casbin策略失败", "error", err)
 			return fmt.Errorf("加载Casbin策略失败: %w", err)
 		}
 
 		// 批量添加策略
 		success, err := s.casbinService.AddPolicies(casbinPolicies)
 		if err != nil || !success {
-			log.Error("批量添加Casbin权限策略失败", "error", err)
+			logger.Error("批量添加Casbin权限策略失败", "error", err)
 			return fmt.Errorf("批量添加Casbin权限策略失败: %w", err)
 		}
 
-		log.Info("批量添加Casbin权限策略成功", "count", len(casbinPolicies))
+		logger.Info("批量添加Casbin权限策略成功", "count", len(casbinPolicies))
 	}
 
-	log.Info("同步菜单API权限完成")
+	logger.Info("同步菜单API权限完成")
 	return nil
 }
 
@@ -361,7 +361,7 @@ func (s *MenuAPIService) GetAPIRoles(apiID uint) ([]*model.Role, error) {
 	for _, menuID := range menuIDs {
 		roles, err := s.roleRepo.GetRolesByMenuID(menuID)
 		if err != nil {
-			log.Warn("获取菜单角色失败", "menu_id", menuID, "error", err)
+			logger.Warn("获取菜单角色失败", "menu_id", menuID, "error", err)
 			continue
 		}
 

@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
 // Response API标准响应结构
@@ -112,7 +113,7 @@ func Error(c *gin.Context, err error, msg ...string) {
 	traceID := getTraceIDFromContext(c)
 
 	// 记录错误到日志
-	log.Error("API error occurred",
+	logger.Error("API error occurred",
 		"code", errorCode,
 		"message", message,
 		"trace_id", traceID,
@@ -157,11 +158,11 @@ func getRequestID(c *gin.Context) string {
 		}
 	}
 
-	// 生成新的请求ID
-	newID := time.Now().UnixNano()
+	// 生成新的UUID作为请求ID
+	newID := uuid.New().String()
 	// 将请求ID存储到上下文中
 	c.Set("request_id", newID)
-	return time.Now().Format("20060102150405") + "-" + c.ClientIP()
+	return newID
 }
 
 // getTraceIDFromContext 从上下文中获取链路追踪ID

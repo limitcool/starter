@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
 // ErrorStat 错误统计信息
@@ -111,7 +111,7 @@ func (s *ErrorMonitorService) ResetStats() {
 func (s *ErrorMonitorService) triggerAlert(err *errorx.AppError, stat *ErrorStat) {
 	// 这里可以实现各种报警方式，如发送邮件、短信、钉钉等
 	// 目前仅记录日志
-	log.Warn("Error threshold reached",
+	logger.Warn("Error threshold reached",
 		"code", err.GetErrorCode(),
 		"message", err.GetErrorMsg(),
 		"count", stat.Count,

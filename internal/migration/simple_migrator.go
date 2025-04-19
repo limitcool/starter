@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -48,7 +48,7 @@ func (m *SimpleMigrator) Initialize() error {
 		return fmt.Errorf("创建迁移表失败: %w", err)
 	}
 
-	log.Info("迁移系统初始化完成")
+	logger.Info("迁移系统初始化完成")
 	return nil
 }
 
@@ -84,7 +84,7 @@ func (m *SimpleMigrator) Migrate() error {
 	// 执行未运行的迁移
 	for _, migration := range migrations {
 		if _, ok := ranMigrationNames[migration.Name]; !ok {
-			log.Info("执行迁移", "name", migration.Name)
+			logger.Info("执行迁移", "name", migration.Name)
 
 			// 开始事务
 			tx := m.db.Begin()
@@ -114,7 +114,7 @@ func (m *SimpleMigrator) Migrate() error {
 				return fmt.Errorf("提交事务失败: %w", err)
 			}
 
-			log.Info("迁移完成", "name", migration.Name)
+			logger.Info("迁移完成", "name", migration.Name)
 		}
 	}
 
@@ -155,11 +155,11 @@ func (m *SimpleMigrator) Rollback() error {
 	for _, migration := range lastMigrations {
 		migrationItem, ok := migrationsMap[migration.Name]
 		if !ok || migrationItem.Down == nil {
-			log.Warn("没有找到回滚函数", "name", migration.Name)
+			logger.Warn("没有找到回滚函数", "name", migration.Name)
 			continue
 		}
 
-		log.Info("回滚迁移", "name", migration.Name)
+		logger.Info("回滚迁移", "name", migration.Name)
 
 		// 开始事务
 		tx := m.db.Begin()
@@ -184,7 +184,7 @@ func (m *SimpleMigrator) Rollback() error {
 			return fmt.Errorf("提交事务失败: %w", err)
 		}
 
-		log.Info("回滚完成", "name", migration.Name)
+		logger.Info("回滚完成", "name", migration.Name)
 	}
 
 	return nil
@@ -218,11 +218,11 @@ func (m *SimpleMigrator) Reset() error {
 	for _, migration := range allMigrations {
 		migrationItem, ok := migrationsMap[migration.Name]
 		if !ok || migrationItem.Down == nil {
-			log.Warn("没有找到回滚函数", "name", migration.Name)
+			logger.Warn("没有找到回滚函数", "name", migration.Name)
 			continue
 		}
 
-		log.Info("重置迁移", "name", migration.Name)
+		logger.Info("重置迁移", "name", migration.Name)
 
 		// 开始事务
 		tx := m.db.Begin()
@@ -247,7 +247,7 @@ func (m *SimpleMigrator) Reset() error {
 			return fmt.Errorf("提交事务失败: %w", err)
 		}
 
-		log.Info("重置完成", "name", migration.Name)
+		logger.Info("重置完成", "name", migration.Name)
 	}
 
 	return nil

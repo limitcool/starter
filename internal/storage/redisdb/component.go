@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 )
@@ -47,11 +47,11 @@ func (r *Component) Name() string {
 // Initialize 初始化Redis组件
 func (r *Component) Initialize() error {
 	if !r.enabled {
-		log.Info("Redis component disabled (no configuration or not enabled)")
+		logger.Info("Redis component disabled (no configuration or not enabled)")
 		return nil
 	}
 
-	log.Info("Initializing Redis component")
+	logger.Info("Initializing Redis component")
 	r.manager = NewManager(r.config)
 
 	// 尝试初始化默认Redis客户端
@@ -62,7 +62,7 @@ func (r *Component) Initialize() error {
 
 	r.cleanup = func() {
 		for name, client := range r.manager.clients {
-			log.Debug("Closing Redis connection", "name", name)
+			logger.Debug("Closing Redis connection", "name", name)
 			_ = client.Close()
 		}
 	}
@@ -70,14 +70,14 @@ func (r *Component) Initialize() error {
 	// 不再设置全局访问实例
 	// setupInstance(r) // 已移除，使用依赖注入代替
 
-	log.Info("Redis component initialized successfully")
+	logger.Info("Redis component initialized successfully")
 	return nil
 }
 
 // Cleanup 清理Redis资源
 func (r *Component) Cleanup() {
 	if r.cleanup != nil {
-		log.Info("Cleaning up Redis resources")
+		logger.Info("Cleaning up Redis resources")
 		r.cleanup()
 	}
 }
@@ -143,7 +143,7 @@ func (m *Manager) GetClient(name string) (*redis.Client, error) {
 	}
 
 	redisConfig := m.config.Redis[name]
-	log.Debug("Creating Redis client", "name", name, "addr", redisConfig.Addr)
+	logger.Debug("Creating Redis client", "name", name, "addr", redisConfig.Addr)
 	rdb := redis.NewClient(&redis.Options{
 		Addr:         redisConfig.Addr,
 		Password:     redisConfig.Password,

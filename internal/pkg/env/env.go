@@ -1,10 +1,9 @@
 package env
 
 import (
+	"fmt"
 	"os"
 	"strings"
-
-	"github.com/charmbracelet/log"
 )
 
 type Environment string
@@ -29,7 +28,8 @@ func Get() Environment {
 	case "prod", "production":
 		return Prod
 	default:
-		log.Warn("Unknown environment, using default development environment", "env", env)
+		// 使用标准库输出警告，避免循环导入
+		fmt.Printf("Warning: Unknown environment '%s', using default development environment\n", env)
 		return Dev
 	}
 }

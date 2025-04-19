@@ -4,9 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/pkg/env"
@@ -17,15 +15,9 @@ import (
 
 // InitConfig 加载配置文件
 func InitConfig(cmd *cobra.Command, args []string) *configs.Config {
-
 	// 先设置基本日志格式，确保在配置读取前就使用统一格式
-	log.SetDefault(log.NewWithOptions(os.Stdout, log.Options{
-		Level:           log.InfoLevel,
-		Prefix:          "🌏 starter",
-		TimeFormat:      time.RFC3339,
-		ReportTimestamp: true,
-		Formatter:       log.TextFormatter,
-	}))
+	initialLogger := logger.NewCharmLogger(os.Stdout, logger.InfoLevel, logger.TextFormat)
+	logger.SetDefault(initialLogger)
 
 	// 检查是否通过flag指定了配置文件
 	configFile, _ := cmd.Flags().GetString("config")
@@ -52,16 +44,16 @@ func InitConfig(cmd *cobra.Command, args []string) *configs.Config {
 
 	// 读取环境配置
 	if err := viper.ReadInConfig(); err != nil {
-		log.Fatal("Failed to read config file", "error", err)
+		logger.Fatal("Failed to read config file", "error", err)
 	}
 
 	// 输出使用的配置文件
-	log.Info("Using config file", "path", viper.ConfigFileUsed())
+	logger.Info("Using config file", "path", viper.ConfigFileUsed())
 
 	// 解析配置到结构体
 	cfg := &configs.Config{}
 	if err := viper.Unmarshal(cfg); err != nil {
-		log.Fatal("Config unmarshal failed", "error", err)
+		logger.Fatal("Config unmarshal failed", "error", err)
 	}
 
 	return cfg
@@ -69,8 +61,6 @@ func InitConfig(cmd *cobra.Command, args []string) *configs.Config {
 
 // InitLogger 配置全局日志
 func InitLogger(cfg *configs.Config) {
-	log.SetPrefix("🌏 starter ")
-
 	// 获取环境
 	currentEnv := env.Get()
 
@@ -93,10 +83,10 @@ func InitLogger(cfg *configs.Config) {
 
 	// 记录环境模式
 	if env.IsProd() {
-		log.Info("Running in production mode")
+		logger.Info("Running in production mode")
 	} else if env.IsTest() {
-		log.Info("Running in test mode")
+		logger.Info("Running in test mode")
 	} else {
-		log.Info("Running in debug mode")
+		logger.Info("Running in debug mode")
 	}
 }

@@ -4,10 +4,10 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/casbin"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/repository"
 	"github.com/spf13/viper"
 )
@@ -133,7 +133,7 @@ func (s *PermissionService) AssignPermissionToRole(roleID uint, permissionIDs []
 	if err != nil {
 		// 如果 Casbin 操作失败，记录错误但不回滚数据库事务
 		// 因为数据库事务已经提交，我们可以在后续的同步操作中修复 Casbin 状态
-		log.Error("删除 Casbin 角色权限失败", "error", err)
+		logger.Error("删除 Casbin 角色权限失败", "error", err)
 		// 这里可以添加重试逻辑或触发异步修复任务
 	}
 
@@ -144,7 +144,7 @@ func (s *PermissionService) AssignPermissionToRole(roleID uint, permissionIDs []
 		for _, permID := range permissionIDs {
 			perm, err := s.permissionRepo.GetByID(permID)
 			if err != nil {
-				log.Warn("获取权限信息失败", "permission_id", permID, "error", err)
+				logger.Warn("获取权限信息失败", "permission_id", permID, "error", err)
 				continue
 			}
 
@@ -156,7 +156,7 @@ func (s *PermissionService) AssignPermissionToRole(roleID uint, permissionIDs []
 		if len(policies) > 0 {
 			success, err := s.casbinService.AddPolicies(policies)
 			if err != nil || !success {
-				log.Error("批量添加 Casbin 权限策略失败", "error", err)
+				logger.Error("批量添加 Casbin 权限策略失败", "error", err)
 				// 这里可以添加重试逻辑或触发异步修复任务
 			}
 		}
@@ -233,7 +233,7 @@ func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) err
 	if len(currentRoles) > 0 {
 		success, err := s.casbinService.DeleteRolesForUser(userID)
 		if err != nil || !success {
-			log.Error("批量删除用户角色失败", "error", err)
+			logger.Error("批量删除用户角色失败", "error", err)
 			// 这里可以添加重试逻辑或触发异步修复任务
 		}
 	}
@@ -245,7 +245,7 @@ func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) err
 		for _, roleID := range roleIDs {
 			role, err := s.roleRepo.GetByID(roleID)
 			if err != nil {
-				log.Warn("获取角色信息失败", "role_id", roleID, "error", err)
+				logger.Warn("获取角色信息失败", "role_id", roleID, "error", err)
 				continue
 			}
 			roleCodes = append(roleCodes, role.Code)
@@ -255,7 +255,7 @@ func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) err
 		if len(roleCodes) > 0 {
 			success, err := s.casbinService.AddRolesForUser(userID, roleCodes)
 			if err != nil || !success {
-				log.Error("批量添加用户角色失败", "error", err)
+				logger.Error("批量添加用户角色失败", "error", err)
 				// 这里可以添加重试逻辑或触发异步修复任务
 			}
 		}

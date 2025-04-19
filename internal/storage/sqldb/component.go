@@ -3,9 +3,8 @@ package sqldb
 import (
 	"fmt"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/internal/storage/database"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -34,11 +33,11 @@ func (c *Component) Name() string {
 // Initialize 初始化数据库连接
 func (c *Component) Initialize() error {
 	if !c.enabled {
-		log.Info("SQL database component disabled")
+		logger.Info("SQL database component disabled")
 		return nil
 	}
 
-	log.Info("Initializing SQL database component")
+	logger.Info("Initializing SQL database component")
 
 	db := newDbConn(c.Config)
 	if db == nil {
@@ -55,7 +54,7 @@ func (c *Component) Initialize() error {
 	// 	return fmt.Errorf("database migration failed: %w", err)
 	// }
 
-	log.Info("SQL database component initialized successfully")
+	logger.Info("SQL database component initialized successfully")
 	return nil
 }
 
@@ -65,12 +64,12 @@ func (c *Component) Migrate() error {
 		return fmt.Errorf("database not initialized")
 	}
 
-	log.Info("Running database migrations")
+	logger.Info("Running database migrations")
 	if err := c.db.AutoMigrate(); err != nil {
 		return fmt.Errorf("database migration failed: %w", err)
 	}
 
-	log.Info("Database migrations completed successfully")
+	logger.Info("Database migrations completed successfully")
 	return nil
 }
 
@@ -84,7 +83,7 @@ func (c *Component) Close() error {
 	if c.db != nil {
 		sqlDB, err := c.db.DB()
 		if err == nil {
-			log.Info("Closing database connection")
+			logger.Info("Closing database connection")
 			return sqlDB.Close()
 		}
 		return err

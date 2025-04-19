@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/internal/core"
 	"github.com/limitcool/starter/internal/pkg/casbin"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/router"
 	"github.com/limitcool/starter/internal/storage/database"
 	"github.com/limitcool/starter/internal/storage/mongodb"
@@ -52,21 +52,21 @@ func runServer(cmd *cobra.Command, args []string) {
 	}
 
 	// 日志系统配置完成后的第一条日志
-	log.Info("Application starting", "name", cfg.App.Name)
+	logger.Info("Application starting", "name", cfg.App.Name)
 
 	// 创建应用实例
 	app := core.Setup(cfg)
 
 	// 添加SQL数据库组件（如果配置了启用）
 	if cfg.Database.Enabled {
-		log.Info("Adding SQL database component", "driver", cfg.Driver)
+		logger.Info("Adding SQL database component", "driver", cfg.Driver)
 		dbComponent := sqldb.NewComponent(cfg)
 		app.ComponentManager.AddComponent(dbComponent)
 	}
 
 	// 添加MongoDB组件（如果配置了启用）
 	if cfg.Mongo.Enabled {
-		log.Info("Adding MongoDB component")
+		logger.Info("Adding MongoDB component")
 		mongoComponent := mongodb.NewComponent(cfg)
 		app.ComponentManager.AddComponent(mongoComponent)
 	}
@@ -77,7 +77,7 @@ func runServer(cmd *cobra.Command, args []string) {
 
 	// 添加Casbin组件（如果配置了启用）
 	if cfg.Casbin.Enabled {
-		log.Info("Adding Casbin component")
+		logger.Info("Adding Casbin component")
 		// 获取数据库组件
 		var dbComponent *sqldb.Component
 		for _, component := range app.ComponentManager.GetComponents() {
@@ -91,13 +91,13 @@ func runServer(cmd *cobra.Command, args []string) {
 			casbinComponent := casbin.NewComponent(cfg, dbComponent.DB())
 			app.ComponentManager.AddComponent(casbinComponent)
 		} else {
-			log.Warn("Cannot add Casbin component: database component not found")
+			logger.Warn("Cannot add Casbin component: database component not found")
 		}
 	}
 
 	// 初始化所有组件
 	if err := app.Initialize(); err != nil {
-		log.Fatal("Failed to initialize application", "error", err)
+		logger.Fatal("Failed to initialize application", "error", err)
 	}
 
 	// 获取数据库组件
@@ -110,7 +110,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	}
 
 	if dbComponent == nil {
-		log.Fatal("Failed to get database component")
+		logger.Fatal("Failed to get database component")
 	}
 
 	// 创建数据库适配器
@@ -120,7 +120,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	if cfg.Mongo.Enabled {
 		// MongoDB 组件已经初始化，可以在仓库层使用
 		// 不再需要设置全局集合变量
-		log.Info("MongoDB component initialized and available for repository layer")
+		logger.Info("MongoDB component initialized and available for repository layer")
 	}
 
 	// 确保资源清理
@@ -132,11 +132,11 @@ func runServer(cmd *cobra.Command, args []string) {
 		Handler:        r,
 		MaxHeaderBytes: 1 << 20,
 	}
-	log.Info("Server started", "url", fmt.Sprintf("http://127.0.0.1:%d", cfg.App.Port))
+	logger.Info("Server started", "url", fmt.Sprintf("http://127.0.0.1:%d", cfg.App.Port))
 	go func() {
 		// 服务连接 监听
 		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal("Server listening failed", "error", err)
+			logger.Fatal("Server listening failed", "error", err)
 		}
 	}()
 
@@ -149,11 +149,11 @@ func runServer(cmd *cobra.Command, args []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	log.Info("Shutting down server...")
+	logger.Info("Shutting down server...")
 	if err := s.Shutdown(ctx); err != nil {
 		// 处理错误，例如记录日志、返回错误等
-		log.Info("Error during server shutdown", "error", err)
+		logger.Info("Error during server shutdown", "error", err)
 	}
 
-	log.Info("Server stopped gracefully")
+	logger.Info("Server stopped gracefully")
 }

@@ -6,11 +6,11 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/driver/postgres"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 
-	"github.com/charmbracelet/log"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -49,12 +49,10 @@ func gormConfig(c *configs.Config) *gorm.Config {
 	config := &gorm.Config{DisableForeignKeyConstraintWhenMigrating: true} // 禁止外键约束, 生产环境不建议使用外键约束
 
 	// 创建一个结构化日志适配器
-	gormLogger := logger.New(
+	gormLogger := gormlogger.New(
 		// 使用我们的结构化日志
-		&gormLogWriter{
-			logger: log.Default(),
-		},
-		logger.Config{
+		&gormLogWriter{},
+		gormlogger.Config{
 			SlowThreshold: c.Database.SlowThreshold,
 			Colorful:      false, // 禁用颜色以避免与结构化日志冲突
 			LogLevel:      getGormLogLevel(c),
@@ -75,28 +73,26 @@ func gormConfig(c *configs.Config) *gorm.Config {
 }
 
 // gormLogWriter 适配GORM日志到结构化日志
-type gormLogWriter struct {
-	logger *log.Logger
-}
+type gormLogWriter struct{}
 
 // Printf 实现Print接口供GORM日志使用
 func (w *gormLogWriter) Printf(format string, args ...any) {
 	// 将GORM日志输出到结构化日志
 	msg := fmt.Sprintf(format, args...)
-	w.logger.Info("GORM", "message", msg)
+	logger.Info("GORM", "message", msg)
 }
 
 // getGormLogLevel 根据配置获取GORM日志级别
-func getGormLogLevel(c *configs.Config) logger.LogLevel {
+func getGormLogLevel(c *configs.Config) gormlogger.LogLevel {
 	if c.Database.ShowLog {
-		return logger.Info
+		return gormlogger.Info
 	}
 
 	if c.Database.SlowThreshold > 0 {
-		return logger.Warn
+		return gormlogger.Warn
 	}
 
-	return logger.Silent
+	return gormlogger.Silent
 }
 
 // NewDB 创建数据库连接
@@ -129,10 +125,10 @@ func newDbConn(c *configs.Config) *gorm.DB {
 		// sqlDB, err = sql.Open("sqlite3", dsn) // 注意：SQLite 的驱动名称是 "sqlite3"
 
 	default:
-		log.Fatal("Unsupported database driver", "driver", c.Driver)
+		logger.Fatal("Unsupported database driver", "driver", c.Driver)
 	}
 	if err != nil {
-		log.Fatal("Failed to open database connection",
+		logger.Fatal("Failed to open database connection",
 			"driver", c.Driver,
 			"database", c.Database.DBName,
 			"error", err)
@@ -144,21 +140,21 @@ func newDbConn(c *configs.Config) *gorm.DB {
 		sqlDB.SetConnMaxLifetime(c.Database.ConnMaxLifeTime)
 	} else {
 		if c.Database.DBName == "" {
-			log.Warn("Database name is empty, using default", "driver", c.Driver)
+			logger.Warn("Database name is empty, using default", "driver", c.Driver)
 			c.Database.DBName = "default"
 		}
 	}
 
 	db, err := gorm.Open(getGormDriver(c), gormConfig(c))
 	if err != nil {
-		log.Fatal("Database connection failed",
+		logger.Fatal("Database connection failed",
 			"database", c.Database.DBName,
 			"error", err)
 	}
 	db.Set("gorm:table_options", "CHARSET=utf8mb4")
 	err = db.AutoMigrate()
 	if err != nil {
-		log.Fatal("AutoMigrate failed", "error", err)
+		logger.Fatal("AutoMigrate failed", "error", err)
 	}
 	return db
 }
@@ -172,7 +168,7 @@ func getGormDriver(c *configs.Config) gorm.Dialector {
 	case configs.DriverSqlite:
 		return sqlite.Open(getDSN(c))
 	default:
-		log.Fatal("Unsupported database driver", "driver", c.Driver)
+		logger.Fatal("Unsupported database driver", "driver", c.Driver)
 		return nil
 	}
 }

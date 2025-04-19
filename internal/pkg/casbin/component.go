@@ -1,8 +1,8 @@
 package casbin
 
 import (
-	"github.com/charmbracelet/log"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -31,11 +31,11 @@ func (c *Component) Name() string {
 // Initialize 初始化Casbin组件
 func (c *Component) Initialize() error {
 	if !c.enabled {
-		log.Info("Casbin component disabled")
+		logger.Info("Casbin component disabled")
 		return nil
 	}
 
-	log.Info("Initializing Casbin component")
+	logger.Info("Initializing Casbin component")
 	
 	// 创建Casbin服务
 	c.service = NewService(c.db, c.config)
@@ -45,14 +45,14 @@ func (c *Component) Initialize() error {
 		return err
 	}
 	
-	log.Info("Casbin component initialized successfully")
+	logger.Info("Casbin component initialized successfully")
 	return nil
 }
 
 // Cleanup 清理Casbin组件资源
 func (c *Component) Cleanup() {
 	// Casbin没有需要清理的资源
-	log.Debug("Cleaning up Casbin component")
+	logger.Debug("Cleaning up Casbin component")
 }
 
 // GetService 获取Casbin服务

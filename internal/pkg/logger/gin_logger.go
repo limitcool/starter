@@ -3,18 +3,17 @@ package logger
 import (
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 )
 
 // GinLogWriter 实现io.Writer接口，将Gin的日志输出重定向到结构化Logger
 type GinLogWriter struct {
-	logger *log.Logger
-	level  log.Level
+	logger Logger
+	level  Level
 }
 
 // NewGinLogWriter 创建一个新的GinLogWriter
-func NewGinLogWriter(logger *log.Logger, level log.Level) *GinLogWriter {
+func NewGinLogWriter(logger Logger, level Level) *GinLogWriter {
 	return &GinLogWriter{
 		logger: logger,
 		level:  level,
@@ -47,13 +46,13 @@ func (w *GinLogWriter) Write(p []byte) (n int, err error) {
 // logWithLevel 根据日志级别记录消息
 func (w *GinLogWriter) logWithLevel(msg string, keysAndValues ...interface{}) {
 	switch w.level {
-	case log.DebugLevel:
+	case DebugLevel:
 		w.logger.Debug(msg, keysAndValues...)
-	case log.InfoLevel:
+	case InfoLevel:
 		w.logger.Info(msg, keysAndValues...)
-	case log.WarnLevel:
+	case WarnLevel:
 		w.logger.Warn(msg, keysAndValues...)
-	case log.ErrorLevel:
+	case ErrorLevel:
 		w.logger.Error(msg, keysAndValues...)
 	default:
 		w.logger.Info(msg, keysAndValues...)
@@ -63,11 +62,11 @@ func (w *GinLogWriter) logWithLevel(msg string, keysAndValues ...interface{}) {
 // SetupGinLogger 配置Gin使用我们的结构化Logger
 func SetupGinLogger() {
 	// 获取默认Logger
-	logger := log.Default()
+	logger := Default()
 
 	// 将Gin的标准输出重定向到我们的Logger (Debug级别)
-	gin.DefaultWriter = NewGinLogWriter(logger, log.DebugLevel)
+	gin.DefaultWriter = NewGinLogWriter(logger, DebugLevel)
 
 	// 将Gin的错误输出重定向到我们的Logger (Error级别)
-	gin.DefaultErrorWriter = NewGinLogWriter(logger, log.ErrorLevel)
+	gin.DefaultErrorWriter = NewGinLogWriter(logger, ErrorLevel)
 }

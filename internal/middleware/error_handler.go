@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
 // ErrorHandler 全局错误处理中间件
@@ -18,7 +18,7 @@ func ErrorHandler() gin.HandlerFunc {
 			if err := recover(); err != nil {
 				// 记录堆栈信息
 				stack := string(debug.Stack())
-				log.Error("Panic recovered", "error", err, "stack", stack)
+				logger.Error("Panic recovered", "error", err, "stack", stack)
 
 				// 根据不同类型的panic返回不同的错误
 				var appErr *errorx.AppError

@@ -3,9 +3,10 @@ package middleware
 import (
 	"time"
 
-	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/limitcool/starter/internal/api/response"
+	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
 // ErrorLogger 是一个记录错误日志的中间件
@@ -13,17 +14,17 @@ func ErrorLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 记录开始时间
 		start := time.Now()
-		
+
 		// 处理请求
 		c.Next()
-		
+
 		// 检查是否有错误
 		if len(c.Errors) > 0 {
 			// 获取最后一个错误
 			err := c.Errors.Last().Err
-			
+
 			// 记录请求信息
-			log.Error("API error occurred",
+			logger.Error("API error occurred",
 				"method", c.Request.Method,
 				"path", c.Request.URL.Path,
 				"ip", c.ClientIP(),
@@ -32,10 +33,10 @@ func ErrorLogger() gin.HandlerFunc {
 				"status", c.Writer.Status(),
 				"error", err.Error(),
 			)
-			
+
 			// 返回错误响应
 			response.Error(c, err)
-			
+
 			// 中止后续处理
 			c.Abort()
 		}
@@ -47,23 +48,24 @@ func RequestLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 记录开始时间
 		start := time.Now()
-		
+
 		// 获取请求ID
 		requestID := c.GetHeader("X-Request-ID")
 		if requestID == "" {
-			requestID = time.Now().Format("20060102150405") + "-" + c.ClientIP()
+			requestID = uuid.New().String()
 			c.Request.Header.Set("X-Request-ID", requestID)
+			c.Set("request_id", requestID) // 同时存入上下文
 		}
-		
+
 		// 处理请求
 		c.Next()
-		
+
 		// 计算延迟
 		latency := time.Since(start)
-		
+
 		// 根据状态码选择日志级别
 		status := c.Writer.Status()
-		
+
 		// 准备日志字段
 		fields := []any{
 			"method", c.Request.Method,
@@ -76,19 +78,19 @@ func RequestLogger() gin.HandlerFunc {
 			"referer", c.Request.Referer(),
 			"body_size", c.Writer.Size(),
 		}
-		
+
 		// 如果有错误，记录错误信息
 		if len(c.Errors) > 0 {
 			fields = append(fields, "errors", c.Errors.String())
 		}
-		
+
 		// 根据状态码选择日志级别
 		if status >= 500 {
-			log.Error("Server error", fields...)
+			logger.Error("Server error", fields...)
 		} else if status >= 400 {
-			log.Warn("Client error", fields...)
+			logger.Warn("Client error", fields...)
 		} else {
-			log.Info("Request completed", fields...)
+			logger.Info("Request completed", fields...)
 		}
 	}
 }

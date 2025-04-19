@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"github.com/BurntSushi/toml"
-	"github.com/charmbracelet/log"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 )
@@ -70,7 +70,7 @@ func Setup(config Config, fsys fs.FS) error {
 			return fmt.Errorf("failed to parse language file %s: %v", path, err)
 		}
 
-		log.Info("Language file loaded", "path", path, "language", lang)
+		logger.Info("Language file loaded", "path", path, "language", lang)
 
 		// 初始化语言对应的localizer
 		localizerMux.Lock()
@@ -123,7 +123,7 @@ func Translate(messageID string, lang string, args map[string]interface{}) strin
 	})
 
 	if err != nil {
-		log.Debug("Failed to translate message", "message_id", messageID, "lang", lang, "error", err)
+		logger.Debug("Failed to translate message", "message_id", messageID, "lang", lang, "error", err)
 		return messageID
 	}
 
