@@ -43,7 +43,7 @@ func (s *OperationLogService) CreateUserLog(c *gin.Context, userID int64, userna
 // GetOperationLogs 分页获取操作日志
 func (s *OperationLogService) GetOperationLogs(ctx context.Context, query *v1.OperationLogQuery) (*PageResult, error) {
 	// 标准化分页请求
-	query.PageRequest.Normalize()
+	query.Normalize()
 
 	// 创建仓库查询参数
 	repoQuery := &repository.OperationLogQuery{

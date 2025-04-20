@@ -16,7 +16,7 @@ import (
 // InitConfig 加载配置文件
 func InitConfig(cmd *cobra.Command, args []string) *configs.Config {
 	// 先设置基本日志格式，确保在配置读取前就使用统一格式
-	initialLogger := logger.NewCharmLogger(os.Stdout, logger.InfoLevel, logger.TextFormat)
+	initialLogger := logger.NewZapLogger(os.Stdout, logger.InfoLevel, logger.TextFormat)
 	logger.SetDefault(initialLogger)
 
 	// 检查是否通过flag指定了配置文件

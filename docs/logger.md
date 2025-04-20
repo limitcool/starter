@@ -1,6 +1,6 @@
 # 日志系统使用指南
 
-本项目使用了统一的日志抽象层，支持多种日志实现，目前支持 charmbracelet/log 和 uber-go/zap。
+本项目使用了统一的日志抽象层，使用 uber-go/zap 作为日志实现。
 
 ## 基本用法
 
@@ -72,35 +72,41 @@ func doSomething() error {
 func (c *Controller) HandleRequest(ctx *gin.Context) {
     if err := doSomething(); err != nil {
         // 记录错误，包含完整的错误链
-        logger.LogErrorWithStack("处理请求失败", err, 
+        logger.LogErrorWithStack("处理请求失败", err,
             "request_id", ctx.GetString("request_id"),
             "user_id", ctx.GetInt64("user_id"),
         )
-        
+
         // 返回用户友好的错误响应
         response.Error(ctx, err)
         return
     }
-    
+
     response.Success(ctx, "操作成功")
 }
 ```
 
-## 切换日志实现
+## 自定义日志配置
 
-项目默认使用 charmbracelet/log 作为日志实现，如果需要切换到 zap，可以在应用初始化时进行设置：
+项目默认使用 zap 作为日志实现，可以通过配置文件或代码进行自定义配置：
 
 ```go
 import (
     "os"
     "github.com/limitcool/starter/internal/pkg/logger"
+    "github.com/limitcool/starter/pkg/logconfig"
 )
 
-// 使用 Zap 作为日志实现
-zapLogger := logger.NewZapLogger(os.Stdout, logger.InfoLevel, logger.JSONFormat)
+// 创建自定义配置的日志记录器
+config := logconfig.LogConfig{
+    Level: logconfig.LogLevelInfo,
+    Format: logconfig.LogFormatJSON,
+    Output: []string{"console"},
+}
+zapLogger := logger.NewZapLoggerWithConfig(config)
 logger.SetDefault(zapLogger)
 
-// 现在所有的日志都会使用 Zap 记录
+// 使用自定义日志记录器
 logger.Info("应用启动成功", "version", "1.0.0")
 ```
 

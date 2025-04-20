@@ -116,7 +116,7 @@ var global Logger
 // Default 获取默认日志记录器
 func Default() Logger {
 	if global == nil {
-		global = NewCharmLogger(nil, InfoLevel, TextFormat)
+		global = NewZapLogger(nil, InfoLevel, TextFormat)
 	}
 	return global
 }

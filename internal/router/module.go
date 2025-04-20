@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/controller"
+	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"github.com/limitcool/starter/internal/pkg/middleware"
 	"go.uber.org/fx"
 )
 
@@ -62,12 +62,14 @@ func NewRouter(params RouterParams) RouterResult {
 
 	// 添加中间件
 	r.Use(gin.Recovery())
-	r.Use(middleware.Logger())
+	r.Use(middleware.RequestLogger())
+	r.Use(middleware.RequestContext())
 	r.Use(middleware.Cors())
+	r.Use(middleware.ErrorHandler())
 
 	// 添加Casbin中间件（如果启用）
 	if params.Config.Casbin.Enabled && params.Enforcer != nil {
-		r.Use(middleware.Casbin(params.Enforcer))
+		r.Use(middleware.CasbinMiddleware(params.PermissionController.GetPermissionService(), params.Config))
 	}
 
 	// 注册路由

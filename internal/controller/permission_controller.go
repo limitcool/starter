@@ -22,6 +22,11 @@ type PermissionController struct {
 	permissionService *services.PermissionService
 }
 
+// GetPermissionService 获取权限服务
+func (pc *PermissionController) GetPermissionService() *services.PermissionService {
+	return pc.permissionService
+}
+
 // 更新权限系统设置
 func (pc *PermissionController) UpdatePermissionSettings(c *gin.Context) {
 	var req struct {
