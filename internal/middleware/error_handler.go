@@ -18,7 +18,16 @@ func ErrorHandler() gin.HandlerFunc {
 			if err := recover(); err != nil {
 				// 记录堆栈信息
 				stack := string(debug.Stack())
-				logger.Error("Panic recovered", "error", err, "stack", stack)
+
+				// 获取请求ID和链路追踪ID
+				requestID, _ := c.Get("request_id")
+				traceID, _ := c.Get("trace_id")
+
+				logger.Error("Panic recovered",
+					"error", err,
+					"stack", stack,
+					"request_id", requestID,
+					"trace_id", traceID)
 
 				// 根据不同类型的panic返回不同的错误
 				var appErr *errorx.AppError

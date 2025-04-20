@@ -31,7 +31,7 @@ func (rc *RoleController) CreateRole(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	if err := rc.roleService.CreateRole(&role); err != nil {
+	if err := rc.roleService.CreateRole(c.Request.Context(), &role); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -54,7 +54,7 @@ func (rc *RoleController) UpdateRole(c *gin.Context) {
 	}
 
 	role.ID = uint(id)
-	if err := rc.roleService.UpdateRole(&role); err != nil {
+	if err := rc.roleService.UpdateRole(c.Request.Context(), &role); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -70,7 +70,7 @@ func (rc *RoleController) DeleteRole(c *gin.Context) {
 		return
 	}
 
-	if err := rc.roleService.DeleteRole(uint(id)); err != nil {
+	if err := rc.roleService.DeleteRole(c.Request.Context(), uint(id)); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -87,14 +87,14 @@ func (rc *RoleController) GetRole(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	role, err := rc.roleService.GetRoleByID(uint(id))
+	role, err := rc.roleService.GetRoleByID(c.Request.Context(), uint(id))
 	if err != nil {
 		response.Error(c, err)
 		return
 	}
 
 	// 获取角色菜单ID
-	roleMenus, err := rc.menuService.GetMenusByRoleID(role.ID)
+	roleMenus, err := rc.menuService.GetMenusByRoleID(c.Request.Context(), role.ID)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -113,7 +113,7 @@ func (rc *RoleController) GetRole(c *gin.Context) {
 // 获取角色列表
 func (rc *RoleController) GetRoles(c *gin.Context) {
 	// 使用控制器中的服务实例
-	roles, err := rc.roleService.GetRoles()
+	roles, err := rc.roleService.GetRoles(c.Request.Context())
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -135,7 +135,7 @@ func (rc *RoleController) AssignMenuToRole(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	if err := rc.menuService.AssignMenuToRole(req.RoleID, req.MenuIDs); err != nil {
+	if err := rc.menuService.AssignMenuToRole(c.Request.Context(), req.RoleID, req.MenuIDs); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -157,7 +157,7 @@ func (rc *RoleController) SetRolePermission(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	if err := rc.roleService.SetRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
+	if err := rc.roleService.SetRolePermission(c.Request.Context(), req.RoleCode, req.Object, req.Action); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -179,7 +179,7 @@ func (rc *RoleController) DeleteRolePermission(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	if err := rc.roleService.DeleteRolePermission(req.RoleCode, req.Object, req.Action); err != nil {
+	if err := rc.roleService.DeleteRolePermission(c.Request.Context(), req.RoleCode, req.Object, req.Action); err != nil {
 		response.Error(c, err)
 		return
 	}

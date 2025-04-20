@@ -35,7 +35,7 @@ func (pc *PermissionController) UpdatePermissionSettings(c *gin.Context) {
 	}
 
 	// 使用服务层更新权限设置
-	err := pc.permissionService.UpdatePermissionSettings(req.Enabled, req.DefaultAllow)
+	err := pc.permissionService.UpdatePermissionSettings(c.Request.Context(), req.Enabled, req.DefaultAllow)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -50,7 +50,7 @@ func (pc *PermissionController) UpdatePermissionSettings(c *gin.Context) {
 
 // GetPermissions 获取权限列表
 func (pc *PermissionController) GetPermissions(c *gin.Context) {
-	permissions, err := pc.permissionService.GetPermissions()
+	permissions, err := pc.permissionService.GetPermissions(c.Request.Context())
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -66,7 +66,7 @@ func (pc *PermissionController) GetPermission(c *gin.Context) {
 		return
 	}
 
-	permission, err := pc.permissionService.GetPermission(id)
+	permission, err := pc.permissionService.GetPermission(c.Request.Context(), id)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -83,7 +83,7 @@ func (pc *PermissionController) CreatePermission(c *gin.Context) {
 		return
 	}
 
-	if err := pc.permissionService.CreatePermission(&permission); err != nil {
+	if err := pc.permissionService.CreatePermission(c.Request.Context(), &permission); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -105,7 +105,7 @@ func (pc *PermissionController) UpdatePermission(c *gin.Context) {
 		return
 	}
 
-	if err := pc.permissionService.UpdatePermission(id, &permission); err != nil {
+	if err := pc.permissionService.UpdatePermission(c.Request.Context(), id, &permission); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -122,7 +122,7 @@ func (pc *PermissionController) DeletePermission(c *gin.Context) {
 	}
 
 	// 删除权限
-	if err := pc.permissionService.DeletePermission(id); err != nil {
+	if err := pc.permissionService.DeletePermission(c.Request.Context(), id); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -140,7 +140,7 @@ func (pc *PermissionController) GetUserPermissions(c *gin.Context) {
 	}
 
 	// 获取用户权限
-	permissions, err := pc.permissionService.GetPermissionsByUserID(uint(userID))
+	permissions, err := pc.permissionService.GetPermissionsByUserID(c.Request.Context(), uint(userID))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -159,7 +159,7 @@ func (pc *PermissionController) GetUserMenus(c *gin.Context) {
 	}
 
 	// 获取用户菜单
-	menus, err := pc.permissionService.GetUserMenus(strconv.FormatUint(userID, 10))
+	menus, err := pc.permissionService.GetUserMenus(c.Request.Context(), strconv.FormatUint(userID, 10))
 	if err != nil {
 		logger.Error("获取用户菜单失败", "error", err)
 		response.Error(c, err)
@@ -179,7 +179,7 @@ func (pc *PermissionController) GetUserRoles(c *gin.Context) {
 	}
 
 	// 获取用户角色
-	roles, err := pc.permissionService.GetUserRoles(strconv.FormatUint(userID, 10))
+	roles, err := pc.permissionService.GetUserRoles(c.Request.Context(), strconv.FormatUint(userID, 10))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -208,7 +208,7 @@ func (pc *PermissionController) AssignRolesToUser(c *gin.Context) {
 	}
 
 	// 分配角色
-	if err := pc.permissionService.AssignRolesToUser(strconv.FormatUint(userID, 10), req.RoleIDs); err != nil {
+	if err := pc.permissionService.AssignRolesToUser(c.Request.Context(), strconv.FormatUint(userID, 10), req.RoleIDs); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -236,7 +236,7 @@ func (pc *PermissionController) AssignPermissionsToRole(c *gin.Context) {
 	}
 
 	// 分配权限
-	if err := pc.permissionService.AssignPermissionToRole(uint(roleID), req.PermissionIDs); err != nil {
+	if err := pc.permissionService.AssignPermissionToRole(c.Request.Context(), uint(roleID), req.PermissionIDs); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -254,7 +254,7 @@ func (pc *PermissionController) GetRolePermissions(c *gin.Context) {
 	}
 
 	// 获取角色权限
-	permissions, err := pc.permissionService.GetPermissionsByRoleID(uint(roleID))
+	permissions, err := pc.permissionService.GetPermissionsByRoleID(c.Request.Context(), uint(roleID))
 	if err != nil {
 		response.Error(c, err)
 		return

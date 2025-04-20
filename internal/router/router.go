@@ -7,11 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/controller"
+	"github.com/limitcool/starter/internal/datastore/database"
+	"github.com/limitcool/starter/internal/filestore"
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"github.com/limitcool/starter/internal/pkg/storage"
-	"github.com/limitcool/starter/internal/storage/database"
+	"github.com/limitcool/starter/internal/pkg/types"
 )
 
 // SetupRouter 初始化并返回一个配置完整的Gin路由引擎
@@ -41,16 +42,16 @@ func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 	}
 
 	// 初始化存储服务（如果启用）
-	var stg *storage.Storage
+	var stg *filestore.Storage
 	if config.Storage.Enabled {
-		storageConfig := storage.Config{Type: config.Storage.Type}
+		storageConfig := filestore.Config{Type: config.Storage.Type}
 
 		// 根据存储类型设置配置
 		switch config.Storage.Type {
-		case storage.StorageTypeLocal:
+		case types.StorageTypeLocal:
 			storageConfig.Path = config.Storage.Local.Path
 			storageConfig.URL = config.Storage.Local.URL
-		case storage.StorageTypeS3:
+		case types.StorageTypeS3:
 			storageConfig.AccessKey = config.Storage.S3.AccessKey
 			storageConfig.SecretKey = config.Storage.S3.SecretKey
 			storageConfig.Region = config.Storage.S3.Region
@@ -59,7 +60,7 @@ func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 		}
 
 		var err error
-		stg, err = storage.New(storageConfig)
+		stg, err = filestore.New(storageConfig)
 		if err != nil {
 			logger.Error("Failed to initialize storage service", "err", err)
 		} else {
@@ -68,7 +69,7 @@ func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 	}
 
 	// 配置静态文件服务
-	if stg != nil && config.Storage.Type == storage.StorageTypeLocal {
+	if stg != nil && config.Storage.Type == types.StorageTypeLocal {
 		// 从URL提取路径前缀
 		urlPath := "/static" // 默认路径
 		if config.Storage.Local.URL != "" {

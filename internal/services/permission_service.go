@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"path/filepath"
 	"strconv"
 
@@ -19,6 +20,7 @@ type PermissionService struct {
 	menuRepo       *repository.MenuRepo
 	casbinService  casbin.Service
 	config         *configs.Config
+	menuService    *MenuService
 }
 
 // NewPermissionService 创建权限服务
@@ -29,17 +31,23 @@ func NewPermissionService(
 	casbinService casbin.Service,
 	config *configs.Config,
 ) *PermissionService {
-	return &PermissionService{
+	// 创建 PermissionService 实例
+	ps := &PermissionService{
 		permissionRepo: permissionRepo,
 		roleRepo:       roleRepo,
 		menuRepo:       menuRepo,
 		casbinService:  casbinService,
 		config:         config,
 	}
+
+	// 初始化 MenuService
+	ps.menuService = NewMenuService(menuRepo, roleRepo, casbinService)
+
+	return ps
 }
 
 // UpdatePermissionSettings 更新权限系统设置
-func (s *PermissionService) UpdatePermissionSettings(enabled, defaultAllow bool) error {
+func (s *PermissionService) UpdatePermissionSettings(ctx context.Context, enabled, defaultAllow bool) error {
 	// 更新内存中的配置
 	s.config.Casbin.Enabled = enabled
 	s.config.Casbin.DefaultAllow = defaultAllow
@@ -59,35 +67,35 @@ func (s *PermissionService) UpdatePermissionSettings(enabled, defaultAllow bool)
 }
 
 // GetPermissions 获取权限列表
-func (s *PermissionService) GetPermissions() ([]model.Permission, error) {
-	return s.permissionRepo.GetAll()
+func (s *PermissionService) GetPermissions(ctx context.Context) ([]model.Permission, error) {
+	return s.permissionRepo.GetAll(ctx)
 }
 
 // GetPermission 获取权限详情
-func (s *PermissionService) GetPermission(id uint64) (*model.Permission, error) {
-	return s.permissionRepo.GetByID(uint(id))
+func (s *PermissionService) GetPermission(ctx context.Context, id uint64) (*model.Permission, error) {
+	return s.permissionRepo.GetByID(ctx, uint(id))
 }
 
 // CreatePermission 创建权限
-func (s *PermissionService) CreatePermission(permission *model.Permission) error {
-	return s.permissionRepo.Create(permission)
+func (s *PermissionService) CreatePermission(ctx context.Context, permission *model.Permission) error {
+	return s.permissionRepo.Create(ctx, permission)
 }
 
 // UpdatePermission 更新权限
-func (s *PermissionService) UpdatePermission(id uint64, permission *model.Permission) error {
+func (s *PermissionService) UpdatePermission(ctx context.Context, id uint64, permission *model.Permission) error {
 	permission.ID = uint(id)
-	return s.permissionRepo.Update(permission)
+	return s.permissionRepo.Update(ctx, permission)
 }
 
 // DeletePermission 删除权限
-func (s *PermissionService) DeletePermission(id uint64) error {
-	return s.permissionRepo.Delete(uint(id))
+func (s *PermissionService) DeletePermission(ctx context.Context, id uint64) error {
+	return s.permissionRepo.Delete(ctx, uint(id))
 }
 
 // AssignPermissionToRole 为角色分配权限
-func (s *PermissionService) AssignPermissionToRole(roleID uint, permissionIDs []uint) error {
+func (s *PermissionService) AssignPermissionToRole(ctx context.Context, roleID uint, permissionIDs []uint) error {
 	// 获取角色
-	role, err := s.roleRepo.GetByID(roleID)
+	role, err := s.roleRepo.GetByID(ctx, roleID)
 	if err != nil {
 		return err
 	}
@@ -129,7 +137,7 @@ func (s *PermissionService) AssignPermissionToRole(roleID uint, permissionIDs []
 	// 使用 Casbin 事务批量更新权限策略
 	// 注意：这里我们使用 Casbin 的批量操作 API
 	// 1. 删除 Casbin 中的角色权限
-	_, err = s.casbinService.DeleteRole(role.Code)
+	_, err = s.casbinService.DeleteRole(ctx, role.Code)
 	if err != nil {
 		// 如果 Casbin 操作失败，记录错误但不回滚数据库事务
 		// 因为数据库事务已经提交，我们可以在后续的同步操作中修复 Casbin 状态
@@ -142,7 +150,7 @@ func (s *PermissionService) AssignPermissionToRole(roleID uint, permissionIDs []
 		// 准备批量添加的策略
 		var policies [][]string
 		for _, permID := range permissionIDs {
-			perm, err := s.permissionRepo.GetByID(permID)
+			perm, err := s.permissionRepo.GetByID(ctx, permID)
 			if err != nil {
 				logger.Warn("获取权限信息失败", "permission_id", permID, "error", err)
 				continue
@@ -154,7 +162,7 @@ func (s *PermissionService) AssignPermissionToRole(roleID uint, permissionIDs []
 
 		// 批量添加策略
 		if len(policies) > 0 {
-			success, err := s.casbinService.AddPolicies(policies)
+			success, err := s.casbinService.AddPolicies(ctx, policies)
 			if err != nil || !success {
 				logger.Error("批量添加 Casbin 权限策略失败", "error", err)
 				// 这里可以添加重试逻辑或触发异步修复任务
@@ -166,24 +174,24 @@ func (s *PermissionService) AssignPermissionToRole(roleID uint, permissionIDs []
 }
 
 // GetPermissionsByRoleID 获取角色的权限列表
-func (s *PermissionService) GetPermissionsByRoleID(roleID uint) ([]model.Permission, error) {
-	return s.permissionRepo.GetByRoleID(roleID)
+func (s *PermissionService) GetPermissionsByRoleID(ctx context.Context, roleID uint) ([]model.Permission, error) {
+	return s.permissionRepo.GetByRoleID(ctx, roleID)
 }
 
 // GetPermissionsByUserID 获取用户的权限列表
-func (s *PermissionService) GetPermissionsByUserID(userID uint) ([]model.Permission, error) {
-	return s.permissionRepo.GetByUserID(userID)
+func (s *PermissionService) GetPermissionsByUserID(ctx context.Context, userID uint) ([]model.Permission, error) {
+	return s.permissionRepo.GetByUserID(ctx, userID)
 }
 
 // CheckPermission 检查权限
-func (s *PermissionService) CheckPermission(userID string, obj string, act string) (bool, error) {
-	return s.casbinService.CheckPermission(userID, obj, act)
+func (s *PermissionService) CheckPermission(ctx context.Context, userID string, obj string, act string) (bool, error) {
+	return s.casbinService.CheckPermission(ctx, userID, obj, act)
 }
 
 // AssignRolesToUser 为用户分配角色
-func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) error {
+func (s *PermissionService) AssignRolesToUser(ctx context.Context, userID string, roleIDs []uint) error {
 	// 获取用户当前角色
-	currentRoles, err := s.casbinService.GetRolesForUser(userID)
+	currentRoles, err := s.casbinService.GetRolesForUser(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -195,7 +203,7 @@ func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) err
 	}
 
 	// 开始数据库事务
-	tx := s.roleRepo.DB.Begin()
+	tx := s.roleRepo.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -203,7 +211,7 @@ func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) err
 	}()
 
 	// 在事务中删除原有的用户角色关联
-	if err := tx.Where("user_id = ?", userIDInt).Delete(&model.UserRole{}).Error; err != nil {
+	if err := tx.WithContext(ctx).Where("user_id = ?", userIDInt).Delete(&model.UserRole{}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -217,7 +225,7 @@ func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) err
 				RoleID: roleID,
 			})
 		}
-		if err := tx.Create(&userRoles).Error; err != nil {
+		if err := tx.WithContext(ctx).Create(&userRoles).Error; err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -231,7 +239,7 @@ func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) err
 	// 使用 Casbin 批量操作 API 更新权限
 	// 1. 批量删除当前角色
 	if len(currentRoles) > 0 {
-		success, err := s.casbinService.DeleteRolesForUser(userID)
+		success, err := s.casbinService.DeleteRolesForUser(ctx, userID)
 		if err != nil || !success {
 			logger.Error("批量删除用户角色失败", "error", err)
 			// 这里可以添加重试逻辑或触发异步修复任务
@@ -243,7 +251,7 @@ func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) err
 		// 准备批量添加的角色
 		var roleCodes []string
 		for _, roleID := range roleIDs {
-			role, err := s.roleRepo.GetByID(roleID)
+			role, err := s.roleRepo.GetByID(ctx, roleID)
 			if err != nil {
 				logger.Warn("获取角色信息失败", "role_id", roleID, "error", err)
 				continue
@@ -253,7 +261,7 @@ func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) err
 
 		// 批量添加角色
 		if len(roleCodes) > 0 {
-			success, err := s.casbinService.AddRolesForUser(userID, roleCodes)
+			success, err := s.casbinService.AddRolesForUser(ctx, userID, roleCodes)
 			if err != nil || !success {
 				logger.Error("批量添加用户角色失败", "error", err)
 				// 这里可以添加重试逻辑或触发异步修复任务
@@ -265,9 +273,9 @@ func (s *PermissionService) AssignRolesToUser(userID string, roleIDs []uint) err
 }
 
 // GetUserRoles 获取用户角色
-func (s *PermissionService) GetUserRoles(userID string) ([]model.Role, error) {
+func (s *PermissionService) GetUserRoles(ctx context.Context, userID string) ([]model.Role, error) {
 	// 获取用户角色编码
-	roleCodes, err := s.casbinService.GetRolesForUser(userID)
+	roleCodes, err := s.casbinService.GetRolesForUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +283,7 @@ func (s *PermissionService) GetUserRoles(userID string) ([]model.Role, error) {
 	// 获取角色详情
 	var roles []model.Role
 	for _, code := range roleCodes {
-		role, err := s.roleRepo.GetByCode(code)
+		role, err := s.roleRepo.GetByCode(ctx, code)
 		if err != nil {
 			continue
 		}
@@ -286,56 +294,13 @@ func (s *PermissionService) GetUserRoles(userID string) ([]model.Role, error) {
 }
 
 // GetUserMenus 获取用户菜单
-func (s *PermissionService) GetUserMenus(userID string) ([]*model.MenuTree, error) {
+func (s *PermissionService) GetUserMenus(ctx context.Context, userID string) ([]*model.MenuTree, error) {
 	// 获取用户角色
-	roles, err := s.GetUserRoles(userID)
+	roles, err := s.GetUserRoles(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 获取角色菜单
-	var menuIDs []uint
-	for _, role := range roles {
-		// 管理员角色获取所有菜单
-		if role.Code == "admin" {
-			allMenus, err := s.menuRepo.GetAll()
-			if err != nil {
-				return nil, err
-			}
-			return s.menuRepo.BuildMenuTree(allMenus), nil
-		}
-
-		// 获取角色菜单
-		roleMenus, err := s.menuRepo.GetByRoleID(role.ID)
-		if err != nil {
-			continue
-		}
-
-		for _, menu := range roleMenus {
-			menuIDs = append(menuIDs, menu.ID)
-		}
-	}
-
-	// 去重
-	uniqueMenuIDs := make(map[uint]bool)
-	var uniqueIDs []uint
-	for _, id := range menuIDs {
-		if !uniqueMenuIDs[id] {
-			uniqueMenuIDs[id] = true
-			uniqueIDs = append(uniqueIDs, id)
-		}
-	}
-
-	// 获取菜单详情
-	var menus []*model.Menu
-	for _, id := range uniqueIDs {
-		menu, err := s.menuRepo.GetByIDWithRelations(id)
-		if err != nil {
-			continue
-		}
-		menus = append(menus, menu)
-	}
-
-	// 构建菜单树
-	return s.menuRepo.BuildMenuTree(menus), nil
+	// 使用 MenuService 的方法获取用户菜单树
+	return s.menuService.GetUserMenuTree(ctx, userID, roles)
 }

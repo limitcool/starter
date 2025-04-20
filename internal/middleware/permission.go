@@ -42,7 +42,7 @@ func CasbinMiddleware(permissionService *services.PermissionService, config *con
 		logger.Debug("检查权限", "userID", userID, "object", obj, "action", act)
 
 		// 检查权限
-		pass, err := permissionService.CheckPermission(userID, obj, act)
+		pass, err := permissionService.CheckPermission(c.Request.Context(), userID, obj, act)
 		if err != nil {
 			logger.Error("权限检查错误", "error", err)
 			response.Error(c, errorx.ErrCasbinService)
@@ -52,7 +52,7 @@ func CasbinMiddleware(permissionService *services.PermissionService, config *con
 
 		if !pass {
 			// 尝试获取用户角色
-			roles, err := permissionService.GetUserRoles(userID)
+			roles, err := permissionService.GetUserRoles(c.Request.Context(), userID)
 			if err == nil {
 				var roleNames []string
 				for _, role := range roles {
@@ -102,7 +102,7 @@ func PermissionCodeMiddleware(permissionService *services.PermissionService, con
 		userID := strconv.FormatUint(uint64(userIDInterface.(float64)), 10)
 
 		// 获取用户角色
-		roles, err := permissionService.GetUserRoles(userID)
+		roles, err := permissionService.GetUserRoles(c.Request.Context(), userID)
 		if err != nil {
 			logger.Error("获取用户角色失败", "error", err)
 			response.Error(c, errorx.ErrCasbinService)
@@ -120,7 +120,7 @@ func PermissionCodeMiddleware(permissionService *services.PermissionService, con
 			}
 
 			// 检查角色是否有权限
-			pass, err := permissionService.CheckPermission(role.Code, requiredPerm, "*")
+			pass, err := permissionService.CheckPermission(c.Request.Context(), role.Code, requiredPerm, "*")
 			if err != nil {
 				logger.Error("权限检查错误", "error", err)
 				continue
@@ -163,7 +163,7 @@ func RequirePermission(permCode string, permissionService *services.PermissionSe
 		}
 
 		// 获取用户角色
-		roles, err := permissionService.GetUserRoles(strconv.FormatUint(userID, 10))
+		roles, err := permissionService.GetUserRoles(c.Request.Context(), strconv.FormatUint(userID, 10))
 		if err != nil {
 			logger.Error("获取用户角色失败", "error", err)
 			response.Error(c, errorx.ErrCasbinService)
@@ -181,7 +181,7 @@ func RequirePermission(permCode string, permissionService *services.PermissionSe
 			}
 
 			// 检查角色是否有权限
-			pass, err := permissionService.CheckPermission(role.Code, permCode, "*")
+			pass, err := permissionService.CheckPermission(c.Request.Context(), role.Code, permCode, "*")
 			if err != nil {
 				logger.Error("权限检查错误", "error", err)
 				continue

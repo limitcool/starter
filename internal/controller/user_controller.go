@@ -47,7 +47,7 @@ func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 		"username", req.Username,
 		"ip", clientIP)
 
-	tokenResponse, err := ctrl.userService.Login(req.Username, req.Password, clientIP)
+	tokenResponse, err := ctrl.userService.Login(ctx.Request.Context(), req.Username, req.Password, clientIP)
 	if err != nil {
 		// 根据错误类型记录不同级别的日志
 		if errorx.IsAppErr(err) {
@@ -102,7 +102,7 @@ func (ctrl *UserController) UserRegister(c *gin.Context) {
 	// 获取客户端IP地址
 	clientIP := c.ClientIP()
 
-	user, err := ctrl.userService.Register(req, clientIP)
+	user, err := ctrl.userService.Register(c.Request.Context(), req, clientIP)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -125,7 +125,7 @@ func (ctrl *UserController) UserChangePassword(c *gin.Context) {
 		return
 	}
 
-	err := ctrl.userService.ChangePassword(cast.ToInt64(userID), req.OldPassword, req.NewPassword)
+	err := ctrl.userService.ChangePassword(c.Request.Context(), cast.ToInt64(userID), req.OldPassword, req.NewPassword)
 	if err != nil {
 		if errorx.IsAppErr(err) {
 			response.Error(c, err)
@@ -148,7 +148,7 @@ func (ctrl *UserController) UserInfo(c *gin.Context) {
 	}
 
 	// 获取用户信息
-	user, err := ctrl.userService.GetUserByID(cast.ToInt64(userID))
+	user, err := ctrl.userService.GetUserByID(c.Request.Context(), cast.ToInt64(userID))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -169,7 +169,7 @@ func (ctrl *UserController) RefreshToken(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	tokenResponse, err := ctrl.sysUserService.RefreshToken(req.RefreshToken)
+	tokenResponse, err := ctrl.sysUserService.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		logger.LogError("RefreshToken 刷新访问令牌失败", err,
 			"refresh_token", req.RefreshToken)

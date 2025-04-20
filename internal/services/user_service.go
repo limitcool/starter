@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -10,37 +11,42 @@ import (
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
-	jwtpkg "github.com/limitcool/starter/internal/pkg/jwt"
 	"github.com/limitcool/starter/internal/repository"
 )
 
 // UserService 普通用户服务
 type UserService struct {
-	userRepo *repository.UserRepo
-	config   *configs.Config
+	userRepo    *repository.UserRepo
+	config      *configs.Config
+	authService *AuthService
 }
 
 // NewUserService 创建普通用户服务
 func NewUserService(userRepo *repository.UserRepo, config *configs.Config) *UserService {
+	// 创建认证服务
+	authService := NewAuthService(config)
+
 	return &UserService{
-		userRepo: userRepo,
-		config:   config,
+		userRepo:    userRepo,
+		config:      config,
+		authService: authService,
 	}
 }
 
 // GetUserByID 根据ID获取用户信息
-func (s *UserService) GetUserByID(id int64) (*model.User, error) {
-	return s.userRepo.GetByID(id)
+func (s *UserService) GetUserByID(ctx context.Context, id int64) (*model.User, error) {
+	return s.userRepo.GetByID(ctx, id)
 }
 
 // VerifyPassword 验证用户密码
 func (s *UserService) VerifyPassword(password, hashedPassword string) bool {
-	return crypto.CheckPassword(hashedPassword, password)
+	// 使用通用的 VerifyPassword 函数
+	return VerifyPassword(password, hashedPassword)
 }
 
 // Register 用户注册
-func (s *UserService) Register(req v1.UserRegisterRequest, registerIP string) (*model.User, error) {
-	isExist, err := s.userRepo.IsExist(req.Username)
+func (s *UserService) Register(ctx context.Context, req v1.UserRegisterRequest, registerIP string) (*model.User, error) {
+	isExist, err := s.userRepo.IsExist(ctx, req.Username)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("检查用户名 %s 是否存在失败", req.Username))
 	}
@@ -69,7 +75,7 @@ func (s *UserService) Register(req v1.UserRegisterRequest, registerIP string) (*
 		RegisterIP: registerIP,
 	}
 
-	if err := s.userRepo.Create(user); err != nil {
+	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("创建用户 %s 失败", req.Username))
 	}
 
@@ -77,9 +83,9 @@ func (s *UserService) Register(req v1.UserRegisterRequest, registerIP string) (*
 }
 
 // Login 用户登录
-func (s *UserService) Login(username, password string, ip string) (*v1.LoginResponse, error) {
+func (s *UserService) Login(ctx context.Context, username, password string, ip string) (*v1.LoginResponse, error) {
 	// 获取用户
-	user, err := s.userRepo.GetByUsername(username)
+	user, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		// 判断是否是用户不存在错误
 		if errorx.IsAppErr(err) && err.(*errorx.AppError).GetErrorCode() == errorx.ErrorUserNotFoundCode {
@@ -107,48 +113,18 @@ func (s *UserService) Login(username, password string, ip string) (*v1.LoginResp
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	}
-	if err := s.userRepo.UpdateFields(user.ID, fields); err != nil {
+	if err := s.userRepo.UpdateFields(ctx, user.ID, fields); err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("更新用户 %s 的登录信息失败", username))
 	}
 
-	// 获取配置
-	cfg := s.config
-
-	// 生成访问令牌
-	accessClaims := &jwtpkg.CustomClaims{
-		UserID:    user.ID,
-		Username:  user.Username,
-		UserType:  enum.UserTypeUser,             // 普通用户
-		TokenType: enum.TokenTypeAccess.String(), // 访问令牌
-	}
-
-	// 生成刷新令牌
-	refreshClaims := &jwtpkg.CustomClaims{
-		UserID:    user.ID,
-		Username:  user.Username,
-		UserType:  enum.UserTypeUser,              // 普通用户
-		TokenType: enum.TokenTypeRefresh.String(), // 刷新令牌
-	}
-
-	accessToken, err := jwtpkg.GenerateTokenWithCustomClaims(accessClaims, cfg.JwtAuth.AccessSecret, time.Duration(cfg.JwtAuth.AccessExpire)*time.Second)
-	if err != nil {
-		return nil, fmt.Errorf("生成访问令牌失败: %w", err)
-	}
-
-	refreshToken, err := jwtpkg.GenerateTokenWithCustomClaims(refreshClaims, cfg.JwtAuth.RefreshSecret, time.Duration(cfg.JwtAuth.RefreshExpire)*time.Second)
-	if err != nil {
-		return nil, fmt.Errorf("生成刷新令牌失败: %w", err)
-	}
-
-	return &v1.LoginResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    cfg.JwtAuth.AccessExpire,
-	}, nil
+	// 使用认证服务生成令牌
+	// 普通用户默认角色
+	roles := []string{"user"}
+	return s.authService.GenerateTokens(uint(user.ID), user.Username, enum.UserTypeUser, roles)
 }
 
 // UpdateUser 更新用户信息
-func (s *UserService) UpdateUser(id uint, data map[string]any) error {
+func (s *UserService) UpdateUser(ctx context.Context, id uint, data map[string]any) error {
 	// 不允许更新的字段
 	delete(data, "id")
 	delete(data, "username")
@@ -161,16 +137,16 @@ func (s *UserService) UpdateUser(id uint, data map[string]any) error {
 	for k, v := range data {
 		fields[k] = v
 	}
-	if err := s.userRepo.UpdateFields(int64(id), fields); err != nil {
+	if err := s.userRepo.UpdateFields(ctx, int64(id), fields); err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("更新用户ID %d 的信息失败", id))
 	}
 	return nil
 }
 
 // ChangePassword 修改密码
-func (s *UserService) ChangePassword(id int64, oldPassword, newPassword string) error {
+func (s *UserService) ChangePassword(ctx context.Context, id int64, oldPassword, newPassword string) error {
 	// 获取用户
-	user, err := s.userRepo.GetByID(id)
+	user, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("获取用户ID %d 失败", id))
 	}
@@ -191,7 +167,7 @@ func (s *UserService) ChangePassword(id int64, oldPassword, newPassword string) 
 	fields := map[string]any{
 		"password": hashedPassword,
 	}
-	if err := s.userRepo.UpdateFields(id, fields); err != nil {
+	if err := s.userRepo.UpdateFields(ctx, id, fields); err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("更新用户ID %d 的密码失败", id))
 	}
 	return nil

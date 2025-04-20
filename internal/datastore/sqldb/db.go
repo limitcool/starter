@@ -100,16 +100,6 @@ func NewDB(c configs.Config) *gorm.DB {
 	return newDbConn(&c)
 }
 
-// func NewMysql(dsn string, c configs.Config) *gorm.DB {
-// 	c.Driver = configs.DriverMysql
-// 	return newDbConn(c)
-// }
-
-// func NewSqlite(dsn string, c configs.Config) *gorm.DB {
-// 	c.Driver = configs.DriverSqlite
-// 	return newDbConn(c)
-// }
-
 func newDbConn(c *configs.Config) *gorm.DB {
 	dsn := getDSN(c)
 	var (

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -8,24 +9,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/internal/filestore"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
-	"github.com/limitcool/starter/internal/pkg/storage"
 	"github.com/limitcool/starter/internal/repository"
 )
 
 // FileService 文件服务
 type FileService struct {
-	storage     *storage.Storage
+	storage     *filestore.Storage
 	fileRepo    *repository.FileRepo
 	userRepo    *repository.UserRepo
 	sysUserRepo *repository.SysUserRepo
 }
 
 // NewFileService 创建文件服务
-func NewFileService(storage *storage.Storage, fileRepo *repository.FileRepo, userRepo *repository.UserRepo, sysUserRepo *repository.SysUserRepo) *FileService {
+func NewFileService(storage *filestore.Storage, fileRepo *repository.FileRepo, userRepo *repository.UserRepo, sysUserRepo *repository.SysUserRepo) *FileService {
 	return &FileService{
 		storage:     storage,
 		fileRepo:    fileRepo,
@@ -35,7 +35,7 @@ func NewFileService(storage *storage.Storage, fileRepo *repository.FileRepo, use
 }
 
 // UploadFile 上传文件
-func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeader, fileType string, uploaderID int64, userType enum.UserType, isPublic bool) (*model.File, error) {
+func (s *FileService) UploadFile(ctx context.Context, fileHeader *multipart.FileHeader, fileType string, uploaderID int64, userType enum.UserType, isPublic bool) (*model.File, error) {
 	if fileHeader == nil {
 		return nil, errorx.ErrInvalidParams
 	}
@@ -43,7 +43,7 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 	// 获取文件基本信息
 	originalName := fileHeader.Filename
 	ext := strings.ToLower(filepath.Ext(originalName))
-	mimeType := storage.GetMimeType(originalName)
+	mimeType := filestore.GetMimeType(originalName)
 	size := fileHeader.Size
 
 	// 验证文件类型
@@ -103,7 +103,7 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 		IsPublic:       isPublic, // 设置是否公开
 	}
 
-	if err := s.fileRepo.Create(fileModel); err != nil {
+	if err := s.fileRepo.Create(ctx, fileModel); err != nil {
 		return nil, errorx.ErrDatabase.WithError(err)
 	}
 
@@ -111,8 +111,8 @@ func (s *FileService) UploadFile(c *gin.Context, fileHeader *multipart.FileHeade
 }
 
 // GetFile 获取文件信息
-func (s *FileService) GetFile(id string, currentUserID int64, currentUserType enum.UserType) (*model.File, error) {
-	file, err := s.fileRepo.GetByID(id)
+func (s *FileService) GetFile(ctx context.Context, id string, currentUserID int64, currentUserType enum.UserType) (*model.File, error) {
+	file, err := s.fileRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -150,8 +150,8 @@ func (s *FileService) GetFile(id string, currentUserID int64, currentUserType en
 }
 
 // DeleteFile 删除文件
-func (s *FileService) DeleteFile(id string, currentUserID int64, currentUserType enum.UserType) error {
-	file, err := s.fileRepo.GetByID(id)
+func (s *FileService) DeleteFile(ctx context.Context, id string, currentUserID int64, currentUserType enum.UserType) error {
+	file, err := s.fileRepo.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (s *FileService) DeleteFile(id string, currentUserID int64, currentUserType
 	}
 
 	// 从数据库中删除记录
-	if err := s.fileRepo.Delete(id); err != nil {
+	if err := s.fileRepo.Delete(ctx, id); err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("从数据库中删除文件记录失败: id=%s", id))
 	}
 
@@ -175,9 +175,9 @@ func (s *FileService) DeleteFile(id string, currentUserID int64, currentUserType
 }
 
 // 获取文件内容
-func (s *FileService) GetFileContent(id string, currentUserID int64, currentUserType enum.UserType) (io.ReadCloser, string, error) {
+func (s *FileService) GetFileContent(ctx context.Context, id string, currentUserID int64, currentUserType enum.UserType) (io.ReadCloser, string, error) {
 	// 先验证权限
-	file, err := s.GetFile(id, currentUserID, currentUserType)
+	file, err := s.GetFile(ctx, id, currentUserID, currentUserType)
 	if err != nil {
 		return nil, "", err
 	}
@@ -192,20 +192,20 @@ func (s *FileService) GetFileContent(id string, currentUserID int64, currentUser
 }
 
 // UpdateUserAvatar 更新用户头像
-func (s *FileService) UpdateUserAvatar(userID int64, fileHeader *multipart.FileHeader) (string, error) {
+func (s *FileService) UpdateUserAvatar(ctx context.Context, userID int64, fileHeader *multipart.FileHeader) (string, error) {
 	// 上传头像文件（图片类型，头像用途）
-	file, err := s.UploadFile(nil, fileHeader, model.FileTypeImage, userID, enum.UserTypeUser, false)
+	file, err := s.UploadFile(ctx, fileHeader, model.FileTypeImage, userID, enum.UserTypeUser, false)
 	if err != nil {
 		return "", err
 	}
 
 	// 设置文件用途为头像
-	if err := s.fileRepo.UpdateFileUsage(file, model.FileUsageAvatar); err != nil {
+	if err := s.fileRepo.UpdateFileUsage(ctx, file, model.FileUsageAvatar); err != nil {
 		return "", errorx.ErrDatabase.WithError(err)
 	}
 
 	// 更新用户头像
-	if err := s.userRepo.UpdateAvatar(userID, file.ID); err != nil {
+	if err := s.userRepo.UpdateAvatar(ctx, userID, file.ID); err != nil {
 		return "", err
 	}
 
@@ -213,20 +213,20 @@ func (s *FileService) UpdateUserAvatar(userID int64, fileHeader *multipart.FileH
 }
 
 // UpdateSysUserAvatar 更新系统用户头像
-func (s *FileService) UpdateSysUserAvatar(userID int64, fileHeader *multipart.FileHeader) (string, error) {
+func (s *FileService) UpdateSysUserAvatar(ctx context.Context, userID int64, fileHeader *multipart.FileHeader) (string, error) {
 	// 上传头像文件（图片类型，头像用途）
-	file, err := s.UploadFile(nil, fileHeader, model.FileTypeImage, userID, enum.UserTypeSysUser, false)
+	file, err := s.UploadFile(ctx, fileHeader, model.FileTypeImage, userID, enum.UserTypeSysUser, false)
 	if err != nil {
 		return "", err
 	}
 
 	// 设置文件用途为头像
-	if err := s.fileRepo.UpdateFileUsage(file, model.FileUsageAvatar); err != nil {
+	if err := s.fileRepo.UpdateFileUsage(ctx, file, model.FileUsageAvatar); err != nil {
 		return "", errorx.ErrDatabase.WithError(err)
 	}
 
 	// 更新系统用户头像
-	if err := s.sysUserRepo.UpdateAvatar(userID, file.ID); err != nil {
+	if err := s.sysUserRepo.UpdateAvatar(ctx, userID, file.ID); err != nil {
 		return "", err
 	}
 

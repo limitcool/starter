@@ -3,9 +3,9 @@ package cmd
 import (
 	"os"
 
+	"github.com/limitcool/starter/internal/datastore/sqldb"
 	"github.com/limitcool/starter/internal/migration"
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"github.com/limitcool/starter/internal/storage/sqldb"
 	"github.com/spf13/cobra"
 )
 

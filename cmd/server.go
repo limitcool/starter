@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/limitcool/starter/internal/core"
+	"github.com/limitcool/starter/internal/datastore/database"
+	"github.com/limitcool/starter/internal/datastore/mongodb"
+	"github.com/limitcool/starter/internal/datastore/redisdb"
+	"github.com/limitcool/starter/internal/datastore/sqldb"
+	"github.com/limitcool/starter/internal/filestore"
 	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/router"
-	"github.com/limitcool/starter/internal/storage/database"
-	"github.com/limitcool/starter/internal/storage/mongodb"
-	"github.com/limitcool/starter/internal/storage/redisdb"
-	"github.com/limitcool/starter/internal/storage/sqldb"
 	"github.com/spf13/cobra"
 )
 
@@ -74,6 +75,13 @@ func runServer(cmd *cobra.Command, args []string) {
 	// 添加Redis组件（如果配置了启用）
 	redisComponent := redisdb.NewComponent(cfg)
 	app.ComponentManager.AddComponent(redisComponent)
+
+	// 添加文件存储组件（如果配置了启用）
+	if cfg.Storage.Enabled {
+		logger.Info("Adding file storage component", "type", cfg.Storage.Type)
+		fileComponent := filestore.NewComponent(cfg)
+		app.ComponentManager.AddComponent(fileComponent)
+	}
 
 	// 添加Casbin组件（如果配置了启用）
 	if cfg.Casbin.Enabled {

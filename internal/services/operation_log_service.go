@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -40,7 +41,7 @@ func (s *OperationLogService) CreateUserLog(c *gin.Context, userID int64, userna
 }
 
 // GetOperationLogs 分页获取操作日志
-func (s *OperationLogService) GetOperationLogs(query *v1.OperationLogQuery) (*PageResult, error) {
+func (s *OperationLogService) GetOperationLogs(ctx context.Context, query *v1.OperationLogQuery) (*PageResult, error) {
 	// 标准化分页请求
 	query.PageRequest.Normalize()
 
@@ -60,7 +61,7 @@ func (s *OperationLogService) GetOperationLogs(query *v1.OperationLogQuery) (*Pa
 	}
 
 	// 执行查询
-	result, err := s.logRepo.GetLogs(repoQuery)
+	result, err := s.logRepo.GetLogs(ctx, repoQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -75,11 +76,11 @@ func (s *OperationLogService) GetOperationLogs(query *v1.OperationLogQuery) (*Pa
 }
 
 // DeleteOperationLog 删除操作日志
-func (s *OperationLogService) DeleteOperationLog(id uint) error {
-	return s.logRepo.Delete(id)
+func (s *OperationLogService) DeleteOperationLog(ctx context.Context, id uint) error {
+	return s.logRepo.Delete(ctx, id)
 }
 
 // BatchDeleteOperationLogs 批量删除操作日志
-func (s *OperationLogService) BatchDeleteOperationLogs(ids []uint) error {
-	return s.logRepo.BatchDelete(ids)
+func (s *OperationLogService) BatchDeleteOperationLogs(ctx context.Context, ids []uint) error {
+	return s.logRepo.BatchDelete(ctx, ids)
 }

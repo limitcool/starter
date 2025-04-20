@@ -1,8 +1,10 @@
 package services
 
 import (
+	"context"
+
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/internal/storage/database"
+	"github.com/limitcool/starter/internal/datastore/database"
 )
 
 // SystemService 系统服务
@@ -20,7 +22,7 @@ func NewSystemService(db database.Database, config *configs.Config) *SystemServi
 }
 
 // GetSystemSettings 获取系统设置
-func (s *SystemService) GetSystemSettings() map[string]any {
+func (s *SystemService) GetSystemSettings(ctx context.Context) map[string]any {
 	// 使用服务实例中的配置
 	config := s.config
 

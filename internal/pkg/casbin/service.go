@@ -1,6 +1,7 @@
 package casbin
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -20,30 +21,30 @@ type Service interface {
 	GetEnforcer() *casbin.Enforcer
 
 	// 权限检查
-	CheckPermission(sub, obj, act string) (bool, error)
+	CheckPermission(ctx context.Context, sub, obj, act string) (bool, error)
 
 	// 角色管理
-	AddRoleForUser(userID, role string) (bool, error)
-	DeleteRoleForUser(userID, role string) (bool, error)
-	GetRolesForUser(userID string) ([]string, error)
-	HasRoleForUser(userID, role string) (bool, error)
-	GetUsersForRole(role string) ([]string, error)
-	GetAllRoles() ([]string, error)
-	DeleteRole(role string) (bool, error)
+	AddRoleForUser(ctx context.Context, userID, role string) (bool, error)
+	DeleteRoleForUser(ctx context.Context, userID, role string) (bool, error)
+	GetRolesForUser(ctx context.Context, userID string) ([]string, error)
+	HasRoleForUser(ctx context.Context, userID, role string) (bool, error)
+	GetUsersForRole(ctx context.Context, role string) ([]string, error)
+	GetAllRoles(ctx context.Context) ([]string, error)
+	DeleteRole(ctx context.Context, role string) (bool, error)
 
 	// 批量角色管理
-	AddRolesForUser(userID string, roles []string) (bool, error)
-	DeleteRolesForUser(userID string) (bool, error)
+	AddRolesForUser(ctx context.Context, userID string, roles []string) (bool, error)
+	DeleteRolesForUser(ctx context.Context, userID string) (bool, error)
 
 	// 权限管理
-	AddPermissionForRole(role, obj, act string) (bool, error)
-	DeletePermissionForRole(role, obj, act string) (bool, error)
-	GetPermissionsForUser(userID string) ([][]string, error)
-	GetPermissionsForRole(role string) ([][]string, error)
+	AddPermissionForRole(ctx context.Context, role, obj, act string) (bool, error)
+	DeletePermissionForRole(ctx context.Context, role, obj, act string) (bool, error)
+	GetPermissionsForUser(ctx context.Context, userID string) ([][]string, error)
+	GetPermissionsForRole(ctx context.Context, role string) ([][]string, error)
 
 	// 批量权限管理
-	AddPolicies(policies [][]string) (bool, error)
-	RemovePolicies(policies [][]string) (bool, error)
+	AddPolicies(ctx context.Context, policies [][]string) (bool, error)
+	RemovePolicies(ctx context.Context, policies [][]string) (bool, error)
 }
 
 // DefaultService Casbin服务默认实现
@@ -130,7 +131,7 @@ func (s *DefaultService) GetEnforcer() *casbin.Enforcer {
 }
 
 // CheckPermission 检查权限
-func (s *DefaultService) CheckPermission(sub, obj, act string) (bool, error) {
+func (s *DefaultService) CheckPermission(ctx context.Context, sub, obj, act string) (bool, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -148,7 +149,7 @@ func (s *DefaultService) CheckPermission(sub, obj, act string) (bool, error) {
 }
 
 // AddRoleForUser 为用户添加角色
-func (s *DefaultService) AddRoleForUser(userID string, role string) (bool, error) {
+func (s *DefaultService) AddRoleForUser(ctx context.Context, userID string, role string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -161,7 +162,7 @@ func (s *DefaultService) AddRoleForUser(userID string, role string) (bool, error
 }
 
 // DeleteRoleForUser 删除用户角色
-func (s *DefaultService) DeleteRoleForUser(userID string, role string) (bool, error) {
+func (s *DefaultService) DeleteRoleForUser(ctx context.Context, userID string, role string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -174,7 +175,7 @@ func (s *DefaultService) DeleteRoleForUser(userID string, role string) (bool, er
 }
 
 // AddPermissionForRole 为角色添加权限
-func (s *DefaultService) AddPermissionForRole(role string, obj string, act string) (bool, error) {
+func (s *DefaultService) AddPermissionForRole(ctx context.Context, role string, obj string, act string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -187,7 +188,7 @@ func (s *DefaultService) AddPermissionForRole(role string, obj string, act strin
 }
 
 // DeletePermissionForRole 删除角色权限
-func (s *DefaultService) DeletePermissionForRole(role string, obj string, act string) (bool, error) {
+func (s *DefaultService) DeletePermissionForRole(ctx context.Context, role string, obj string, act string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -200,7 +201,7 @@ func (s *DefaultService) DeletePermissionForRole(role string, obj string, act st
 }
 
 // GetRolesForUser 获取用户角色列表
-func (s *DefaultService) GetRolesForUser(userID string) ([]string, error) {
+func (s *DefaultService) GetRolesForUser(ctx context.Context, userID string) ([]string, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -213,7 +214,7 @@ func (s *DefaultService) GetRolesForUser(userID string) ([]string, error) {
 }
 
 // HasRoleForUser 判断用户是否拥有指定角色
-func (s *DefaultService) HasRoleForUser(userID string, role string) (bool, error) {
+func (s *DefaultService) HasRoleForUser(ctx context.Context, userID string, role string) (bool, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -226,7 +227,7 @@ func (s *DefaultService) HasRoleForUser(userID string, role string) (bool, error
 }
 
 // GetUsersForRole 获取角色的所有用户
-func (s *DefaultService) GetUsersForRole(role string) ([]string, error) {
+func (s *DefaultService) GetUsersForRole(ctx context.Context, role string) ([]string, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -239,7 +240,7 @@ func (s *DefaultService) GetUsersForRole(role string) ([]string, error) {
 }
 
 // GetPermissionsForUser 获取用户所有权限
-func (s *DefaultService) GetPermissionsForUser(userID string) ([][]string, error) {
+func (s *DefaultService) GetPermissionsForUser(ctx context.Context, userID string) ([][]string, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -256,7 +257,7 @@ func (s *DefaultService) GetPermissionsForUser(userID string) ([][]string, error
 }
 
 // GetPermissionsForRole 获取角色所有权限
-func (s *DefaultService) GetPermissionsForRole(role string) ([][]string, error) {
+func (s *DefaultService) GetPermissionsForRole(ctx context.Context, role string) ([][]string, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -273,7 +274,7 @@ func (s *DefaultService) GetPermissionsForRole(role string) ([][]string, error) 
 }
 
 // GetAllRoles 获取所有角色
-func (s *DefaultService) GetAllRoles() ([]string, error) {
+func (s *DefaultService) GetAllRoles(ctx context.Context) ([]string, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
@@ -290,7 +291,7 @@ func (s *DefaultService) GetAllRoles() ([]string, error) {
 }
 
 // DeleteRole 删除角色
-func (s *DefaultService) DeleteRole(role string) (bool, error) {
+func (s *DefaultService) DeleteRole(ctx context.Context, role string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -317,7 +318,7 @@ func (s *DefaultService) DeleteRole(role string) (bool, error) {
 }
 
 // AddRolesForUser 为用户批量添加角色
-func (s *DefaultService) AddRolesForUser(userID string, roles []string) (bool, error) {
+func (s *DefaultService) AddRolesForUser(ctx context.Context, userID string, roles []string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -343,7 +344,7 @@ func (s *DefaultService) AddRolesForUser(userID string, roles []string) (bool, e
 }
 
 // DeleteRolesForUser 删除用户所有角色
-func (s *DefaultService) DeleteRolesForUser(userID string) (bool, error) {
+func (s *DefaultService) DeleteRolesForUser(ctx context.Context, userID string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -363,7 +364,7 @@ func (s *DefaultService) DeleteRolesForUser(userID string) (bool, error) {
 }
 
 // AddPolicies 批量添加权限策略
-func (s *DefaultService) AddPolicies(policies [][]string) (bool, error) {
+func (s *DefaultService) AddPolicies(ctx context.Context, policies [][]string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -383,7 +384,7 @@ func (s *DefaultService) AddPolicies(policies [][]string) (bool, error) {
 }
 
 // RemovePolicies 批量删除权限策略
-func (s *DefaultService) RemovePolicies(policies [][]string) (bool, error) {
+func (s *DefaultService) RemovePolicies(ctx context.Context, policies [][]string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 

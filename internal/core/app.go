@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/internal/storage/database"
+	"github.com/limitcool/starter/internal/datastore/database"
 )
 
 // App 应用实例

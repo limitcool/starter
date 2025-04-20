@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/limitcool/starter/internal/model"
@@ -26,8 +27,8 @@ func NewMenuService(menuRepo *repository.MenuRepo, roleRepo *repository.RoleRepo
 }
 
 // CreateMenu 创建菜单
-func (s *MenuService) CreateMenu(menu *model.Menu) error {
-	err := s.menuRepo.Create(menu)
+func (s *MenuService) CreateMenu(ctx context.Context, menu *model.Menu) error {
+	err := s.menuRepo.Create(ctx, menu)
 	if err != nil {
 		return errorx.WrapError(err, "创建菜单失败")
 	}
@@ -35,8 +36,8 @@ func (s *MenuService) CreateMenu(menu *model.Menu) error {
 }
 
 // UpdateMenu 更新菜单
-func (s *MenuService) UpdateMenu(menu *model.Menu) error {
-	err := s.menuRepo.Update(menu)
+func (s *MenuService) UpdateMenu(ctx context.Context, menu *model.Menu) error {
+	err := s.menuRepo.Update(ctx, menu)
 	if err != nil {
 		return errorx.WrapError(err, "更新菜单失败")
 	}
@@ -44,8 +45,8 @@ func (s *MenuService) UpdateMenu(menu *model.Menu) error {
 }
 
 // DeleteMenu 删除菜单
-func (s *MenuService) DeleteMenu(id uint) error {
-	err := s.menuRepo.Delete(id)
+func (s *MenuService) DeleteMenu(ctx context.Context, id uint) error {
+	err := s.menuRepo.Delete(ctx, id)
 	if err != nil {
 		return errorx.WrapError(err, "删除菜单失败")
 	}
@@ -53,8 +54,8 @@ func (s *MenuService) DeleteMenu(id uint) error {
 }
 
 // GetMenuByID 根据ID获取菜单
-func (s *MenuService) GetMenuByID(id uint) (*model.Menu, error) {
-	menu, err := s.menuRepo.GetByID(id)
+func (s *MenuService) GetMenuByID(ctx context.Context, id uint) (*model.Menu, error) {
+	menu, err := s.menuRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, errorx.WrapError(err, "获取菜单失败")
 	}
@@ -62,8 +63,8 @@ func (s *MenuService) GetMenuByID(id uint) (*model.Menu, error) {
 }
 
 // GetAllMenus 获取所有菜单
-func (s *MenuService) GetAllMenus() ([]*model.Menu, error) {
-	menus, err := s.menuRepo.GetAll()
+func (s *MenuService) GetAllMenus(ctx context.Context) ([]*model.Menu, error) {
+	menus, err := s.menuRepo.GetAll(ctx)
 	if err != nil {
 		return nil, errorx.WrapError(err, "获取所有菜单失败")
 	}
@@ -71,8 +72,8 @@ func (s *MenuService) GetAllMenus() ([]*model.Menu, error) {
 }
 
 // GetMenusByRoleID 获取角色菜单
-func (s *MenuService) GetMenusByRoleID(roleID uint) ([]*model.Menu, error) {
-	menus, err := s.menuRepo.GetByRoleID(roleID)
+func (s *MenuService) GetMenusByRoleID(ctx context.Context, roleID uint) ([]*model.Menu, error) {
+	menus, err := s.menuRepo.GetByRoleID(ctx, roleID)
 	if err != nil {
 		return nil, errorx.WrapError(err, "获取角色菜单失败")
 	}
@@ -80,8 +81,8 @@ func (s *MenuService) GetMenusByRoleID(roleID uint) ([]*model.Menu, error) {
 }
 
 // GetUserMenus 获取用户菜单
-func (s *MenuService) GetUserMenus(userID uint) ([]*model.Menu, error) {
-	menus, err := s.menuRepo.GetByUserID(userID)
+func (s *MenuService) GetUserMenus(ctx context.Context, userID uint) ([]*model.Menu, error) {
+	menus, err := s.menuRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		return nil, errorx.WrapError(err, "获取用户菜单失败")
 	}
@@ -89,35 +90,35 @@ func (s *MenuService) GetUserMenus(userID uint) ([]*model.Menu, error) {
 }
 
 // AssignMenuToRole 为角色分配菜单
-func (s *MenuService) AssignMenuToRole(roleID uint, menuIDs []uint) error {
-	err := s.menuRepo.AssignMenuToRole(roleID, menuIDs)
+func (s *MenuService) AssignMenuToRole(ctx context.Context, roleID uint, menuIDs []uint) error {
+	err := s.menuRepo.AssignMenuToRole(ctx, roleID, menuIDs)
 	if err != nil {
 		return errorx.WrapError(err, "为角色分配菜单失败")
 	}
 
 	// 更新 Casbin 策略
 	// 获取角色的所有权限
-	perms, err := s.menuRepo.GetPermsByRoleIDs([]uint{roleID})
+	perms, err := s.menuRepo.GetPermsByRoleIDs(ctx, []uint{roleID})
 	if err != nil {
 		return errorx.WrapError(err, "获取角色权限失败")
 	}
 
 	// 更新 Casbin 策略
 	// 先获取角色编码
-	role, err := s.roleRepo.GetByID(roleID)
+	role, err := s.roleRepo.GetByID(ctx, roleID)
 	if err != nil {
 		return errorx.WrapError(err, "获取角色信息失败")
 	}
 
 	// 删除原有策略
-	policies, err := s.casbinService.GetPermissionsForRole(role.Code)
+	policies, err := s.casbinService.GetPermissionsForRole(ctx, role.Code)
 	if err != nil {
 		return errorx.WrapError(err, "获取角色权限策略失败")
 	}
 
 	// 如果有原有策略，删除它们
 	if len(policies) > 0 {
-		_, err = s.casbinService.RemovePolicies(policies)
+		_, err = s.casbinService.RemovePolicies(ctx, policies)
 		if err != nil {
 			return errorx.WrapError(err, "删除原有权限策略失败")
 		}
@@ -130,7 +131,7 @@ func (s *MenuService) AssignMenuToRole(roleID uint, menuIDs []uint) error {
 			newPolicies = append(newPolicies, []string{role.Code, perm, "*"})
 		}
 
-		_, err = s.casbinService.AddPolicies(newPolicies)
+		_, err = s.casbinService.AddPolicies(ctx, newPolicies)
 		if err != nil {
 			return errorx.WrapError(err, "添加权限策略失败")
 		}
@@ -140,20 +141,69 @@ func (s *MenuService) AssignMenuToRole(roleID uint, menuIDs []uint) error {
 }
 
 // GetMenuTree 获取菜单树(用于前端菜单选择)
-func (s *MenuService) GetMenuTree() ([]*model.MenuTree, error) {
-	menus, err := s.menuRepo.GetAll()
+func (s *MenuService) GetMenuTree(ctx context.Context) ([]*model.MenuTree, error) {
+	menus, err := s.menuRepo.GetAll(ctx)
 	if err != nil {
 		return nil, errorx.WrapError(err, "获取所有菜单失败")
 	}
 	return s.menuRepo.BuildMenuTree(menus), nil
 }
 
+// GetUserMenuTree 获取用户菜单树
+func (s *MenuService) GetUserMenuTree(ctx context.Context, userID string, roles []model.Role) ([]*model.MenuTree, error) {
+	// 获取角色菜单
+	var menuIDs []uint
+	for _, role := range roles {
+		// 管理员角色获取所有菜单
+		if role.Code == "admin" {
+			allMenus, err := s.menuRepo.GetAll(ctx)
+			if err != nil {
+				return nil, errorx.WrapError(err, "获取所有菜单失败")
+			}
+			return s.menuRepo.BuildMenuTree(allMenus), nil
+		}
+
+		// 获取角色菜单
+		roleMenus, err := s.menuRepo.GetByRoleID(ctx, role.ID)
+		if err != nil {
+			continue
+		}
+
+		for _, menu := range roleMenus {
+			menuIDs = append(menuIDs, menu.ID)
+		}
+	}
+
+	// 去重
+	uniqueMenuIDs := make(map[uint]bool)
+	var uniqueIDs []uint
+	for _, id := range menuIDs {
+		if !uniqueMenuIDs[id] {
+			uniqueMenuIDs[id] = true
+			uniqueIDs = append(uniqueIDs, id)
+		}
+	}
+
+	// 获取菜单详情
+	var menus []*model.Menu
+	for _, id := range uniqueIDs {
+		menu, err := s.menuRepo.GetByIDWithRelations(ctx, id)
+		if err != nil {
+			continue
+		}
+		menus = append(menus, menu)
+	}
+
+	// 构建菜单树
+	return s.menuRepo.BuildMenuTree(menus), nil
+}
+
 // GetMenuPermsByUserID 获取用户菜单权限标识
-func (s *MenuService) GetMenuPermsByUserID(userID uint) ([]string, error) {
+func (s *MenuService) GetMenuPermsByUserID(ctx context.Context, userID uint) ([]string, error) {
 	userIDStr := strconv.FormatUint(uint64(userID), 10)
 
 	// 获取用户角色
-	roles, err := s.casbinService.GetRolesForUser(userIDStr)
+	roles, err := s.casbinService.GetRolesForUser(ctx, userIDStr)
 	if err != nil {
 		return nil, errorx.WrapError(err, "获取用户角色失败")
 	}
@@ -170,5 +220,5 @@ func (s *MenuService) GetMenuPermsByUserID(userID uint) ([]string, error) {
 	}
 
 	// 查询角色菜单权限标识
-	return s.menuRepo.GetPermsByRoleIDs(roleIDs)
+	return s.menuRepo.GetPermsByRoleIDs(ctx, roleIDs)
 }

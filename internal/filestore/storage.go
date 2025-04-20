@@ -1,4 +1,4 @@
-package storage
+package filestore
 
 import (
 	"fmt"
@@ -8,30 +8,22 @@ import (
 	"strings"
 
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/types"
 	"github.com/qor/oss"
 	"github.com/qor/oss/filesystem"
 	"github.com/qor/oss/s3"
 )
 
-// StorageType 存储类型
-type StorageType string
-
-const (
-	StorageTypeLocal StorageType = "local" // 本地文件系统
-	StorageTypeS3    StorageType = "s3"    // AWS S3
-	StorageTypeOSS   StorageType = "oss"   // 阿里云OSS
-)
-
 // Config 存储配置
 type Config struct {
-	Type      StorageType `json:"type"`       // 存储类型
-	Path      string      `json:"path"`       // 本地存储路径
-	URL       string      `json:"url"`        // 访问URL
-	AccessKey string      `json:"access_key"` // 访问密钥
-	SecretKey string      `json:"secret_key"` // 访问密钥
-	Region    string      `json:"region"`     // 区域
-	Bucket    string      `json:"bucket"`     // 桶名称
-	Endpoint  string      `json:"endpoint"`   // 端点
+	Type      types.StorageType `json:"type"`       // 存储类型
+	Path      string            `json:"path"`       // 本地存储路径
+	URL       string            `json:"url"`        // 访问URL
+	AccessKey string            `json:"access_key"` // 访问密钥
+	SecretKey string            `json:"secret_key"` // 访问密钥
+	Region    string            `json:"region"`     // 区域
+	Bucket    string            `json:"bucket"`     // 桶名称
+	Endpoint  string            `json:"endpoint"`   // 端点
 }
 
 // Storage 存储服务
@@ -46,14 +38,14 @@ func New(config Config) (*Storage, error) {
 	var err error
 
 	switch config.Type {
-	case StorageTypeLocal:
+	case types.StorageTypeLocal:
 		// 确保本地存储路径存在
 		err = os.MkdirAll(config.Path, os.ModePerm)
 		if err != nil {
 			return nil, errorx.WrapError(err, fmt.Sprintf("创建存储路径失败: %s", config.Path))
 		}
 		ossStorage = filesystem.New(config.Path)
-	case StorageTypeS3:
+	case types.StorageTypeS3:
 		// S3配置检查
 		if config.AccessKey == "" || config.SecretKey == "" || config.Bucket == "" {
 			return nil, errorx.Errorf(errorx.ErrFileStorage, "S3配置不完整")
@@ -126,7 +118,7 @@ func (s *Storage) GetURL(path string) (string, error) {
 	normalizedPath := strings.ReplaceAll(path, "\\", "/")
 
 	// 本地存储特殊处理
-	if s.Config.Type == StorageTypeLocal && s.Config.URL != "" {
+	if s.Config.Type == types.StorageTypeLocal && s.Config.URL != "" {
 		return fmt.Sprintf("%s/%s", strings.TrimRight(s.Config.URL, "/"), normalizedPath), nil
 	}
 

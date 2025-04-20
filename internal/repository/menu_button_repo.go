@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"context"
+
 	"github.com/limitcool/starter/internal/model"
 	"gorm.io/gorm"
 )
@@ -18,45 +20,45 @@ func NewMenuButtonRepo(db *gorm.DB) *MenuButtonRepo {
 }
 
 // Create 创建菜单按钮
-func (r *MenuButtonRepo) Create(button *model.MenuButton) error {
-	return r.DB.Create(button).Error
+func (r *MenuButtonRepo) Create(ctx context.Context, button *model.MenuButton) error {
+	return r.DB.WithContext(ctx).Create(button).Error
 }
 
 // Update 更新菜单按钮
-func (r *MenuButtonRepo) Update(button *model.MenuButton) error {
-	return r.DB.Save(button).Error
+func (r *MenuButtonRepo) Update(ctx context.Context, button *model.MenuButton) error {
+	return r.DB.WithContext(ctx).Save(button).Error
 }
 
 // Delete 删除菜单按钮
-func (r *MenuButtonRepo) Delete(id uint) error {
-	return r.DB.Delete(&model.MenuButton{}, id).Error
+func (r *MenuButtonRepo) Delete(ctx context.Context, id uint) error {
+	return r.DB.WithContext(ctx).Delete(&model.MenuButton{}, id).Error
 }
 
 // GetByID 根据ID获取菜单按钮
-func (r *MenuButtonRepo) GetByID(id uint) (*model.MenuButton, error) {
+func (r *MenuButtonRepo) GetByID(ctx context.Context, id uint) (*model.MenuButton, error) {
 	var button model.MenuButton
-	err := r.DB.First(&button, id).Error
+	err := r.DB.WithContext(ctx).First(&button, id).Error
 	return &button, err
 }
 
 // GetAll 获取所有菜单按钮
-func (r *MenuButtonRepo) GetAll() ([]*model.MenuButton, error) {
+func (r *MenuButtonRepo) GetAll(ctx context.Context) ([]*model.MenuButton, error) {
 	var buttons []*model.MenuButton
-	err := r.DB.Find(&buttons).Error
+	err := r.DB.WithContext(ctx).Find(&buttons).Error
 	return buttons, err
 }
 
 // GetByMenuID 获取菜单的所有按钮
-func (r *MenuButtonRepo) GetByMenuID(menuID uint) ([]*model.MenuButton, error) {
+func (r *MenuButtonRepo) GetByMenuID(ctx context.Context, menuID uint) ([]*model.MenuButton, error) {
 	var buttons []*model.MenuButton
-	err := r.DB.Where("menu_id = ?", menuID).Find(&buttons).Error
+	err := r.DB.WithContext(ctx).Where("menu_id = ?", menuID).Find(&buttons).Error
 	return buttons, err
 }
 
 // GetByPermission 根据权限标识获取按钮
-func (r *MenuButtonRepo) GetByPermission(permission string) (*model.MenuButton, error) {
+func (r *MenuButtonRepo) GetByPermission(ctx context.Context, permission string) (*model.MenuButton, error) {
 	var button model.MenuButton
-	err := r.DB.Where("permission = ?", permission).First(&button).Error
+	err := r.DB.WithContext(ctx).Where("permission = ?", permission).First(&button).Error
 	return &button, err
 }
 

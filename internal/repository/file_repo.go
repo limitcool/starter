@@ -1,8 +1,7 @@
 package repository
 
 import (
-	"errors"
-	"fmt"
+	"context"
 
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
@@ -11,61 +10,48 @@ import (
 
 // FileRepo 文件仓库
 type FileRepo struct {
-	DB *gorm.DB
+	DB          *gorm.DB
+	genericRepo *GenericRepo[model.File] // 泛型仓库
 }
 
 // NewFileRepo 创建文件仓库
 func NewFileRepo(db *gorm.DB) *FileRepo {
-	return &FileRepo{DB: db}
+	genericRepo := NewGenericRepo[model.File](db)
+	genericRepo.SetErrorCode(errorx.ErrorNotFoundCode) // 设置错误码
+
+	return &FileRepo{
+		DB:          db,
+		genericRepo: genericRepo,
+	}
 }
 
 // Create 创建文件记录
-func (r *FileRepo) Create(file *model.File) error {
-	err := r.DB.Create(file).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("创建文件记录失败: %s", file.Name))
-	}
-	return nil
+func (r *FileRepo) Create(ctx context.Context, file *model.File) error {
+	// 使用泛型仓库
+	return r.genericRepo.Create(ctx, file)
 }
 
 // GetByID 根据ID获取文件
-func (r *FileRepo) GetByID(id string) (*model.File, error) {
-	var file model.File
-	err := r.DB.First(&file, id).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		notFoundErr := errorx.Errorf(errorx.ErrNotFound, "文件ID %s 不存在", id)
-		return nil, errorx.WrapError(notFoundErr, "")
-	}
-	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("查询文件失败: id=%s", id))
-	}
-	return &file, nil
+func (r *FileRepo) GetByID(ctx context.Context, id string) (*model.File, error) {
+	// 使用泛型仓库
+	return r.genericRepo.GetByID(ctx, id)
 }
 
 // Delete 删除文件记录
-func (r *FileRepo) Delete(id string) error {
-	err := r.DB.Delete(&model.File{}, id).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("删除文件记录失败: id=%s", id))
-	}
-	return nil
+func (r *FileRepo) Delete(ctx context.Context, id string) error {
+	// 使用泛型仓库
+	return r.genericRepo.Delete(ctx, id)
 }
 
 // Update 更新文件记录
-func (r *FileRepo) Update(file *model.File) error {
-	err := r.DB.Save(file).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("更新文件记录失败: id=%s, name=%s", file.ID, file.Name))
-	}
-	return nil
+func (r *FileRepo) Update(ctx context.Context, file *model.File) error {
+	// 使用泛型仓库
+	return r.genericRepo.Update(ctx, file)
 }
 
 // UpdateFileUsage 更新文件用途
-func (r *FileRepo) UpdateFileUsage(file *model.File, usage string) error {
+func (r *FileRepo) UpdateFileUsage(ctx context.Context, file *model.File, usage string) error {
 	file.Usage = usage
-	err := r.DB.Save(file).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("更新文件用途失败: id=%s, usage=%s", file.ID, usage))
-	}
-	return nil
+	// 使用泛型仓库
+	return r.genericRepo.Update(ctx, file)
 }

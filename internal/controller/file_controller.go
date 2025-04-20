@@ -70,7 +70,7 @@ func (ctrl *FileController) UploadFile(c *gin.Context) {
 	}
 
 	// 上传文件，传入用户类型
-	fileModel, err := ctrl.fileService.UploadFile(c, file, fileType, cast.ToInt64(userID), enum.UserType(cast.ToInt8(userType)), isPublic)
+	fileModel, err := ctrl.fileService.UploadFile(c.Request.Context(), file, fileType, cast.ToInt64(userID), enum.UserType(cast.ToInt8(userType)), isPublic)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -107,7 +107,7 @@ func (ctrl *FileController) GetFile(c *gin.Context) {
 		userType = enum.UserTypeSysUser // 默认为系统用户
 	}
 
-	file, err := ctrl.fileService.GetFile(id, cast.ToInt64(userID), enum.UserType(cast.ToUint8(userType)))
+	file, err := ctrl.fileService.GetFile(c.Request.Context(), id, cast.ToInt64(userID), enum.UserType(cast.ToUint8(userType)))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -136,7 +136,7 @@ func (ctrl *FileController) DeleteFile(c *gin.Context) {
 		userType = "sys_user" // 默认为系统用户
 	}
 
-	err := ctrl.fileService.DeleteFile(id, cast.ToInt64(userID), enum.UserType(cast.ToUint8(userType)))
+	err := ctrl.fileService.DeleteFile(c.Request.Context(), id, cast.ToInt64(userID), enum.UserType(cast.ToUint8(userType)))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -167,7 +167,7 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 	}
 
 	// 获取文件内容
-	fileStream, contentType, err := ctrl.fileService.GetFileContent(id, userID, userType)
+	fileStream, contentType, err := ctrl.fileService.GetFileContent(c.Request.Context(), id, userID, userType)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -175,7 +175,7 @@ func (ctrl *FileController) DownloadFile(c *gin.Context) {
 	defer fileStream.Close()
 
 	// 获取文件信息以设置文件名
-	file, err := ctrl.fileService.GetFile(id, userID, userType)
+	file, err := ctrl.fileService.GetFile(c.Request.Context(), id, userID, userType)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -210,7 +210,7 @@ func (ctrl *FileController) UpdateUserAvatar(c *gin.Context) {
 	}
 
 	// 更新头像
-	avatarURL, err := ctrl.fileService.UpdateUserAvatar(cast.ToInt64(userID), avatar)
+	avatarURL, err := ctrl.fileService.UpdateUserAvatar(c.Request.Context(), cast.ToInt64(userID), avatar)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -235,7 +235,7 @@ func (ctrl *FileController) UpdateSysUserAvatar(c *gin.Context) {
 	}
 
 	// 更新头像
-	avatarURL, err := ctrl.fileService.UpdateSysUserAvatar(cast.ToInt64(userID), avatar)
+	avatarURL, err := ctrl.fileService.UpdateSysUserAvatar(c.Request.Context(), cast.ToInt64(userID), avatar)
 	if err != nil {
 		response.Error(c, err)
 		return

@@ -1,11 +1,13 @@
 package repository
 
 import (
+	"context"
 	"encoding/json"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/options"
 	"gorm.io/gorm"
 )
@@ -56,17 +58,25 @@ func (q *OperationLogQuery) Normalize() {
 
 // OperationLogRepo 操作日志仓库
 type OperationLogRepo struct {
-	DB *gorm.DB
+	DB          *gorm.DB
+	genericRepo *GenericRepo[model.OperationLog] // 泛型仓库
 }
 
 // NewOperationLogRepo 创建操作日志仓库
 func NewOperationLogRepo(db *gorm.DB) *OperationLogRepo {
-	return &OperationLogRepo{DB: db}
+	genericRepo := NewGenericRepo[model.OperationLog](db)
+	genericRepo.SetErrorCode(errorx.ErrorNotFoundCode) // 设置错误码
+
+	return &OperationLogRepo{
+		DB:          db,
+		genericRepo: genericRepo,
+	}
 }
 
 // Create 创建操作日志
-func (r *OperationLogRepo) Create(log *model.OperationLog) error {
-	return r.DB.Create(log).Error
+func (r *OperationLogRepo) Create(ctx context.Context, log *model.OperationLog) error {
+	// 使用泛型仓库
+	return r.genericRepo.Create(ctx, log)
 }
 
 // CreateSysUserLog 创建系统用户操作日志
@@ -114,7 +124,7 @@ func (r *OperationLogRepo) CreateSysUserLog(c *gin.Context, userID int64, userna
 		Username:    username,
 	}
 
-	return r.Create(&operationLog)
+	return r.Create(c.Request.Context(), &operationLog)
 }
 
 // CreateUserLog 创建普通用户操作日志
@@ -162,11 +172,11 @@ func (r *OperationLogRepo) CreateUserLog(c *gin.Context, userID int64, username 
 		Username:    username,
 	}
 
-	return r.Create(&operationLog)
+	return r.Create(c.Request.Context(), &operationLog)
 }
 
 // GetLogs 获取操作日志列表
-func (r *OperationLogRepo) GetLogs(query *OperationLogQuery) (*PageResult, error) {
+func (r *OperationLogRepo) GetLogs(ctx context.Context, query *OperationLogQuery) (*PageResult, error) {
 	// 标准化分页请求
 	query.Normalize()
 
@@ -206,7 +216,7 @@ func (r *OperationLogRepo) GetLogs(query *OperationLogQuery) (*PageResult, error
 	}
 
 	// 构建查询
-	tx := r.DB.Model(&model.OperationLog{})
+	tx := r.DB.WithContext(ctx).Model(&model.OperationLog{})
 
 	// 获取总数
 	var total int64
@@ -233,11 +243,19 @@ func (r *OperationLogRepo) GetLogs(query *OperationLogQuery) (*PageResult, error
 }
 
 // Delete 删除操作日志
-func (r *OperationLogRepo) Delete(id uint) error {
-	return r.DB.Delete(&model.OperationLog{}, id).Error
+func (r *OperationLogRepo) Delete(ctx context.Context, id uint) error {
+	// 使用泛型仓库
+	return r.genericRepo.Delete(ctx, id)
 }
 
 // BatchDelete 批量删除操作日志
-func (r *OperationLogRepo) BatchDelete(ids []uint) error {
-	return r.DB.Where("id IN ?", ids).Delete(&model.OperationLog{}).Error
+func (r *OperationLogRepo) BatchDelete(ctx context.Context, ids []uint) error {
+	// 将 []uint 转换为 []any
+	anyIDs := make([]any, len(ids))
+	for i, id := range ids {
+		anyIDs[i] = id
+	}
+
+	// 使用泛型仓库
+	return r.genericRepo.BatchDelete(ctx, anyIDs)
 }

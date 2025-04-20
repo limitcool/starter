@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -55,6 +56,10 @@ func RequestLogger() gin.HandlerFunc {
 			requestID = uuid.New().String()
 			c.Request.Header.Set("X-Request-ID", requestID)
 			c.Set("request_id", requestID) // 同时存入上下文
+
+			// 将请求ID添加到context.Context中
+			ctx := context.WithValue(c.Request.Context(), "request_id", requestID)
+			c.Request = c.Request.WithContext(ctx)
 		}
 
 		// 处理请求

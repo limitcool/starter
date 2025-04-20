@@ -3,11 +3,11 @@ package router
 import (
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/controller"
+	"github.com/limitcool/starter/internal/datastore/database"
+	"github.com/limitcool/starter/internal/filestore"
 	"github.com/limitcool/starter/internal/pkg/casbin"
-	"github.com/limitcool/starter/internal/pkg/storage"
 	"github.com/limitcool/starter/internal/repository"
 	"github.com/limitcool/starter/internal/services"
-	"github.com/limitcool/starter/internal/storage/database"
 	"gorm.io/gorm"
 )
 
@@ -94,7 +94,7 @@ func initServices(repos *Repositories, casbinService casbin.Service, db database
 }
 
 // initControllers 初始化控制器层
-func initControllers(svcs *Services, repos *Repositories, stg *storage.Storage) *Controllers {
+func initControllers(svcs *Services, repos *Repositories, stg *filestore.Storage) *Controllers {
 	// 创建控制器
 	controllers := &Controllers{
 		UserController:         controller.NewUserController(svcs.SysUserService, svcs.UserService),

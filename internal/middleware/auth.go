@@ -81,17 +81,23 @@ func JWTAuth(config *configs.Config) gin.HandlerFunc {
 		}
 
 		// 将claims存入请求上下文
-		c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), TokenKey, claims))
+		ctx := context.WithValue(c.Request.Context(), TokenKey, claims)
 
 		// 将用户ID存入请求上下文
 		if userId, exists := (*claims)["user_id"]; exists {
 			c.Set("user_id", userId)
+			ctx = context.WithValue(ctx, "user_id", userId)
 		}
 		if userType, exists := (*claims)["user_type"]; exists {
 			c.Set("user_type", userType)
+			ctx = context.WithValue(ctx, "user_type", userType)
 		}
 		// 将token存入请求上下文
 		c.Set("token", token)
+		ctx = context.WithValue(ctx, "token", token)
+
+		// 更新请求上下文
+		c.Request = c.Request.WithContext(ctx)
 
 		// 添加用户信息到上下文
 		// TODO: 在此处获取用户/系统用户信息并添加到上下文中

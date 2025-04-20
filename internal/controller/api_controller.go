@@ -26,7 +26,7 @@ func NewAPIController(apiService *services.APIService, menuAPIService *services.
 
 // GetAPIs 获取API列表
 func (c *APIController) GetAPIs(ctx *gin.Context) {
-	apis, err := c.apiService.GetAll()
+	apis, err := c.apiService.GetAll(ctx.Request.Context())
 	if err != nil {
 		response.Error(ctx, err)
 		return
@@ -43,7 +43,7 @@ func (c *APIController) GetAPI(ctx *gin.Context) {
 		return
 	}
 
-	api, err := c.apiService.GetByID(uint(id))
+	api, err := c.apiService.GetByID(ctx.Request.Context(), uint(id))
 	if err != nil {
 		response.Error(ctx, err)
 		return
@@ -60,7 +60,7 @@ func (c *APIController) CreateAPI(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.apiService.Create(&api); err != nil {
+	if err := c.apiService.Create(ctx.Request.Context(), &api); err != nil {
 		response.Error(ctx, err)
 		return
 	}
@@ -83,7 +83,7 @@ func (c *APIController) UpdateAPI(ctx *gin.Context) {
 	}
 
 	api.ID = uint(id)
-	if err := c.apiService.Update(&api); err != nil {
+	if err := c.apiService.Update(ctx.Request.Context(), &api); err != nil {
 		response.Error(ctx, err)
 		return
 	}
@@ -99,7 +99,7 @@ func (c *APIController) DeleteAPI(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.apiService.Delete(uint(id)); err != nil {
+	if err := c.apiService.Delete(ctx.Request.Context(), uint(id)); err != nil {
 		response.Error(ctx, err)
 		return
 	}
@@ -124,7 +124,7 @@ func (c *APIController) AssignAPIsToMenu(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.menuAPIService.AssignAPIsToMenu(uint(menuID), req.APIIDs); err != nil {
+	if err := c.menuAPIService.AssignAPIsToMenu(ctx.Request.Context(), uint(menuID), req.APIIDs); err != nil {
 		response.Error(ctx, err)
 		return
 	}
@@ -140,7 +140,7 @@ func (c *APIController) GetMenuAPIs(ctx *gin.Context) {
 		return
 	}
 
-	apis, err := c.menuAPIService.GetMenuAPIs(uint(menuID))
+	apis, err := c.menuAPIService.GetMenuAPIs(ctx.Request.Context(), uint(menuID))
 	if err != nil {
 		response.Error(ctx, err)
 		return
@@ -151,7 +151,7 @@ func (c *APIController) GetMenuAPIs(ctx *gin.Context) {
 
 // SyncMenuAPIPermissions 同步菜单API权限
 func (c *APIController) SyncMenuAPIPermissions(ctx *gin.Context) {
-	if err := c.menuAPIService.SyncMenuAPIPermissions(); err != nil {
+	if err := c.menuAPIService.SyncMenuAPIPermissions(ctx.Request.Context()); err != nil {
 		response.Error(ctx, err)
 		return
 	}

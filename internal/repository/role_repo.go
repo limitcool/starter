@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"errors"
+	"context"
 	"fmt"
 
 	"github.com/limitcool/starter/internal/model"
@@ -11,46 +11,37 @@ import (
 
 // RoleRepo 角色仓库
 type RoleRepo struct {
-	DB *gorm.DB
+	DB          *gorm.DB
+	genericRepo *GenericRepo[model.Role] // 泛型仓库
 }
 
 // NewRoleRepo 创建角色仓库
 func NewRoleRepo(db *gorm.DB) *RoleRepo {
-	return &RoleRepo{DB: db}
+	genericRepo := NewGenericRepo[model.Role](db)
+	genericRepo.SetErrorCode(errorx.ErrorNotFoundCode) // 设置错误码
+
+	return &RoleRepo{
+		DB:          db,
+		genericRepo: genericRepo,
+	}
 }
 
 // GetByID 根据ID获取角色
-func (r *RoleRepo) GetByID(id uint) (*model.Role, error) {
-	var role model.Role
-	err := r.DB.Where("id = ?", id).First(&role).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		notFoundErr := errorx.Errorf(errorx.ErrNotFound, "角色ID %d 不存在", id)
-		return nil, errorx.WrapError(notFoundErr, "")
-	}
-	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: id=%d", id))
-	}
-	return &role, nil
+func (r *RoleRepo) GetByID(ctx context.Context, id uint) (*model.Role, error) {
+	// 使用泛型仓库
+	return r.genericRepo.GetByID(ctx, id)
 }
 
 // GetByCode 根据编码获取角色
-func (r *RoleRepo) GetByCode(code string) (*model.Role, error) {
-	var role model.Role
-	err := r.DB.Where("code = ?", code).First(&role).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		notFoundErr := errorx.Errorf(errorx.ErrNotFound, "角色编码 %s 不存在", code)
-		return nil, errorx.WrapError(notFoundErr, "")
-	}
-	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: code=%s", code))
-	}
-	return &role, nil
+func (r *RoleRepo) GetByCode(ctx context.Context, code string) (*model.Role, error) {
+	// 使用泛型仓库的高级查询
+	return r.genericRepo.FindByField(ctx, "code", code)
 }
 
 // GetAll 获取所有角色
-func (r *RoleRepo) GetAll() ([]model.Role, error) {
+func (r *RoleRepo) GetAll(ctx context.Context) ([]model.Role, error) {
 	var roles []model.Role
-	err := r.DB.Order("sort").Find(&roles).Error
+	err := r.DB.WithContext(ctx).Order("sort").Find(&roles).Error
 	if err != nil {
 		return nil, errorx.WrapError(err, "查询所有角色失败")
 	}
@@ -58,36 +49,27 @@ func (r *RoleRepo) GetAll() ([]model.Role, error) {
 }
 
 // Create 创建角色
-func (r *RoleRepo) Create(role *model.Role) error {
-	err := r.DB.Create(role).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("创建角色失败: name=%s, code=%s", role.Name, role.Code))
-	}
-	return nil
+func (r *RoleRepo) Create(ctx context.Context, role *model.Role) error {
+	// 使用泛型仓库
+	return r.genericRepo.Create(ctx, role)
 }
 
 // Update 更新角色
-func (r *RoleRepo) Update(role *model.Role) error {
-	err := r.DB.Model(&model.Role{}).Where("id = ?", role.ID).Updates(role).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("更新角色失败: id=%d, name=%s, code=%s", role.ID, role.Name, role.Code))
-	}
-	return nil
+func (r *RoleRepo) Update(ctx context.Context, role *model.Role) error {
+	// 使用泛型仓库
+	return r.genericRepo.Update(ctx, role)
 }
 
 // Delete 删除角色
-func (r *RoleRepo) Delete(id uint) error {
-	err := r.DB.Delete(&model.Role{}, id).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("删除角色失败: id=%d", id))
-	}
-	return nil
+func (r *RoleRepo) Delete(ctx context.Context, id uint) error {
+	// 使用泛型仓库
+	return r.genericRepo.Delete(ctx, id)
 }
 
 // IsAssignedToUser 检查角色是否已分配给用户
-func (r *RoleRepo) IsAssignedToUser(id uint) (bool, error) {
+func (r *RoleRepo) IsAssignedToUser(ctx context.Context, id uint) (bool, error) {
 	var count int64
-	err := r.DB.Model(&model.UserRole{}).Where("role_id = ?", id).Count(&count).Error
+	err := r.DB.WithContext(ctx).Model(&model.UserRole{}).Where("role_id = ?", id).Count(&count).Error
 	if err != nil {
 		return false, errorx.WrapError(err, fmt.Sprintf("检查角色是否已分配给用户失败: roleID=%d", id))
 	}
@@ -95,8 +77,8 @@ func (r *RoleRepo) IsAssignedToUser(id uint) (bool, error) {
 }
 
 // DeleteRoleMenus 删除角色的菜单关联
-func (r *RoleRepo) DeleteRoleMenus(roleID uint) error {
-	err := r.DB.Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error
+func (r *RoleRepo) DeleteRoleMenus(ctx context.Context, roleID uint) error {
+	err := r.DB.WithContext(ctx).Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error
 	if err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("删除角色的菜单关联失败: roleID=%d", roleID))
 	}
@@ -104,9 +86,9 @@ func (r *RoleRepo) DeleteRoleMenus(roleID uint) error {
 }
 
 // GetMenuIDsByRoleID 获取角色菜单ID列表
-func (r *RoleRepo) GetMenuIDsByRoleID(roleID uint) ([]uint, error) {
+func (r *RoleRepo) GetMenuIDsByRoleID(ctx context.Context, roleID uint) ([]uint, error) {
 	var roleMenus []model.RoleMenu
-	err := r.DB.Where("role_id = ?", roleID).Find(&roleMenus).Error
+	err := r.DB.WithContext(ctx).Where("role_id = ?", roleID).Find(&roleMenus).Error
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("获取角色菜单ID列表失败: roleID=%d", roleID))
 	}
@@ -120,9 +102,9 @@ func (r *RoleRepo) GetMenuIDsByRoleID(roleID uint) ([]uint, error) {
 }
 
 // GetRoleIDsByUserID 获取用户角色ID列表
-func (r *RoleRepo) GetRoleIDsByUserID(userID uint) ([]uint, error) {
+func (r *RoleRepo) GetRoleIDsByUserID(ctx context.Context, userID uint) ([]uint, error) {
 	var userRoles []model.UserRole
-	err := r.DB.Where("user_id = ?", userID).Find(&userRoles).Error
+	err := r.DB.WithContext(ctx).Where("user_id = ?", userID).Find(&userRoles).Error
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("获取用户角色ID列表失败: userID=%d", userID))
 	}
@@ -136,9 +118,9 @@ func (r *RoleRepo) GetRoleIDsByUserID(userID uint) ([]uint, error) {
 }
 
 // AssignRolesToUser 为用户分配角色
-func (r *RoleRepo) AssignRolesToUser(userID int64, roleIDs []uint) error {
+func (r *RoleRepo) AssignRolesToUser(ctx context.Context, userID int64, roleIDs []uint) error {
 	// 开始事务
-	tx := r.DB.Begin()
+	tx := r.DB.WithContext(ctx).Begin()
 	defer func() {
 		if rec := recover(); rec != nil {
 			tx.Rollback()
@@ -173,8 +155,8 @@ func (r *RoleRepo) AssignRolesToUser(userID int64, roleIDs []uint) error {
 }
 
 // BatchCreateRoleMenus 批量创建角色菜单关联
-func (r *RoleRepo) BatchCreateRoleMenus(roleMenus []model.RoleMenu) error {
-	err := r.DB.Create(&roleMenus).Error
+func (r *RoleRepo) BatchCreateRoleMenus(ctx context.Context, roleMenus []model.RoleMenu) error {
+	err := r.DB.WithContext(ctx).Create(&roleMenus).Error
 	if err != nil {
 		return errorx.WrapError(err, "批量创建角色菜单关联失败")
 	}
@@ -182,8 +164,8 @@ func (r *RoleRepo) BatchCreateRoleMenus(roleMenus []model.RoleMenu) error {
 }
 
 // DeleteUserRolesByUserID 删除用户的角色关联
-func (r *RoleRepo) DeleteUserRolesByUserID(userID int64) error {
-	err := r.DB.Where("user_id = ?", userID).Delete(&model.UserRole{}).Error
+func (r *RoleRepo) DeleteUserRolesByUserID(ctx context.Context, userID int64) error {
+	err := r.DB.WithContext(ctx).Where("user_id = ?", userID).Delete(&model.UserRole{}).Error
 	if err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("删除用户的角色关联失败: userID=%d", userID))
 	}
@@ -191,9 +173,9 @@ func (r *RoleRepo) DeleteUserRolesByUserID(userID int64) error {
 }
 
 // AssignMenusToRole 为角色分配菜单
-func (r *RoleRepo) AssignMenusToRole(roleID uint, menuIDs []uint) error {
+func (r *RoleRepo) AssignMenusToRole(ctx context.Context, roleID uint, menuIDs []uint) error {
 	// 开始事务
-	tx := r.DB.Begin()
+	tx := r.DB.WithContext(ctx).Begin()
 	defer func() {
 		if rec := recover(); rec != nil {
 			tx.Rollback()
@@ -228,10 +210,10 @@ func (r *RoleRepo) AssignMenusToRole(roleID uint, menuIDs []uint) error {
 }
 
 // GetRolesByMenuID 获取拥有指定菜单的所有角色
-func (r *RoleRepo) GetRolesByMenuID(menuID uint) ([]*model.Role, error) {
+func (r *RoleRepo) GetRolesByMenuID(ctx context.Context, menuID uint) ([]*model.Role, error) {
 	// 查询菜单关联的角色ID
 	var roleMenus []model.RoleMenu
-	err := r.DB.Where("menu_id = ?", menuID).Find(&roleMenus).Error
+	err := r.DB.WithContext(ctx).Where("menu_id = ?", menuID).Find(&roleMenus).Error
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("查询菜单关联的角色失败: menuID=%d", menuID))
 	}
@@ -248,7 +230,7 @@ func (r *RoleRepo) GetRolesByMenuID(menuID uint) ([]*model.Role, error) {
 
 	// 查询角色
 	var roles []*model.Role
-	err = r.DB.Where("id IN ?", roleIDs).Find(&roles).Error
+	err = r.DB.WithContext(ctx).Where("id IN ?", roleIDs).Find(&roles).Error
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: roleIDs=%v", roleIDs))
 	}

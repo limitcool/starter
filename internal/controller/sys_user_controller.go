@@ -32,7 +32,7 @@ func (ctrl *SysUserController) SysUserLogin(c *gin.Context) {
 	clientIP := c.ClientIP()
 
 	// 使用控制器中的服务实例
-	tokenResponse, err := ctrl.userService.Login(req.Username, req.Password, clientIP)
+	tokenResponse, err := ctrl.userService.Login(c.Request.Context(), req.Username, req.Password, clientIP)
 	if err != nil {
 		// 使用辅助函数记录错误，同时包含额外的上下文信息
 		logger.LogError("SysUserLogin 登录失败", err,

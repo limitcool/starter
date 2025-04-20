@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"github.com/limitcool/starter/internal/pkg/storage"
+	"github.com/limitcool/starter/internal/pkg/types"
 	"github.com/limitcool/starter/pkg/logconfig"
 	"github.com/spf13/viper"
 )
@@ -49,19 +50,45 @@ func LoadConfig() *Config {
 			User:    "",
 			DB:      "starter",
 		},
-		Redis: map[string]Redis{
-			"default": {
-				Enabled:      false,
-				Addr:         "localhost:6379",
-				Password:     "",
-				DB:           0,
-				MinIdleConn:  5,
-				DialTimeout:  5,
-				ReadTimeout:  3,
-				WriteTimeout: 3,
-				PoolSize:     10,
-				PoolTimeout:  5,
-				EnableTrace:  false,
+		Redis: RedisConfig{
+			Instances: map[string]RedisInstance{
+				"default": {
+					Enabled:      true,
+					Addr:         "localhost:6379",
+					Password:     "",
+					DB:           0,
+					MinIdleConn:  10,
+					DialTimeout:  5 * time.Second,
+					ReadTimeout:  3 * time.Second,
+					WriteTimeout: 3 * time.Second,
+					PoolSize:     100,
+					PoolTimeout:  4 * time.Second,
+					EnableTrace:  false,
+				},
+				"session": {
+					Enabled:      false,
+					Addr:         "localhost:6379",
+					Password:     "",
+					DB:           1,
+					MinIdleConn:  5,
+					DialTimeout:  5 * time.Second,
+					ReadTimeout:  3 * time.Second,
+					WriteTimeout: 3 * time.Second,
+					PoolSize:     50,
+					PoolTimeout:  4 * time.Second,
+					EnableTrace:  false,
+				},
+			},
+			Cache: CacheConfig{
+				DefaultTTL:        30 * time.Minute,
+				KeyPrefix:         "cache:",
+				EnablePrewarm:     true,
+				EnableProtection:  true,
+				ProtectionTimeout: 5 * time.Second,
+				NilValueTTL:       1 * time.Minute,
+				LocalCache:        false,
+				LocalCacheTTL:     5 * time.Minute,
+				LocalCacheSize:    10000,
 			},
 		},
 		Log: logconfig.DefaultLogConfig(),
@@ -74,7 +101,7 @@ func LoadConfig() *Config {
 		},
 		Storage: Storage{
 			Enabled: true,
-			Type:    storage.StorageTypeLocal,
+			Type:    types.StorageTypeLocal,
 			Local: LocalStorage{
 				Path: "storage",
 				URL:  "/static",
@@ -149,7 +176,7 @@ func PrintConfig(config *Config) {
 	logger.Info("应用配置", "name", config.App.Name, "port", config.App.Port)
 	logger.Info("数据库配置", "enabled", config.Database.Enabled, "driver", config.Driver, "host", config.Database.Host, "port", config.Database.Port)
 	logger.Info("MongoDB配置", "enabled", config.Mongo.Enabled)
-	logger.Info("Redis配置", "enabled", config.Redis["default"].Enabled)
+	logger.Info("Redis配置", "instances", len(config.Redis.Instances), "default_enabled", config.Redis.Instances["default"].Enabled)
 	logger.Info("Casbin配置", "enabled", config.Casbin.Enabled, "default_allow", config.Casbin.DefaultAllow)
 	logger.Info("存储配置", "enabled", config.Storage.Enabled, "type", config.Storage.Type)
 	logger.Info("国际化配置", "enabled", config.I18n.Enabled, "default", config.I18n.DefaultLanguage)
@@ -188,7 +215,7 @@ func SaveConfig(config *Config, path string) error {
 }
 
 // structToMap 将结构体转换为map
-func structToMap(config *Config) map[string]interface{} {
+func structToMap(config *Config) map[string]any {
 	v := viper.New()
 	v.Set("app", config.App)
 	v.Set("driver", config.Driver)

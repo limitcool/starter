@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -11,61 +12,49 @@ import (
 
 // APIRepo API仓库
 type APIRepo struct {
-	DB *gorm.DB
+	DB          *gorm.DB
+	genericRepo *GenericRepo[model.API] // 泛型仓库
 }
 
 // NewAPIRepo 创建API仓库
 func NewAPIRepo(db *gorm.DB) *APIRepo {
+	genericRepo := NewGenericRepo[model.API](db)
+	genericRepo.SetErrorCode(errorx.ErrorNotFoundCode) // 设置错误码
+
 	return &APIRepo{
-		DB: db,
+		DB:          db,
+		genericRepo: genericRepo,
 	}
 }
 
 // Create 创建API
-func (r *APIRepo) Create(api *model.API) error {
-	err := r.DB.Create(api).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("创建API失败: path=%s, method=%s", api.Path, api.Method))
-	}
-	return nil
+func (r *APIRepo) Create(ctx context.Context, api *model.API) error {
+	// 使用泛型仓库
+	return r.genericRepo.Create(ctx, api)
 }
 
 // Update 更新API
-func (r *APIRepo) Update(api *model.API) error {
-	err := r.DB.Save(api).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("更新API失败: id=%d, path=%s, method=%s", api.ID, api.Path, api.Method))
-	}
-	return nil
+func (r *APIRepo) Update(ctx context.Context, api *model.API) error {
+	// 使用泛型仓库
+	return r.genericRepo.Update(ctx, api)
 }
 
 // Delete 删除API
-func (r *APIRepo) Delete(id uint) error {
-	err := r.DB.Delete(&model.API{}, id).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("删除API失败: id=%d", id))
-	}
-	return nil
+func (r *APIRepo) Delete(ctx context.Context, id uint) error {
+	// 使用泛型仓库
+	return r.genericRepo.Delete(ctx, id)
 }
 
 // GetByID 根据ID获取API
-func (r *APIRepo) GetByID(id uint) (*model.API, error) {
-	var api model.API
-	err := r.DB.First(&api, id).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		notFoundErr := errorx.Errorf(errorx.ErrNotFound, "API ID %d 不存在", id)
-		return nil, errorx.WrapError(notFoundErr, "")
-	}
-	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("查询API失败: id=%d", id))
-	}
-	return &api, nil
+func (r *APIRepo) GetByID(ctx context.Context, id uint) (*model.API, error) {
+	// 使用泛型仓库
+	return r.genericRepo.GetByID(ctx, id)
 }
 
 // GetAll 获取所有API
-func (r *APIRepo) GetAll() ([]*model.API, error) {
+func (r *APIRepo) GetAll(ctx context.Context) ([]*model.API, error) {
 	var apis []*model.API
-	err := r.DB.Find(&apis).Error
+	err := r.DB.WithContext(ctx).Find(&apis).Error
 	if err != nil {
 		return nil, errorx.WrapError(err, "查询所有API失败")
 	}
@@ -73,9 +62,10 @@ func (r *APIRepo) GetAll() ([]*model.API, error) {
 }
 
 // GetByPath 根据路径获取API
-func (r *APIRepo) GetByPath(path string, method string) (*model.API, error) {
+func (r *APIRepo) GetByPath(ctx context.Context, path string, method string) (*model.API, error) {
+	// 使用泛型仓库的高级查询
 	var api model.API
-	err := r.DB.Where("path = ? AND method = ?", path, method).First(&api).Error
+	err := r.DB.WithContext(ctx).Where("path = ? AND method = ?", path, method).First(&api).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil // 返回nil表示未找到
 	}
@@ -86,9 +76,9 @@ func (r *APIRepo) GetByPath(path string, method string) (*model.API, error) {
 }
 
 // GetByMenuID 获取菜单关联的API
-func (r *APIRepo) GetByMenuID(menuID uint) ([]*model.API, error) {
+func (r *APIRepo) GetByMenuID(ctx context.Context, menuID uint) ([]*model.API, error) {
 	var apis []*model.API
-	err := r.DB.Joins("JOIN sys_menu_api ON sys_menu_api.api_id = sys_api.id").
+	err := r.DB.WithContext(ctx).Joins("JOIN sys_menu_api ON sys_menu_api.api_id = sys_api.id").
 		Where("sys_menu_api.menu_id = ?", menuID).
 		Find(&apis).Error
 	if err != nil {
@@ -99,5 +89,11 @@ func (r *APIRepo) GetByMenuID(menuID uint) ([]*model.API, error) {
 
 // WithTx 使用事务
 func (r *APIRepo) WithTx(tx *gorm.DB) *APIRepo {
-	return &APIRepo{DB: tx}
+	genericRepo := NewGenericRepo[model.API](tx)
+	genericRepo.SetErrorCode(errorx.ErrorNotFoundCode)
+
+	return &APIRepo{
+		DB:          tx,
+		genericRepo: genericRepo,
+	}
 }

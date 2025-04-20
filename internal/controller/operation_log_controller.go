@@ -38,7 +38,7 @@ func (olc *OperationLogController) GetOperationLogs(c *gin.Context) {
 	}
 
 	// 获取操作日志
-	result, err := olc.opLogService.GetOperationLogs(&query)
+	result, err := olc.opLogService.GetOperationLogs(c.Request.Context(), &query)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -55,7 +55,7 @@ func (olc *OperationLogController) DeleteOperationLog(c *gin.Context) {
 		return
 	}
 
-	if err := olc.opLogService.DeleteOperationLog(uint(id)); err != nil {
+	if err := olc.opLogService.DeleteOperationLog(c.Request.Context(), uint(id)); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -78,7 +78,7 @@ func (olc *OperationLogController) ClearOperationLogs(c *gin.Context) {
 	}
 
 	// 批量删除操作日志
-	if err := olc.opLogService.BatchDeleteOperationLogs(req.IDs); err != nil {
+	if err := olc.opLogService.BatchDeleteOperationLogs(c.Request.Context(), req.IDs); err != nil {
 		response.Error(c, err)
 		return
 	}

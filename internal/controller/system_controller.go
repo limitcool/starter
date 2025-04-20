@@ -20,7 +20,7 @@ type SystemController struct {
 
 func (sc *SystemController) GetSystemSettings(c *gin.Context) {
 	// 获取系统设置
-	settings := sc.systemService.GetSystemSettings()
+	settings := sc.systemService.GetSystemSettings(c.Request.Context())
 
 	response.Success(c, settings)
 }

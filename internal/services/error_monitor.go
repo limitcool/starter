@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -32,7 +33,7 @@ func NewErrorMonitorService() *ErrorMonitorService {
 }
 
 // RecordError 记录错误
-func (s *ErrorMonitorService) RecordError(err error) {
+func (s *ErrorMonitorService) RecordError(ctx context.Context, err error) {
 	// 只处理AppError类型的错误
 	if !errorx.IsAppErr(err) {
 		return
@@ -55,7 +56,7 @@ func (s *ErrorMonitorService) RecordError(err error) {
 
 		// 检查是否达到报警阈值
 		if stat.Count == s.threshold {
-			s.triggerAlert(appErr, stat)
+			s.triggerAlert(ctx, appErr, stat)
 		}
 	} else {
 		// 新错误
@@ -69,7 +70,7 @@ func (s *ErrorMonitorService) RecordError(err error) {
 }
 
 // GetErrorStats 获取错误统计信息
-func (s *ErrorMonitorService) GetErrorStats() map[int]*ErrorStat {
+func (s *ErrorMonitorService) GetErrorStats(ctx context.Context) map[int]*ErrorStat {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -88,7 +89,7 @@ func (s *ErrorMonitorService) GetErrorStats() map[int]*ErrorStat {
 }
 
 // SetThreshold 设置报警阈值
-func (s *ErrorMonitorService) SetThreshold(threshold int) {
+func (s *ErrorMonitorService) SetThreshold(ctx context.Context, threshold int) {
 	if threshold <= 0 {
 		return
 	}
@@ -100,7 +101,7 @@ func (s *ErrorMonitorService) SetThreshold(threshold int) {
 }
 
 // ResetStats 重置统计信息
-func (s *ErrorMonitorService) ResetStats() {
+func (s *ErrorMonitorService) ResetStats(ctx context.Context) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -108,7 +109,7 @@ func (s *ErrorMonitorService) ResetStats() {
 }
 
 // triggerAlert 触发报警
-func (s *ErrorMonitorService) triggerAlert(err *errorx.AppError, stat *ErrorStat) {
+func (s *ErrorMonitorService) triggerAlert(ctx context.Context, err *errorx.AppError, stat *ErrorStat) {
 	// 这里可以实现各种报警方式，如发送邮件、短信、钉钉等
 	// 目前仅记录日志
 	logger.Warn("Error threshold reached",

@@ -3,7 +3,7 @@ package configs
 import (
 	"time"
 
-	"github.com/limitcool/starter/internal/pkg/storage"
+	"github.com/limitcool/starter/internal/pkg/types"
 	"github.com/limitcool/starter/pkg/logconfig"
 )
 
@@ -24,12 +24,12 @@ type Config struct {
 	Database Database
 	JwtAuth  JwtAuth
 	Mongo    Mongo
-	Redis    map[string]Redis
+	Redis    RedisConfig         // Redis配置
 	Log      logconfig.LogConfig // 使用 pkg/logconfig 中的 LogConfig
-	Casbin   Casbin             // 权限系统配置
-	Storage  Storage            // 文件存储配置
-	Admin    Admin              // 管理员配置
-	I18n     I18n               // 国际化配置
+	Casbin   Casbin              // 权限系统配置
+	Storage  Storage             // 文件存储配置
+	Admin    Admin               // 管理员配置
+	I18n     I18n                // 国际化配置
 }
 
 // Config app config
@@ -74,19 +74,41 @@ type Mongo struct {
 	DB       string
 }
 
-// Redis配置结构
-type Redis struct {
-	Enabled      bool // 是否启用Redis
-	Addr         string
-	Password     string
-	DB           int
-	MinIdleConn  int
-	DialTimeout  time.Duration
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
-	PoolSize     int
-	PoolTimeout  time.Duration
-	EnableTrace  bool
+// RedisConfig Redis配置
+type RedisConfig struct {
+	// 基本配置
+	Instances map[string]RedisInstance `yaml:"instances" json:"instances"` // Redis实例配置
+
+	// 缓存配置
+	Cache CacheConfig `yaml:"cache" json:"cache"` // 缓存配置
+}
+
+// RedisInstance Redis实例配置
+type RedisInstance struct {
+	Enabled      bool          `yaml:"enabled" json:"enabled"`             // 是否启用
+	Addr         string        `yaml:"addr" json:"addr"`                   // 地址
+	Password     string        `yaml:"password" json:"password"`           // 密码
+	DB           int           `yaml:"db" json:"db"`                       // 数据库索引
+	MinIdleConn  int           `yaml:"min_idle_conn" json:"min_idle_conn"` // 最小空闲连接数
+	DialTimeout  time.Duration `yaml:"dial_timeout" json:"dial_timeout"`   // 连接超时
+	ReadTimeout  time.Duration `yaml:"read_timeout" json:"read_timeout"`   // 读取超时
+	WriteTimeout time.Duration `yaml:"write_timeout" json:"write_timeout"` // 写入超时
+	PoolSize     int           `yaml:"pool_size" json:"pool_size"`         // 连接池大小
+	PoolTimeout  time.Duration `yaml:"pool_timeout" json:"pool_timeout"`   // 连接池超时
+	EnableTrace  bool          `yaml:"enable_trace" json:"enable_trace"`   // 是否启用链路追踪
+}
+
+// CacheConfig 缓存配置
+type CacheConfig struct {
+	DefaultTTL        time.Duration `yaml:"default_ttl" json:"default_ttl"`               // 默认过期时间
+	KeyPrefix         string        `yaml:"key_prefix" json:"key_prefix"`                 // 键前缀
+	EnablePrewarm     bool          `yaml:"enable_prewarm" json:"enable_prewarm"`         // 是否启用预热
+	EnableProtection  bool          `yaml:"enable_protection" json:"enable_protection"`   // 是否启用穿透保护
+	ProtectionTimeout time.Duration `yaml:"protection_timeout" json:"protection_timeout"` // 穿透保护锁超时
+	NilValueTTL       time.Duration `yaml:"nil_value_ttl" json:"nil_value_ttl"`           // 空值缓存过期时间
+	LocalCache        bool          `yaml:"local_cache" json:"local_cache"`               // 是否启用本地缓存
+	LocalCacheTTL     time.Duration `yaml:"local_cache_ttl" json:"local_cache_ttl"`       // 本地缓存过期时间
+	LocalCacheSize    int           `yaml:"local_cache_size" json:"local_cache_size"`     // 本地缓存大小
 }
 
 // Casbin 权限系统配置
@@ -100,12 +122,12 @@ type Casbin struct {
 
 // Storage 文件存储配置
 type Storage struct {
-	Enabled    bool                // 是否启用文件存储
-	Type       storage.StorageType // 存储类型: local, s3, oss
-	Local      LocalStorage        // 本地存储配置
-	S3         S3Storage           // S3存储配置
-	OSS        OSSStorage          // 阿里云OSS存储配置
-	PathConfig PathConfig          // 路径配置
+	Enabled    bool              // 是否启用文件存储
+	Type       types.StorageType // 存储类型: local, s3, oss
+	Local      LocalStorage      // 本地存储配置
+	S3         S3Storage         // S3存储配置
+	OSS        OSSStorage        // 阿里云OSS存储配置
+	PathConfig PathConfig        // 路径配置
 }
 
 // LocalStorage 本地存储配置

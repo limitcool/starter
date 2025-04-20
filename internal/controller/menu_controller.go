@@ -29,7 +29,7 @@ func (mc *MenuController) CreateMenu(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	if err := mc.menuService.CreateMenu(&menu); err != nil {
+	if err := mc.menuService.CreateMenu(c.Request.Context(), &menu); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -52,7 +52,7 @@ func (mc *MenuController) UpdateMenu(c *gin.Context) {
 	}
 
 	menu.ID = uint(id)
-	if err := mc.menuService.UpdateMenu(&menu); err != nil {
+	if err := mc.menuService.UpdateMenu(c.Request.Context(), &menu); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -68,7 +68,7 @@ func (mc *MenuController) DeleteMenu(c *gin.Context) {
 		return
 	}
 
-	if err := mc.menuService.DeleteMenu(uint(id)); err != nil {
+	if err := mc.menuService.DeleteMenu(c.Request.Context(), uint(id)); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -85,7 +85,7 @@ func (mc *MenuController) GetMenu(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	menu, err := mc.menuService.GetMenuByID(uint(id))
+	menu, err := mc.menuService.GetMenuByID(c.Request.Context(), uint(id))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -96,7 +96,7 @@ func (mc *MenuController) GetMenu(c *gin.Context) {
 
 // 获取菜单树
 func (mc *MenuController) GetMenuTree(c *gin.Context) {
-	menus, err := mc.menuService.GetMenuTree()
+	menus, err := mc.menuService.GetMenuTree(c.Request.Context())
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -115,7 +115,7 @@ func (mc *MenuController) GetUserMenus(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	menus, err := mc.menuService.GetUserMenus(uint(userID.(float64)))
+	menus, err := mc.menuService.GetUserMenus(c.Request.Context(), uint(userID.(float64)))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -134,7 +134,7 @@ func (mc *MenuController) GetUserMenuPerms(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	perms, err := mc.menuService.GetMenuPermsByUserID(uint(userID.(float64)))
+	perms, err := mc.menuService.GetMenuPermsByUserID(c.Request.Context(), uint(userID.(float64)))
 	if err != nil {
 		response.Error(c, err)
 		return
