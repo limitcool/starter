@@ -26,7 +26,14 @@ func CachedRepoExample(db *gorm.DB) {
 	}
 
 	// 创建基础用户仓库
-	baseUserRepo := repository.NewUserRepo(db)
+	// 在示例中创建一个简化版的 UserRepo
+	genericRepo := repository.NewGenericRepo[model.User](db)
+	genericRepo.SetErrorCode(1001) // 设置错误码
+
+	baseUserRepo := &repository.UserRepo{
+		DB:          db,
+		GenericRepo: genericRepo,
+	}
 
 	// 创建缓存用户仓库
 	cachedUserRepo := repository.NewCachedRepo[model.User](baseUserRepo.GenericRepo, userCache, "user", 5*time.Minute)

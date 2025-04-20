@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/redis/go-redis/v9"
+	"github.com/go-redis/redis/v8"
 )
 
 // CacheType 缓存类型

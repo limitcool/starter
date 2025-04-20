@@ -11,7 +11,9 @@ import (
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/repository"
+	"go.uber.org/fx"
 )
 
 // UserService 普通用户服务
@@ -22,15 +24,26 @@ type UserService struct {
 }
 
 // NewUserService 创建普通用户服务
-func NewUserService(userRepo *repository.UserRepo, config *configs.Config) *UserService {
-	// 创建认证服务
-	authService := NewAuthService(config)
-
-	return &UserService{
-		userRepo:    userRepo,
-		config:      config,
+func NewUserService(params ServiceParams, authService *AuthService) *UserService {
+	service := &UserService{
+		userRepo:    params.UserRepo,
+		config:      params.Config,
 		authService: authService,
 	}
+
+	// 注册生命周期钩子
+	params.LC.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			logger.Info("UserService initialized")
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			logger.Info("UserService stopped")
+			return nil
+		},
+	})
+
+	return service
 }
 
 // GetUserByID 根据ID获取用户信息

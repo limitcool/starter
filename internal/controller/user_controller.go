@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	v1 "github.com/limitcool/starter/internal/api/v1"
@@ -8,13 +10,28 @@ import (
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/spf13/cast"
+	"go.uber.org/fx"
 )
 
-func NewUserController(sysUserService *services.SysUserService, userService *services.UserService) *UserController {
-	return &UserController{
-		sysUserService: sysUserService,
-		userService:    userService,
+func NewUserController(params ControllerParams) *UserController {
+	controller := &UserController{
+		sysUserService: params.SysUserService,
+		userService:    params.UserService,
 	}
+
+	// 注册生命周期钩子
+	params.LC.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			logger.Info("UserController initialized")
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			logger.Info("UserController stopped")
+			return nil
+		},
+	})
+
+	return controller
 }
 
 type UserController struct {

@@ -4,20 +4,20 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
 	"time"
 
-	"github.com/limitcool/starter/internal/core"
-	"github.com/limitcool/starter/internal/datastore/database"
-	"github.com/limitcool/starter/internal/datastore/mongodb"
+	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/controller"
 	"github.com/limitcool/starter/internal/datastore/redisdb"
 	"github.com/limitcool/starter/internal/datastore/sqldb"
 	"github.com/limitcool/starter/internal/filestore"
 	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/logger"
+	"github.com/limitcool/starter/internal/repository"
 	"github.com/limitcool/starter/internal/router"
+	"github.com/limitcool/starter/internal/services"
 	"github.com/spf13/cobra"
+	"go.uber.org/fx"
 )
 
 // serverCmd 表示server子命令
@@ -38,130 +38,89 @@ func init() {
 	serverCmd.Flags().IntP("port", "p", 0, "HTTP server port number, overrides the setting in the configuration file")
 }
 
-// runServer 运行HTTP服务器
-func runServer(cmd *cobra.Command, args []string) {
+// ConfigParams 配置参数
+type ConfigParams struct {
+	Cmd  *cobra.Command
+	Args []string
+}
+
+// LoadConfig 加载配置
+func LoadConfig(params *ConfigParams) (*configs.Config, error) {
 	// 加载配置
-	cfg := InitConfig(cmd, args)
+	cfg := InitConfig(params.Cmd, params.Args)
 
 	// 设置日志
 	InitLogger(cfg)
 
 	// 检查是否从命令行指定了端口
-	port, _ := cmd.Flags().GetInt("port")
+	port, _ := params.Cmd.Flags().GetInt("port")
 	if port > 0 {
 		cfg.App.Port = port
 	}
 
-	// 日志系统配置完成后的第一条日志
-	logger.Info("Application starting", "name", cfg.App.Name)
+	return cfg, nil
+}
 
-	// 创建应用实例
-	app := core.Setup(cfg)
+// runServer 运行HTTP服务器
+func runServer(cmd *cobra.Command, args []string) {
+	// 创建fx应用程序
+	app := fx.New(
+		// 提供命令行参数
+		fx.Supply(cmd, args),
 
-	// 添加SQL数据库组件（如果配置了启用）
-	if cfg.Database.Enabled {
-		logger.Info("Adding SQL database component", "driver", cfg.Driver)
-		dbComponent := sqldb.NewComponent(cfg)
-		app.ComponentManager.AddComponent(dbComponent)
-	}
+		// 提供配置加载函数
+		fx.Provide(
+			func(cmd *cobra.Command, args []string) *ConfigParams {
+				return &ConfigParams{
+					Cmd:  cmd,
+					Args: args,
+				}
+			},
+			LoadConfig,
+		),
 
-	// 添加MongoDB组件（如果配置了启用）
-	if cfg.Mongo.Enabled {
-		logger.Info("Adding MongoDB component")
-		mongoComponent := mongodb.NewComponent(cfg)
-		app.ComponentManager.AddComponent(mongoComponent)
-	}
+		// 添加所有模块
+		sqldb.Module,
+		redisdb.Module,
+		filestore.Module,
+		casbin.Module,
+		repository.Module,
+		services.Module,
+		controller.Module,
+		router.Module,
 
-	// 添加Redis组件（如果配置了启用）
-	redisComponent := redisdb.NewComponent(cfg)
-	app.ComponentManager.AddComponent(redisComponent)
-
-	// 添加文件存储组件（如果配置了启用）
-	if cfg.Storage.Enabled {
-		logger.Info("Adding file storage component", "type", cfg.Storage.Type)
-		fileComponent := filestore.NewComponent(cfg)
-		app.ComponentManager.AddComponent(fileComponent)
-	}
-
-	// 添加Casbin组件（如果配置了启用）
-	if cfg.Casbin.Enabled {
-		logger.Info("Adding Casbin component")
-		// 获取数据库组件
-		var dbComponent *sqldb.Component
-		for _, component := range app.ComponentManager.GetComponents() {
-			if c, ok := component.(*sqldb.Component); ok {
-				dbComponent = c
-				break
+		// 注册生命周期钩子
+		fx.Invoke(func(lc fx.Lifecycle, cfg *configs.Config, routerResult router.RouterResult) {
+			// 创建HTTP服务器
+			srv := &http.Server{
+				Addr:           fmt.Sprintf(":%d", cfg.App.Port),
+				Handler:        routerResult.Router,
+				ReadTimeout:    10 * time.Second,
+				WriteTimeout:   10 * time.Second,
+				MaxHeaderBytes: 1 << 20,
 			}
-		}
 
-		if dbComponent != nil {
-			casbinComponent := casbin.NewComponent(cfg, dbComponent.DB())
-			app.ComponentManager.AddComponent(casbinComponent)
-		} else {
-			logger.Warn("Cannot add Casbin component: database component not found")
-		}
-	}
+			// 注册启动钩子
+			lc.Append(fx.Hook{
+				OnStart: func(ctx context.Context) error {
+					logger.Info("Starting HTTP server", "port", cfg.App.Port)
+					go func() {
+						if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+							logger.Error("HTTP server error", "error", err)
+						}
+					}()
+					return nil
+				},
+				OnStop: func(ctx context.Context) error {
+					logger.Info("Stopping HTTP server")
+					return srv.Shutdown(ctx)
+				},
+			})
 
-	// 初始化所有组件
-	if err := app.Initialize(); err != nil {
-		logger.Fatal("Failed to initialize application", "error", err)
-	}
+			logger.Info("Application started with fx framework")
+		}),
+	)
 
-	// 获取数据库组件
-	var dbComponent *sqldb.Component
-	for _, component := range app.ComponentManager.GetComponents() {
-		if c, ok := component.(*sqldb.Component); ok {
-			dbComponent = c
-			break
-		}
-	}
-
-	if dbComponent == nil {
-		logger.Fatal("Failed to get database component")
-	}
-
-	// 创建数据库适配器
-	db := database.NewGormDB(dbComponent.DB())
-
-	// 初始化MongoDB集合
-	if cfg.Mongo.Enabled {
-		// MongoDB 组件已经初始化，可以在仓库层使用
-		// 不再需要设置全局集合变量
-		logger.Info("MongoDB component initialized and available for repository layer")
-	}
-
-	// 确保资源清理
-	defer app.Cleanup()
-	// 初始化路由
-	r := router.SetupRouter(db, cfg)
-	s := &http.Server{
-		Addr:           fmt.Sprintf("0.0.0.0:%d", cfg.App.Port),
-		Handler:        r,
-		MaxHeaderBytes: 1 << 20,
-	}
-	logger.Info("Server started", "url", fmt.Sprintf("http://127.0.0.1:%d", cfg.App.Port))
-	go func() {
-		// 服务连接 监听
-		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Server listening failed", "error", err)
-		}
-	}()
-
-	// 等待中断信号以优雅地关闭服务器,这里需要缓冲
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, os.Interrupt)
-	<-quit
-
-	// 设置超时时间
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-
-	logger.Info("Shutting down server...")
-	if err := s.Shutdown(ctx); err != nil {
-		// 处理错误，例如记录日志、返回错误等
-		logger.Info("Error during server shutdown", "error", err)
-	}
-
-	logger.Info("Server stopped gracefully")
+	// 启动应用
+	app.Run()
 }

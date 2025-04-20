@@ -70,16 +70,15 @@ func runMigration(cmd *cobra.Command, args []string) {
 
 	logger.Info("Starting database migration process")
 
-	// 初始化SQL组件
-	sqlComponent := sqldb.NewComponent(cfg)
-	if err := sqlComponent.Initialize(); err != nil {
-		logger.Error("Failed to initialize SQL component", "error", err)
+	// 初始化数据库连接
+	db := sqldb.NewDBWithConfig(*cfg)
+	if db == nil {
+		logger.Error("Failed to initialize database connection")
 		os.Exit(1)
 	}
-	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	migrator, err := migration.InitializeSimpleMigrator(sqlComponent.DB(), cfg)
+	migrator, err := migration.InitializeSimpleMigrator(db, cfg)
 	if err != nil {
 		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
@@ -121,16 +120,15 @@ func runMigrationRollback(cmd *cobra.Command, args []string) {
 
 	logger.Info("Starting database migration rollback process")
 
-	// 初始化SQL组件
-	sqlComponent := sqldb.NewComponent(cfg)
-	if err := sqlComponent.Initialize(); err != nil {
-		logger.Error("Failed to initialize SQL component", "error", err)
+	// 初始化数据库连接
+	db := sqldb.NewDBWithConfig(*cfg)
+	if db == nil {
+		logger.Error("Failed to initialize database connection")
 		os.Exit(1)
 	}
-	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	migrator, err := migration.InitializeSimpleMigrator(sqlComponent.DB(), cfg)
+	migrator, err := migration.InitializeSimpleMigrator(db, cfg)
 	if err != nil {
 		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
@@ -158,16 +156,15 @@ func runMigrationStatus(cmd *cobra.Command, args []string) {
 		logger.Fatal("Database not enabled, please enable it in the configuration file")
 	}
 
-	// 初始化SQL组件
-	sqlComponent := sqldb.NewComponent(cfg)
-	if err := sqlComponent.Initialize(); err != nil {
-		logger.Error("Failed to initialize SQL component", "error", err)
+	// 初始化数据库连接
+	db := sqldb.NewDBWithConfig(*cfg)
+	if db == nil {
+		logger.Error("Failed to initialize database connection")
 		os.Exit(1)
 	}
-	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	migrator, err := migration.InitializeSimpleMigrator(sqlComponent.DB(), cfg)
+	migrator, err := migration.InitializeSimpleMigrator(db, cfg)
 	if err != nil {
 		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
@@ -211,16 +208,15 @@ func runMigrationReset(cmd *cobra.Command, args []string) {
 
 	logger.Info("Starting database migration reset process")
 
-	// 初始化SQL组件
-	sqlComponent := sqldb.NewComponent(cfg)
-	if err := sqlComponent.Initialize(); err != nil {
-		logger.Error("Failed to initialize SQL component", "error", err)
+	// 初始化数据库连接
+	db := sqldb.NewDBWithConfig(*cfg)
+	if db == nil {
+		logger.Error("Failed to initialize database connection")
 		os.Exit(1)
 	}
-	defer sqlComponent.Cleanup()
 
 	// 初始化迁移系统
-	migrator, err := migration.InitializeSimpleMigrator(sqlComponent.DB(), cfg)
+	migrator, err := migration.InitializeSimpleMigrator(db, cfg)
 	if err != nil {
 		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)

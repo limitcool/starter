@@ -34,8 +34,13 @@ type Config struct {
 
 // Config app config
 type App struct {
-	Port int
-	Name string
+	Port           int
+	Name           string
+	Mode           string        // 运行模式: debug, release, test
+	ReadTimeout    time.Duration // 读取超时
+	WriteTimeout   time.Duration // 写入超时
+	IdleTimeout    time.Duration // 空闲超时
+	MaxHeaderBytes int           // 最大请求头大小
 }
 
 // Config MySQL等数据库配置
@@ -117,7 +122,9 @@ type Casbin struct {
 	DefaultAllow     bool   // 默认是否允许访问（权限系统关闭时使用）
 	ModelPath        string // Casbin模型文件路径
 	PolicyTable      string // 策略表名
+	AutoLoad         bool   // 是否自动加载策略
 	AutoLoadInterval int    // 自动加载策略间隔（秒）
+	LogEnabled       bool   // 是否启用日志
 }
 
 // Storage 文件存储配置

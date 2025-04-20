@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"github.com/redis/go-redis/v9"
 )
 
 // RedisCache Redis缓存实现

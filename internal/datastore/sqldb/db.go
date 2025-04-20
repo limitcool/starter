@@ -95,8 +95,8 @@ func getGormLogLevel(c *configs.Config) gormlogger.LogLevel {
 	return gormlogger.Silent
 }
 
-// NewDB 创建数据库连接
-func NewDB(c configs.Config) *gorm.DB {
+// NewDBWithConfig 创建数据库连接
+func NewDBWithConfig(c configs.Config) *gorm.DB {
 	return newDbConn(&c)
 }
 

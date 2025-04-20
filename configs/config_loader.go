@@ -13,7 +13,7 @@ import (
 )
 
 // LoadConfig 加载配置
-func LoadConfig() *Config {
+func LoadConfig(configPath string) *Config {
 	// 创建默认配置
 	config := &Config{
 		App: App{
@@ -135,10 +135,12 @@ func LoadConfig() *Config {
 		},
 	}
 
-	// 设置配置文件路径
-	configPath := "configs/config.yaml"
-	if envPath := os.Getenv("CONFIG_PATH"); envPath != "" {
-		configPath = envPath
+	// 如果未指定配置文件路径，使用默认路径
+	if configPath == "" {
+		configPath = "configs/config.yaml"
+		if envPath := os.Getenv("CONFIG_PATH"); envPath != "" {
+			configPath = envPath
+		}
 	}
 
 	// 检查配置文件是否存在

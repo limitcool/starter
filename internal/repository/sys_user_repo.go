@@ -6,6 +6,8 @@ import (
 
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
+	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
 
@@ -16,14 +18,32 @@ type SysUserRepo struct {
 }
 
 // NewSysUserRepo 创建系统用户仓库
-func NewSysUserRepo(db *gorm.DB) *SysUserRepo {
-	genericRepo := NewGenericRepo[model.SysUser](db)
+func NewSysUserRepo(params RepoParams) *SysUserRepo {
+	genericRepo := NewGenericRepo[model.SysUser](params.DB)
 	genericRepo.SetErrorCode(errorx.ErrorUserNotFoundCode) // 设置错误码
 
-	return &SysUserRepo{
-		DB:          db,
+	repo := &SysUserRepo{
+		DB:          params.DB,
 		genericRepo: genericRepo,
 	}
+
+	// 注册生命周期钩子
+	params.LC.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			if params.Logger != nil {
+				logger.Info("SysUserRepo initialized")
+			}
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			if params.Logger != nil {
+				logger.Info("SysUserRepo stopped")
+			}
+			return nil
+		},
+	})
+
+	return repo
 }
 
 // GetByID 根据ID获取系统用户

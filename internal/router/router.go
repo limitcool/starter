@@ -5,18 +5,15 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/internal/controller"
-	"github.com/limitcool/starter/internal/datastore/database"
 	"github.com/limitcool/starter/internal/filestore"
 	"github.com/limitcool/starter/internal/middleware"
-	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/pkg/types"
 )
 
 // SetupRouter 初始化并返回一个配置完整的Gin路由引擎
-func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
+// 注意：这个函数已经被 NewRouter 函数替代，保留它是为了兼容旧代码
+func SetupRouter(params RouterParams) *gin.Engine {
 	// 创建不带默认中间件的路由
 	r := gin.New()
 
@@ -26,19 +23,14 @@ func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 	r.Use(middleware.LoggerMiddleware())
 	r.Use(gin.Recovery())
 	r.Use(middleware.Cors())
-	r.Use(middleware.I18n(config))
+	r.Use(middleware.I18n(params.Config))
 
 	// 使用依赖注入传入的配置
+	config := params.Config
 
 	// 创建Casbin服务
-	var casbinService casbin.Service
-	if config.Casbin.Enabled {
-		// 创建Casbin服务
-		casbinService = casbin.NewService(db.DB(), config)
-		// 初始化
-		if err := casbinService.Initialize(); err != nil {
-			logger.Warn("初始化Casbin服务失败", "err", err)
-		}
+	if config.Casbin.Enabled && params.Enforcer != nil {
+		logger.Info("Casbin服务已启用")
 	}
 
 	// 初始化存储服务（如果启用）
@@ -96,163 +88,8 @@ func SetupRouter(db database.Database, config *configs.Config) *gin.Engine {
 
 	// 使用传入的数据库实例创建服务
 
-	// 获取数据库连接
-	gormDB := db.DB()
-
-	// 不再使用旧的Casbin服务
-	// 我们已经创建了新的Casbin服务
-
-	// 初始化仓库层
-	repos := initRepositories(gormDB)
-
-	// 初始化服务层
-	svcs := initServices(repos, casbinService, db, config)
-
-	// 初始化控制器层
-	controllers := initControllers(svcs, repos, stg)
-
-	// 设置API路由组
-	apiV1 := r.Group("/api/v1")
-
-	// 健康检查路由
-	apiV1.GET("/ping", controller.Ping)
-
-	// 令牌刷新（公共API）
-	apiV1.POST("/auth/tokens/refresh", controllers.UserController.RefreshToken)
-
-	// 用户相关 - 公开路由
-	publicUser := apiV1.Group("/user")
-	{
-		publicUser.POST("/register", controllers.UserController.UserRegister)
-		publicUser.POST("/login", controllers.UserController.UserLogin)
-	}
-
-	// 管理员相关 - 公开路由
-	publicAdmin := apiV1.Group("/admin")
-	{
-		publicAdmin.POST("/login", controllers.SysUserController.SysUserLogin)
-	}
-
-	// ======= 文件下载API（无需认证）=======
-	if controllers.FileController != nil {
-		apiV1.GET("/files/download/:id", controllers.FileController.DownloadFile)
-	}
-
-	// ======= 需要认证的路由 =======
-	auth := apiV1.Group("")
-	auth.Use(middleware.JWTAuth(config))
-
-	// 用户相关 - 需要认证
-	authUser := auth.Group("/user")
-	authUser.Use(middleware.AuthNormalUser())
-	{
-		authUser.GET("", controllers.UserController.UserInfo)
-		authUser.PUT("/password", controllers.UserController.UserChangePassword)
-		authUser.GET("/menus", controllers.PermissionController.GetUserMenus)
-		authUser.GET("/permissions", controllers.PermissionController.GetUserPermissions)
-		authUser.GET("/roles", controllers.PermissionController.GetUserRoles)
-
-		// 用户头像上传
-		if controllers.FileController != nil {
-			authUser.PUT("/avatar", controllers.FileController.UpdateUserAvatar)
-		}
-	}
-
-	// 文件相关 - 需要认证
-	if controllers.FileController != nil {
-		authFiles := auth.Group("/files")
-		{
-			authFiles.POST("/upload", controllers.FileController.UploadFile)
-			authFiles.GET("/:id", controllers.FileController.GetFile)
-			authFiles.DELETE("/:id", controllers.FileController.DeleteFile)
-		}
-	}
-
-	// 管理员路由 - 需要权限验证
-	if config.Casbin.Enabled && casbinService != nil {
-		adminGroup := auth.Group("/admin")
-		adminGroup.Use(middleware.CasbinMiddleware(svcs.PermissionService, config))
-		{
-			// 系统管理
-			adminSystem := adminGroup.Group("/system")
-			{
-				adminSystem.GET("", controllers.SystemController.GetSystemSettings)
-				adminSystem.PUT("/permissions", controllers.PermissionController.UpdatePermissionSettings)
-			}
-
-			// 菜单管理
-			adminMenu := adminGroup.Group("/menu")
-			{
-				adminMenu.GET("", controllers.MenuController.GetMenuTree)
-				adminMenu.GET("/:id", controllers.MenuController.GetMenu)
-				adminMenu.POST("", controllers.MenuController.CreateMenu)
-				adminMenu.PUT("/:id", controllers.MenuController.UpdateMenu)
-				adminMenu.DELETE("/:id", controllers.MenuController.DeleteMenu)
-			}
-
-			// 角色管理
-			adminRole := adminGroup.Group("/role")
-			{
-				adminRole.GET("", controllers.RoleController.GetRoles)
-				adminRole.GET("/:id", controllers.RoleController.GetRole)
-				adminRole.POST("", controllers.RoleController.CreateRole)
-				adminRole.PUT("/:id", controllers.RoleController.UpdateRole)
-				adminRole.DELETE("/:id", controllers.RoleController.DeleteRole)
-				adminRole.POST("/:id/menus", controllers.RoleController.AssignMenuToRole)
-				adminRole.POST("/:id/permissions", controllers.RoleController.SetRolePermission)
-				adminRole.DELETE("/:id/permissions", controllers.RoleController.DeleteRolePermission)
-			}
-
-			// 权限管理
-			adminPermission := adminGroup.Group("/permission")
-			{
-				adminPermission.GET("", controllers.PermissionController.GetPermissions)
-				adminPermission.GET("/:id", controllers.PermissionController.GetPermission)
-				adminPermission.POST("", controllers.PermissionController.CreatePermission)
-				adminPermission.PUT("/:id", controllers.PermissionController.UpdatePermission)
-				adminPermission.DELETE("/:id", controllers.PermissionController.DeletePermission)
-				// 角色权限管理
-				adminPermission.GET("/role/:id", controllers.PermissionController.GetRolePermissions)
-				adminPermission.POST("/role/:id", controllers.PermissionController.AssignPermissionsToRole)
-			}
-
-			// API管理
-			adminAPI := adminGroup.Group("/api")
-			{
-				adminAPI.GET("", controllers.APIController.GetAPIs)
-				adminAPI.GET("/:id", controllers.APIController.GetAPI)
-				adminAPI.POST("", controllers.APIController.CreateAPI)
-				adminAPI.PUT("/:id", controllers.APIController.UpdateAPI)
-				adminAPI.DELETE("/:id", controllers.APIController.DeleteAPI)
-				// 菜单API关联
-				adminAPI.GET("/menu/:id", controllers.APIController.GetMenuAPIs)
-				adminAPI.POST("/menu/:id", controllers.APIController.AssignAPIsToMenu)
-				// 同步菜单API权限
-				adminAPI.POST("/sync", controllers.APIController.SyncMenuAPIPermissions)
-			}
-
-			// 操作日志管理
-			adminLog := adminGroup.Group("/log")
-			{
-				adminLog.GET("", controllers.OperationLogController.GetOperationLogs)
-				adminLog.DELETE("/:id", controllers.OperationLogController.DeleteOperationLog)
-				adminLog.POST("/batch-delete", controllers.OperationLogController.ClearOperationLogs)
-			}
-
-			// 系统用户管理
-			adminUser := adminGroup.Group("/user")
-			{
-				// 用户角色管理
-				adminUser.POST("/:id/roles", controllers.PermissionController.AssignRolesToUser)
-
-				// 系统用户头像管理
-				if controllers.FileController != nil {
-					adminUser.PUT("/avatar", controllers.FileController.UpdateSysUserAvatar)
-					adminUser.PUT("/avatar/:id", controllers.FileController.UpdateSysUserAvatar)
-				}
-			}
-		}
-	}
+	// 注册路由
+	registerRoutes(r, params)
 
 	// 打印所有注册的路由
 	routes := r.Routes()

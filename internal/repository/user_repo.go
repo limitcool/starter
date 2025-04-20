@@ -7,54 +7,45 @@ import (
 
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
+	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
 
-// UserRepository 用户仓库接口
-type UserRepository interface {
-	// GetByID 根据ID获取用户
-	GetByID(ctx context.Context, id int64) (*model.User, error)
-
-	// GetByUsername 根据用户名获取用户
-	GetByUsername(ctx context.Context, username string) (*model.User, error)
-
-	// Create 创建用户
-	Create(ctx context.Context, user *model.User) error
-
-	// Update 更新用户
-	Update(ctx context.Context, user *model.User) error
-
-	// UpdateFields 更新用户字段
-	UpdateFields(ctx context.Context, id int64, fields map[string]any) error
-
-	// Delete 删除用户
-	Delete(ctx context.Context, id int64) error
-
-	// IsExist 判断用户是否存在
-	IsExist(ctx context.Context, username string) (bool, error)
-
-	// UpdateAvatar 更新用户头像
-	UpdateAvatar(ctx context.Context, userID int64, fileID uint) error
-
-	// WithTx 使用事务
-	WithTx(tx *gorm.DB) *UserRepo
-}
-
 // UserRepo 用户仓库
+// 提供用户相关的数据库操作
 type UserRepo struct {
 	DB          *gorm.DB
 	GenericRepo *GenericRepo[model.User] // 泛型仓库
 }
 
 // NewUserRepo 创建用户仓库
-func NewUserRepo(db *gorm.DB) *UserRepo {
-	genericRepo := NewGenericRepo[model.User](db)
+func NewUserRepo(params RepoParams) *UserRepo {
+	genericRepo := NewGenericRepo[model.User](params.DB)
 	genericRepo.SetErrorCode(errorx.ErrorUserNotFoundCode) // 设置错误码
 
-	return &UserRepo{
-		DB:          db,
+	repo := &UserRepo{
+		DB:          params.DB,
 		GenericRepo: genericRepo,
 	}
+
+	// 注册生命周期钩子
+	params.LC.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			if params.Logger != nil {
+				logger.Info("UserRepo initialized")
+			}
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			if params.Logger != nil {
+				logger.Info("UserRepo stopped")
+			}
+			return nil
+		},
+	})
+
+	return repo
 }
 
 // GetByID 根据ID获取用户
@@ -142,6 +133,7 @@ func (r *UserRepo) WithTx(tx *gorm.DB) *UserRepo {
 	genericRepo := NewGenericRepo[model.User](tx)
 	genericRepo.SetErrorCode(errorx.ErrorUserNotFoundCode)
 
+	// 创建新的仓库实例，使用事务
 	return &UserRepo{
 		DB:          tx,
 		GenericRepo: genericRepo,
