@@ -2,12 +2,9 @@ package cmd
 
 import (
 	"context"
-	"fmt"
-	"net/http"
-	"time"
 
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/internal/controller"
+	"github.com/limitcool/starter/internal/api"
 	"github.com/limitcool/starter/internal/datastore/redisdb"
 	"github.com/limitcool/starter/internal/datastore/sqldb"
 	"github.com/limitcool/starter/internal/filestore"
@@ -15,6 +12,7 @@ import (
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/repository"
 	"github.com/limitcool/starter/internal/router"
+	"github.com/limitcool/starter/internal/server"
 	"github.com/limitcool/starter/internal/services"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
@@ -86,38 +84,22 @@ func runServer(cmd *cobra.Command, args []string) {
 		casbin.Module,
 		repository.Module,
 		services.Module,
-		controller.Module,
+		api.Module,
 		router.Module,
+		server.Module,
 
 		// 注册生命周期钩子
-		fx.Invoke(func(lc fx.Lifecycle, cfg *configs.Config, routerResult router.RouterResult) {
-			// 创建HTTP服务器
-			srv := &http.Server{
-				Addr:           fmt.Sprintf(":%d", cfg.App.Port),
-				Handler:        routerResult.Router,
-				ReadTimeout:    10 * time.Second,
-				WriteTimeout:   10 * time.Second,
-				MaxHeaderBytes: 1 << 20,
-			}
-
-			// 注册启动钩子
+		fx.Invoke(func(lc fx.Lifecycle) {
 			lc.Append(fx.Hook{
 				OnStart: func(ctx context.Context) error {
-					logger.Info("Starting HTTP server", "port", cfg.App.Port)
-					go func() {
-						if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-							logger.Error("HTTP server error", "error", err)
-						}
-					}()
+					logger.Info("Application started with fx framework")
 					return nil
 				},
 				OnStop: func(ctx context.Context) error {
-					logger.Info("Stopping HTTP server")
-					return srv.Shutdown(ctx)
+					logger.Info("Application stopped")
+					return nil
 				},
 			})
-
-			logger.Info("Application started with fx framework")
 		}),
 	)
 

@@ -133,6 +133,14 @@ func LoadConfig(configPath string) *Config {
 			SupportLanguages: []string{"zh-CN", "en-US"},
 			ResourcesPath:    "locales",
 		},
+		GRPC: GRPC{
+			Enabled:      false,
+			Port:         9000,
+			Reflection:   true,
+			HealthCheck:  true,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 5 * time.Second,
+		},
 	}
 
 	// 如果未指定配置文件路径，使用默认路径

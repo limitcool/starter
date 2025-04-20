@@ -120,6 +120,14 @@ admin:
   password: "admin123"
   email: "admin@example.com"
 
+grpc:
+  enabled: false
+  port: 9000
+  reflection: true
+  health_check: true
+  read_timeout: 5s
+  write_timeout: 5s
+
 i18n:
   default_language: "zh-CN"
   languages: ["zh-CN", "en-US"]

@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
@@ -79,6 +80,18 @@ func NewRouter(params RouterParams) RouterResult {
 	params.LC.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Router initialized successfully")
+
+			// 打印路由信息
+			logger.Info("==================================================")
+			logger.Info("路由信息:")
+
+			// 获取所有路由
+			routes := r.Routes()
+			for _, route := range routes {
+				logger.Info(fmt.Sprintf("%-7s %s", route.Method, route.Path))
+			}
+
+			logger.Info("==================================================")
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {

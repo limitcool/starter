@@ -30,6 +30,7 @@ type Config struct {
 	Storage  Storage             // 文件存储配置
 	Admin    Admin               // 管理员配置
 	I18n     I18n                // 国际化配置
+	GRPC     GRPC                // gRPC服务配置
 }
 
 // Config app config
@@ -184,4 +185,14 @@ type I18n struct {
 	DefaultLanguage  string   // 默认语言
 	SupportLanguages []string // 支持的语言列表
 	ResourcesPath    string   // 语言资源文件路径
+}
+
+// GRPC gRPC服务配置
+type GRPC struct {
+	Enabled      bool          // 是否启用gRPC服务
+	Port         int           // gRPC服务端口
+	Reflection   bool          // 是否启用反射服务
+	HealthCheck  bool          // 是否启用健康检查
+	ReadTimeout  time.Duration // 读取超时
+	WriteTimeout time.Duration // 写入超时
 }

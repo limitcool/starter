@@ -68,7 +68,7 @@ func CasbinMiddleware(permissionService *services.PermissionService, config *con
 			return
 		}
 
-		ctx := c.Request.Context()
+		ctx = c.Request.Context()
 		logger.DebugContext(ctx, "权限检查通过", "userID", userID)
 		c.Next()
 	}

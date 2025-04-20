@@ -9,7 +9,7 @@ import (
 
 // Module 控制器模块
 var Module = fx.Options(
-	// 提供所有控制器
+	// 提供所有HTTP控制器
 	fx.Provide(NewUserController),
 	fx.Provide(NewSysUserController),
 	fx.Provide(NewRoleController),
@@ -19,6 +19,12 @@ var Module = fx.Options(
 	fx.Provide(NewFileController),
 	fx.Provide(NewAPIController),
 	fx.Provide(NewSystemController),
+
+	// 提供所有gRPC控制器
+	fx.Provide(NewSystemGRPCController),
+
+	// 注册gRPC控制器
+	fx.Invoke(RegisterSystemGRPCController),
 )
 
 // ControllerParams 控制器参数

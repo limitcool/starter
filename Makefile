@@ -79,6 +79,16 @@ gen-errors:
 	@echo "Generating error codes from $(ERROR_MD) to $(ERROR_CODE_FILE)..."
 	go run tools/errorgen/main.go $(ERROR_MD) $(ERROR_CODE_FILE)
 
+# 生成proto文件
+.PHONY: proto
+proto:
+	@echo "Generating protobuf code..."
+	# 生成proto代码
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative internal/proto/v1/system.proto
+	# 移动生成的文件到gen目录
+	mkdir -p internal/proto/gen/v1
+	mv internal/proto/v1/*.pb.go internal/proto/gen/v1/
+
 # 帮助信息
 .PHONY: help
 help:
@@ -91,11 +101,13 @@ help:
 	@echo "  clean    - Clean build directory"
 	@echo "  test     - Run tests"
 	@echo "  run      - Run the application"
-	@echo "  gen-errors - Generate error codes from Markdown definition"
+	@echo "  gen-errors - Generate error codes from Markdown definition
+  proto     - Generate protobuf code from proto files"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make linux ARCH=arm64   - Build Linux arm64 version"
 	@echo "  make darwin ARCH=arm64  - Build MacOS arm64 version"
 	@echo "  make all-arch          - Build all platforms in amd64"
 	@echo "  make all-arm64         - Build all platforms in arm64"
-	@echo "  make gen-errors        - Generate error codes from $(ERROR_MD)"
+	@echo "  make gen-errors        - Generate error codes from $(ERROR_MD)
+  make proto             - Generate protobuf code"
