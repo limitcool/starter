@@ -7,6 +7,10 @@ English | [中文](README.md)
 
 ## Features
 - Provides a Gin framework project template
+- Supports both HTTP and gRPC dual-protocol services
+  - Can enable/disable gRPC service via configuration
+  - Unified API definition and implementation
+  - Supports gRPC health check and reflection services
 - Uses Uber fx framework for dependency injection, creating clearer code structure
 - Adopts standard MVC architecture, following the principle of separation of concerns
 - Integrates GORM for ORM mapping and database operations
@@ -483,6 +487,146 @@ func example() {
 ```
 
 To switch the log driver, you only need to modify `Log.Driver` in the configuration file, with no need to change your code.
+
+## gRPC Support
+
+The project integrates gRPC support, which can run in parallel with HTTP services, providing high-performance RPC services.
+
+### gRPC Features
+
+- Can enable/disable gRPC service via configuration
+- Supports gRPC health check and reflection services
+- Shares business logic with HTTP services
+- Uses Protocol Buffers to define APIs
+
+### Configuration Example
+
+```yaml
+GRPC:
+  Enabled: true                # Whether to enable gRPC service
+  Port: 9000                  # gRPC service port
+  HealthCheck: true           # Whether to enable health check service
+  Reflection: true            # Whether to enable reflection service
+```
+
+### Usage
+
+1. **Define Proto Files**
+
+   Proto files are defined in the `internal/proto/v1` directory, and the generated code is in the `internal/proto/gen/v1` directory.
+
+   ```protobuf
+   // internal/proto/v1/system.proto
+   syntax = "proto3";
+
+   package internal.proto.v1;
+
+   option go_package = "internal/proto/gen/v1;protov1";
+
+   // SystemService system service
+   service SystemService {
+     // GetSystemInfo get system information
+     rpc GetSystemInfo(SystemInfoRequest) returns (SystemInfoResponse) {}
+   }
+
+   // SystemInfoRequest system information request
+   message SystemInfoRequest {
+     // Request ID
+     string request_id = 1;
+   }
+
+   // SystemInfoResponse system information response
+   message SystemInfoResponse {
+     // Application name
+     string app_name = 1;
+     // Application version
+     string version = 2;
+     // Running mode
+     string mode = 3;
+     // Server time
+     int64 server_time = 4;
+   }
+   ```
+
+2. **Generate gRPC Code**
+
+   Use the proto command in Makefile to generate gRPC code:
+
+   ```bash
+   make proto
+   ```
+
+3. **Implement gRPC Controllers**
+
+   Create gRPC controllers in the `internal/controller` directory, using the `_grpc` suffix to distinguish:
+
+   ```go
+   // internal/controller/system_grpc.go
+   package controller
+
+   import (
+       "context"
+       "time"
+
+       pb "github.com/limitcool/starter/internal/proto/gen/v1"
+       // ...
+   )
+
+   // SystemGRPCController gRPC system controller
+   type SystemGRPCController struct {
+       pb.UnimplementedSystemServiceServer
+       // ...
+   }
+
+   // GetSystemInfo get system information
+   func (c *SystemGRPCController) GetSystemInfo(ctx context.Context, req *pb.SystemInfoRequest) (*pb.SystemInfoResponse, error) {
+       // Implement business logic
+       return &pb.SystemInfoResponse{
+           AppName:    c.config.App.Name,
+           Version:    "1.0.0",
+           Mode:       c.config.App.Mode,
+           ServerTime: time.Now().Unix(),
+       }, nil
+   }
+   ```
+
+4. **Register gRPC Services**
+
+   Register gRPC controllers in `internal/controller/module.go`:
+
+   ```go
+   // Module controller module
+   var Module = fx.Options(
+       // Provide HTTP controllers
+       fx.Provide(NewUserController),
+       // ...
+
+       // Provide gRPC controllers
+       fx.Provide(NewSystemGRPCController),
+
+       // Register gRPC controllers
+       fx.Invoke(RegisterSystemGRPCController),
+   )
+   ```
+
+5. **Use gRPC Client**
+
+   ```go
+   // Create gRPC connection
+   conn, err := grpc.Dial("localhost:9000", grpc.WithInsecure())
+   if err != nil {
+       log.Fatalf("Failed to connect: %v", err)
+   }
+   defer conn.Close()
+
+   // Create client
+   client := pb.NewSystemServiceClient(conn)
+
+   // Call service
+   resp, err := client.GetSystemInfo(context.Background(), &pb.SystemInfoRequest{
+       RequestId: "test-request",
+   })
+   ```
 
 ## Permission System
 

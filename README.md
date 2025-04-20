@@ -7,6 +7,10 @@
 
 ## 特征
 - 提供 gin 框架项目模版
+- 支持 HTTP 和 gRPC 双协议服务
+  - 可通过配置启用/禁用 gRPC 服务
+  - 统一的 API 定义和实现
+  - 支持 gRPC 健康检查和反射服务
 - 使用 Uber fx 框架进行依赖注入，实现更清晰的代码结构
 - 采用标准 MVC 架构，遵循关注点分离原则
 - 集成 GORM 进行 ORM 映射和数据库操作
@@ -489,6 +493,146 @@ func example() {
     logger.Debug("Detailed debug information", "request", req, "response", resp)
 }
 ```
+
+## gRPC 支持
+
+项目集成了 gRPC 支持，可与 HTTP 服务并行运行，提供高性能的 RPC 服务。
+
+### gRPC 特点
+
+- 可通过配置启用/禁用 gRPC 服务
+- 支持 gRPC 健康检查和反射服务
+- 与 HTTP 服务共享业务逻辑
+- 使用 Protocol Buffers 定义 API
+
+### 配置示例
+
+```yaml
+GRPC:
+  Enabled: true                # 是否启用 gRPC 服务
+  Port: 9000                  # gRPC 服务端口
+  HealthCheck: true           # 是否启用健康检查服务
+  Reflection: true            # 是否启用反射服务
+```
+
+### 使用方法
+
+1. **定义 Proto 文件**
+
+   Proto 文件定义在 `internal/proto/v1` 目录下，生成的代码在 `internal/proto/gen/v1` 目录下。
+
+   ```protobuf
+   // internal/proto/v1/system.proto
+   syntax = "proto3";
+
+   package internal.proto.v1;
+
+   option go_package = "internal/proto/gen/v1;protov1";
+
+   // SystemService 系统服务
+   service SystemService {
+     // GetSystemInfo 获取系统信息
+     rpc GetSystemInfo(SystemInfoRequest) returns (SystemInfoResponse) {}
+   }
+
+   // SystemInfoRequest 系统信息请求
+   message SystemInfoRequest {
+     // 请求ID
+     string request_id = 1;
+   }
+
+   // SystemInfoResponse 系统信息响应
+   message SystemInfoResponse {
+     // 应用名称
+     string app_name = 1;
+     // 应用版本
+     string version = 2;
+     // 运行模式
+     string mode = 3;
+     // 服务器时间
+     int64 server_time = 4;
+   }
+   ```
+
+2. **生成 gRPC 代码**
+
+   使用 Makefile 中的 proto 命令生成 gRPC 代码：
+
+   ```bash
+   make proto
+   ```
+
+3. **实现 gRPC 控制器**
+
+   在 `internal/controller` 目录下创建 gRPC 控制器，使用 `_grpc` 后缀区分：
+
+   ```go
+   // internal/controller/system_grpc.go
+   package controller
+
+   import (
+       "context"
+       "time"
+
+       pb "github.com/limitcool/starter/internal/proto/gen/v1"
+       // ...
+   )
+
+   // SystemGRPCController gRPC系统控制器
+   type SystemGRPCController struct {
+       pb.UnimplementedSystemServiceServer
+       // ...
+   }
+
+   // GetSystemInfo 获取系统信息
+   func (c *SystemGRPCController) GetSystemInfo(ctx context.Context, req *pb.SystemInfoRequest) (*pb.SystemInfoResponse, error) {
+       // 实现业务逻辑
+       return &pb.SystemInfoResponse{
+           AppName:    c.config.App.Name,
+           Version:    "1.0.0",
+           Mode:       c.config.App.Mode,
+           ServerTime: time.Now().Unix(),
+       }, nil
+   }
+   ```
+
+4. **注册 gRPC 服务**
+
+   在 `internal/controller/module.go` 中注册 gRPC 控制器：
+
+   ```go
+   // Module 控制器模块
+   var Module = fx.Options(
+       // 提供 HTTP 控制器
+       fx.Provide(NewUserController),
+       // ...
+
+       // 提供 gRPC 控制器
+       fx.Provide(NewSystemGRPCController),
+
+       // 注册 gRPC 控制器
+       fx.Invoke(RegisterSystemGRPCController),
+   )
+   ```
+
+5. **使用 gRPC 客户端**
+
+   ```go
+   // 创建 gRPC 连接
+   conn, err := grpc.Dial("localhost:9000", grpc.WithInsecure())
+   if err != nil {
+       log.Fatalf("Failed to connect: %v", err)
+   }
+   defer conn.Close()
+
+   // 创建客户端
+   client := pb.NewSystemServiceClient(conn)
+
+   // 调用服务
+   resp, err := client.GetSystemInfo(context.Background(), &pb.SystemInfoRequest{
+       RequestId: "test-request",
+   })
+   ```
 
 ## 权限系统
 
