@@ -7,6 +7,8 @@ English | [中文](README.md)
 
 ## Features
 - Provides a Gin framework project template
+- Uses Uber fx framework for dependency injection, creating clearer code structure
+- Adopts standard MVC architecture, following the principle of separation of concerns
 - Integrates GORM for ORM mapping and database operations
   - Supports PostgreSQL (using pgx driver)
   - Supports MySQL
@@ -25,6 +27,68 @@ English | [中文](README.md)
 - Supports separation of database migration and server startup, improving startup speed
 - Complete database migration system, supporting version control and rollback
 - Built-in user, role, permission, and menu management system
+- Optimized error handling system, supporting error codes and multilingual error messages
+
+## Architecture Design
+
+The project adopts a standard MVC architecture, combined with the Uber fx dependency injection framework, implementing a clear layered structure:
+
+### 1. Layered Architecture
+
+- **Model Layer**: Defines data models and database table structures
+- **Repository Layer**: Responsible for data access, the only layer that directly interacts with the database
+- **Service Layer**: Implements business logic, depends on the Repository layer
+- **Controller Layer**: Handles HTTP requests and responses, depends on the Service layer
+- **Router Layer**: Defines API routes, depends on the Controller layer
+
+### 2. Dependency Injection
+
+The project uses the Uber fx framework to implement dependency injection, with each layer injecting its dependencies through constructors:
+
+```go
+// Repository layer
+func NewUserRepo(db *gorm.DB) *UserRepo {
+    // ...
+}
+
+// Service layer
+func NewUserService(userRepo *repository.UserRepo) *UserService {
+    // ...
+}
+
+// Controller layer
+func NewUserController(userService *services.UserService) *UserController {
+    // ...
+}
+
+// Router layer
+func NewRouter(userController *controller.UserController) *gin.Engine {
+    // ...
+}
+```
+
+### 3. Lifecycle Management
+
+Uses fx.Lifecycle to manage component lifecycles, ensuring proper initialization and cleanup of components:
+
+```go
+func NewComponent(lc fx.Lifecycle) *Component {
+    component := &Component{}
+
+    lc.Append(fx.Hook{
+        OnStart: func(ctx context.Context) error {
+            // Initialization logic
+            return nil
+        },
+        OnStop: func(ctx context.Context) error {
+            // Cleanup logic
+            return nil
+        },
+    })
+
+    return component
+}
+```
 
 ## Quick Start
 
@@ -285,14 +349,69 @@ Example language file content:
    - Add the language to the `SupportLanguages` list in the configuration
    - Restart the application to make the configuration effective
 
+## Error Handling System
+
+The project implements a complete error handling system, including error codes, error wrapping, and multilingual error messages.
+
+### Error Handling Features
+
+- Unified error code definition and management
+- Error wrapping, preserving complete error chains and stack information
+- Multilingual error message support
+- Distinction between internal errors and user-visible errors
+
+### Error Handling Best Practices
+
+- Repository layer: Returns specific errors, does not log
+- Service layer: Wraps errors, adds business context, does not log
+- Controller layer: Converts to user-friendly error responses, logs complete error information
+
+### Usage Example
+
+```go
+// Repository layer
+func (r *UserRepo) GetByID(ctx context.Context, id int64) (*model.User, error) {
+    var user model.User
+    if err := r.DB.First(&user, id).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, errorx.NewError(errorx.ErrorUserNotFoundCode, "User not found")
+        }
+        return nil, err
+    }
+    return &user, nil
+}
+
+// Service layer
+func (s *UserService) GetUserByID(ctx context.Context, id int64) (*model.User, error) {
+    user, err := s.userRepo.GetByID(ctx, id)
+    if err != nil {
+        return nil, errorx.WrapError(err, fmt.Sprintf("Failed to get user with ID %d", id))
+    }
+    return user, nil
+}
+
+// Controller layer
+func (c *UserController) GetUser(ctx *gin.Context) {
+    id := cast.ToInt64(ctx.Param("id"))
+    user, err := c.userService.GetUserByID(ctx, id)
+    if err != nil {
+        logger.Error("Failed to get user", "error", err, "id", id)
+        response.Error(ctx, err)
+        return
+    }
+    response.Success(ctx, user)
+}
+```
+
 ## Logging Configuration
 
-The project uses [charmbracelet/log](https://github.com/charmbracelet/log) as its logging library, supporting colorized console output and file output.
+The project supports multiple logging libraries, including [charmbracelet/log](https://github.com/charmbracelet/log) and [uber-go/zap](https://github.com/uber-go/zap), which can be switched via configuration.
 
 ### Configuration Example
 
 ```yaml
 Log:
+  Driver: charm               # Log driver: charm, zap
   Level: info                 # Log level: debug, info, warn, error
   Output: [console, file]     # Output methods: console, file
   Format: text                # Log format: text, json
@@ -303,6 +422,11 @@ Log:
     MaxBackups: 10            # Maximum number of old log files to retain
     Compress: true            # Whether to compress old log files
 ```
+
+### Log Drivers
+
+- `charm`: Uses the charmbracelet/log library, supports colorized console output, suitable for development environments
+- `zap`: Uses the uber-go/zap library, high-performance structured logging, suitable for production environments
 
 ### Log Levels
 
@@ -330,6 +454,35 @@ Multiple output methods can be configured simultaneously, and logs will be outpu
 - `MaxAge`: Number of days to retain log files, automatically deleted after exceeding
 - `MaxBackups`: Number of old log files to retain
 - `Compress`: Whether to compress old log files
+
+### Usage Example
+
+The logging library provides a unified interface, so the usage is consistent regardless of which driver is used:
+
+```go
+// Import the logger package
+import "github.com/limitcool/starter/internal/pkg/logger"
+
+// Log at different levels
+func example() {
+    // Log info message
+    logger.Info("This is an info message", "user", "admin", "action", "login")
+
+    // Log warning message
+    logger.Warn("This is a warning message", "memory", "90%")
+
+    // Log error message
+    err := someFunction()
+    if err != nil {
+        logger.Error("Operation failed", "error", err, "operation", "someFunction")
+    }
+
+    // Log debug message
+    logger.Debug("Detailed debug information", "request", req, "response", resp)
+}
+```
+
+To switch the log driver, you only need to modify `Log.Driver` in the configuration file, with no need to change your code.
 
 ## Permission System
 
@@ -393,6 +546,118 @@ The project integrates the Casbin RBAC permission system and dynamic menu system
    ```
    GET /api/v1/user/perms
    ```
+
+## Generic Repository System
+
+The project leverages Go 1.18+ generics to implement a complete generic repository system, significantly reducing code duplication and improving development efficiency.
+
+### Generic Repository Interface
+
+The generic repository interface defines methods that all repository implementations must provide:
+
+```go
+// Repository interface
+type Repository[T Entity] interface {
+    // Basic CRUD operations
+    Create(ctx context.Context, entity *T) error
+    GetByID(ctx context.Context, id any) (*T, error)
+    Update(ctx context.Context, entity *T) error
+    Delete(ctx context.Context, id any) error
+    List(ctx context.Context, page, pageSize int) ([]T, int64, error)
+    Count(ctx context.Context) (int64, error)
+    UpdateFields(ctx context.Context, id any, fields map[string]any) error
+
+    // Batch operations
+    BatchCreate(ctx context.Context, entities []T) error
+    BatchDelete(ctx context.Context, ids []any) error
+
+    // Query methods
+    FindByField(ctx context.Context, field string, value any) (*T, error)
+    FindAllByField(ctx context.Context, field string, value any) ([]T, error)
+    FindByCondition(ctx context.Context, condition string, args ...any) ([]T, error)
+    FindOneByCondition(ctx context.Context, condition string, args ...any) (*T, error)
+    GetPage(ctx context.Context, page, pageSize int, condition string, args ...any) ([]T, int64, error)
+
+    // Advanced queries
+    FindWithLike(ctx context.Context, field string, value string) ([]T, error)
+    FindWithIn(ctx context.Context, field string, values []any) ([]T, error)
+    FindWithBetween(ctx context.Context, field string, min, max any) ([]T, error)
+    CountWithCondition(ctx context.Context, condition string, args ...any) (int64, error)
+    AggregateField(ctx context.Context, aggregate Aggregate, field string, condition string, args ...any) (float64, error)
+    GroupBy(ctx context.Context, groupFields []string, selectFields []string, condition string, args ...any) ([]map[string]any, error)
+    Join(ctx context.Context, joinType string, table string, on string, selectFields []string, condition string, args ...any) ([]map[string]any, error)
+    Exists(ctx context.Context, condition string, args ...any) (bool, error)
+    Raw(ctx context.Context, sql string, values ...any) ([]map[string]any, error)
+
+    // Transaction related
+    Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error
+    WithTx(tx *gorm.DB) Repository[T]
+}
+```
+
+### Generic Repository Implementations
+
+The project provides two generic repository implementations:
+
+1. **GenericRepo**: Basic generic repository implementation that interacts directly with the database
+2. **CachedRepo**: Cached generic repository implementation that wraps the basic repository and adds caching functionality
+
+#### Creating Generic Repositories
+
+```go
+// Create a basic generic repository
+func NewUserRepo(db *gorm.DB) *UserRepo {
+    // Create generic repository
+    genericRepo := NewGenericRepo[model.User](db)
+    // Set error code
+    genericRepo.SetErrorCode(errorx.ErrorUserNotFoundCode)
+
+    return &UserRepo{
+        DB:          db,
+        GenericRepo: genericRepo,
+    }
+}
+
+// Create a cached generic repository
+func NewCachedUserRepo(repo Repository[model.User]) (Repository[model.User], error) {
+    return WithCache(repo, "user", "user", 30*time.Minute)
+}
+```
+
+#### Using Generic Repositories
+
+```go
+// Using generic repository in service layer
+func (s *UserService) GetUserByID(ctx context.Context, id int64) (*model.User, error) {
+    // Directly call generic repository method
+    user, err := s.userRepo.GetByID(ctx, id)
+    if err != nil {
+        return nil, err
+    }
+    return user, nil
+}
+
+// Using advanced query features
+func (s *UserService) SearchUsers(ctx context.Context, keyword string, page, pageSize int) ([]model.User, int64, error) {
+    condition := ""
+    var args []any
+
+    if keyword != "" {
+        condition = "username LIKE ? OR email LIKE ?"
+        args = append(args, "%"+keyword+"%", "%"+keyword+"%")
+    }
+
+    return s.userRepo.GetPage(ctx, page, pageSize, condition, args...)
+}
+```
+
+### Advantages of Generic Repositories
+
+1. **Code Reuse**: All entities share the same repository implementation, significantly reducing duplicate code
+2. **Type Safety**: Leverages Go generics to ensure type safety, catching type errors at compile time
+3. **Rich Functionality**: Provides complete CRUD operations and advanced query capabilities
+4. **Caching Support**: Easily add caching functionality through the decorator pattern, improving performance
+5. **Transaction Support**: Built-in transaction support ensures data consistency
 
 ## Database Query Options System
 
@@ -516,27 +781,5 @@ func (s *Service) List(query *request.YourQuery) ([]YourModel, int64, error) {
     db.Find(&items)
 
     return items, total, nil
-}
-```
-
-## Component Access Standards
-
-This project uses dependency injection to manage various resources, and the following access methods are recommended:
-
-```go
-// Get database connection through dependency injection
-// In repository layer
-func NewUserRepository(db *gorm.DB) *UserRepository {
-    return &UserRepository{db: db}
-}
-
-// In service layer
-func NewUserService(userRepo *UserRepository) *UserService {
-    return &UserService{userRepo: userRepo}
-}
-
-// In controller layer
-func NewUserController(userService *UserService) *UserController {
-    return &UserController{userService: userService}
 }
 ```

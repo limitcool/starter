@@ -7,6 +7,8 @@
 
 ## 特征
 - 提供 gin 框架项目模版
+- 使用 Uber fx 框架进行依赖注入，实现更清晰的代码结构
+- 采用标准 MVC 架构，遵循关注点分离原则
 - 集成 GORM 进行 ORM 映射和数据库操作
   - 支持 PostgreSQL (使用 pgx 驱动)
   - 支持 MySQL
@@ -25,6 +27,68 @@
 - 支持数据库迁移与服务器启动分离，提高启动速度
 - 完善的数据库迁移系统，支持版本控制和回滚
 - 内置用户、角色、权限和菜单管理系统
+- 优化的错误处理系统，支持错误码和多语言错误消息
+
+## 架构设计
+
+项目采用标准的 MVC 架构，并结合 Uber fx 依赖注入框架，实现了清晰的层次结构：
+
+### 1. 分层架构
+
+- **Model 层**：定义数据模型和数据库表结构
+- **Repository 层**：负责数据访问，是唯一直接与数据库交互的层
+- **Service 层**：实现业务逻辑，依赖于 Repository 层
+- **Controller 层**：处理 HTTP 请求和响应，依赖于 Service 层
+- **Router 层**：定义 API 路由，依赖于 Controller 层
+
+### 2. 依赖注入
+
+项目使用 Uber fx 框架实现依赖注入，每一层都通过构造函数注入其依赖：
+
+```go
+// Repository 层
+func NewUserRepo(db *gorm.DB) *UserRepo {
+    // ...
+}
+
+// Service 层
+func NewUserService(userRepo *repository.UserRepo) *UserService {
+    // ...
+}
+
+// Controller 层
+func NewUserController(userService *services.UserService) *UserController {
+    // ...
+}
+
+// Router 层
+func NewRouter(userController *controller.UserController) *gin.Engine {
+    // ...
+}
+```
+
+### 3. 生命周期管理
+
+使用 fx.Lifecycle 管理组件的生命周期，确保组件的正确初始化和清理：
+
+```go
+func NewComponent(lc fx.Lifecycle) *Component {
+    component := &Component{}
+
+    lc.Append(fx.Hook{
+        OnStart: func(ctx context.Context) error {
+            // 初始化逻辑
+            return nil
+        },
+        OnStop: func(ctx context.Context) error {
+            // 清理逻辑
+            return nil
+        },
+    })
+
+    return component
+}
+```
 
 ## 快速开始
 
@@ -285,9 +349,63 @@ I18n:
    - 在配置中的 `SupportLanguages` 列表中添加该语言
    - 重启应用使配置生效
 
+## 错误处理系统
+
+项目实现了一个完整的错误处理系统，包括错误码、错误包装和多语言错误消息。
+
+### 错误处理特点
+
+- 统一的错误码定义和管理
+- 错误包装，保留完整的错误链和堆栈信息
+- 多语言错误消息支持
+- 区分内部错误和用户可见错误
+
+### 错误处理最佳实践
+
+- Repository 层：返回具体错误，不记录日志
+- Service 层：包装错误，添加业务上下文，不记录日志
+- Controller 层：转换为用户友好的错误响应，记录完整错误日志
+
+### 使用示例
+
+```go
+// Repository 层
+func (r *UserRepo) GetByID(ctx context.Context, id int64) (*model.User, error) {
+    var user model.User
+    if err := r.DB.First(&user, id).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, errorx.NewError(errorx.ErrorUserNotFoundCode, "用户不存在")
+        }
+        return nil, err
+    }
+    return &user, nil
+}
+
+// Service 层
+func (s *UserService) GetUserByID(ctx context.Context, id int64) (*model.User, error) {
+    user, err := s.userRepo.GetByID(ctx, id)
+    if err != nil {
+        return nil, errorx.WrapError(err, fmt.Sprintf("获取用户ID %d 失败", id))
+    }
+    return user, nil
+}
+
+// Controller 层
+func (c *UserController) GetUser(ctx *gin.Context) {
+    id := cast.ToInt64(ctx.Param("id"))
+    user, err := c.userService.GetUserByID(ctx, id)
+    if err != nil {
+        logger.Error("获取用户失败", "error", err, "id", id)
+        response.Error(ctx, err)
+        return
+    }
+    response.Success(ctx, user)
+}
+```
+
 ## 日志配置
 
-项目使用 [charmbracelet/log](https://github.com/charmbracelet/log) 作为日志库，支持控制台彩色输出和文件输出。
+项目使用 [uber-go/zap](https://github.com/uber-go/zap) 作为日志库，提供高性能的结构化日志记录。
 
 ### 配置示例
 
@@ -296,6 +414,9 @@ Log:
   Level: info                 # 日志级别: debug, info, warn, error
   Output: [console, file]     # 输出方式: console, file
   Format: text                # 日志格式: text, json
+  StackTraceEnabled: true     # 是否启用堆栈跟踪
+  StackTraceLevel: error      # 堆栈跟踪级别: error, warn, info, debug
+  MaxStackFrames: 20          # 最大堆栈帧数
   FileConfig:
     Path: ./logs/app.log      # 日志文件路径
     MaxSize: 100              # 每个日志文件的最大大小（MB）
@@ -323,6 +444,12 @@ Log:
 
 可以同时配置多个输出方式，日志会同时输出到所有配置的目标。如果不配置 output，默认只输出到控制台。
 
+### 堆栈跟踪配置
+
+- `StackTraceEnabled`: 是否启用堆栈跟踪，默认为 true
+- `StackTraceLevel`: 堆栈跟踪级别，默认为 error，只有该级别及以上的日志才会记录堆栈
+- `MaxStackFrames`: 最大堆栈帧数，默认为 20
+
 ### 文件输出配置
 
 - `Path`: 日志文件路径
@@ -330,6 +457,38 @@ Log:
 - `MaxAge`: 日志文件保留天数，超过后会自动删除
 - `MaxBackups`: 保留的旧日志文件数量
 - `Compress`: 是否压缩旧的日志文件
+
+### 使用示例
+
+日志库提供了统一的接口：
+
+```go
+// 导入日志包
+import "github.com/limitcool/starter/internal/pkg/logger"
+
+// 记录不同级别的日志
+func example() {
+    // 记录信息日志
+    logger.Info("This is an info message", "user", "admin", "action", "login")
+
+    // 记录警告日志
+    logger.Warn("This is a warning message", "memory", "90%")
+
+    // 记录错误日志
+    err := someFunction()
+    if err != nil {
+        logger.Error("Operation failed", "error", err, "operation", "someFunction")
+    }
+
+    // 记录错误日志，并包含堆栈信息
+    if err != nil {
+        logger.LogErrorWithStack("Operation failed with stack", err, "operation", "someFunction")
+    }
+
+    // 记录调试日志
+    logger.Debug("Detailed debug information", "request", req, "response", resp)
+}
+```
 
 ## 权限系统
 
@@ -393,6 +552,118 @@ Log:
    ```
    GET /api/v1/user/perms
    ```
+
+## 泛型仓库系统
+
+项目利用 Go 1.18+ 的泛型特性，实现了完整的泛型仓库系统，显著减少了重复代码，提高了开发效率。
+
+### 泛型仓库接口
+
+泛型仓库接口定义了所有仓库实现必须提供的方法：
+
+```go
+// Repository 通用仓库接口
+type Repository[T Entity] interface {
+	// 基本 CRUD 操作
+	Create(ctx context.Context, entity *T) error
+	GetByID(ctx context.Context, id any) (*T, error)
+	Update(ctx context.Context, entity *T) error
+	Delete(ctx context.Context, id any) error
+	List(ctx context.Context, page, pageSize int) ([]T, int64, error)
+	Count(ctx context.Context) (int64, error)
+	UpdateFields(ctx context.Context, id any, fields map[string]any) error
+
+	// 批量操作
+	BatchCreate(ctx context.Context, entities []T) error
+	BatchDelete(ctx context.Context, ids []any) error
+
+	// 查询方法
+	FindByField(ctx context.Context, field string, value any) (*T, error)
+	FindAllByField(ctx context.Context, field string, value any) ([]T, error)
+	FindByCondition(ctx context.Context, condition string, args ...any) ([]T, error)
+	FindOneByCondition(ctx context.Context, condition string, args ...any) (*T, error)
+	GetPage(ctx context.Context, page, pageSize int, condition string, args ...any) ([]T, int64, error)
+
+	// 高级查询
+	FindWithLike(ctx context.Context, field string, value string) ([]T, error)
+	FindWithIn(ctx context.Context, field string, values []any) ([]T, error)
+	FindWithBetween(ctx context.Context, field string, min, max any) ([]T, error)
+	CountWithCondition(ctx context.Context, condition string, args ...any) (int64, error)
+	AggregateField(ctx context.Context, aggregate Aggregate, field string, condition string, args ...any) (float64, error)
+	GroupBy(ctx context.Context, groupFields []string, selectFields []string, condition string, args ...any) ([]map[string]any, error)
+	Join(ctx context.Context, joinType string, table string, on string, selectFields []string, condition string, args ...any) ([]map[string]any, error)
+	Exists(ctx context.Context, condition string, args ...any) (bool, error)
+	Raw(ctx context.Context, sql string, values ...any) ([]map[string]any, error)
+
+	// 事务相关
+	Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error
+	WithTx(tx *gorm.DB) Repository[T]
+}
+```
+
+### 泛型仓库实现
+
+项目提供了两种泛型仓库实现：
+
+1. **GenericRepo**：基本泛型仓库实现，直接与数据库交互
+2. **CachedRepo**：带缓存的泛型仓库实现，封装了基本仓库并添加缓存功能
+
+#### 创建泛型仓库
+
+```go
+// 创建基本泛型仓库
+func NewUserRepo(db *gorm.DB) *UserRepo {
+    // 创建泛型仓库
+    genericRepo := NewGenericRepo[model.User](db)
+    // 设置错误码
+    genericRepo.SetErrorCode(errorx.ErrorUserNotFoundCode)
+
+    return &UserRepo{
+        DB:          db,
+        GenericRepo: genericRepo,
+    }
+}
+
+// 创建带缓存的泛型仓库
+func NewCachedUserRepo(repo Repository[model.User]) (Repository[model.User], error) {
+    return WithCache(repo, "user", "user", 30*time.Minute)
+}
+```
+
+#### 使用泛型仓库
+
+```go
+// 在服务层使用泛型仓库
+func (s *UserService) GetUserByID(ctx context.Context, id int64) (*model.User, error) {
+    // 直接调用泛型仓库方法
+    user, err := s.userRepo.GetByID(ctx, id)
+    if err != nil {
+        return nil, err
+    }
+    return user, nil
+}
+
+// 使用高级查询功能
+func (s *UserService) SearchUsers(ctx context.Context, keyword string, page, pageSize int) ([]model.User, int64, error) {
+    condition := ""
+    var args []any
+
+    if keyword != "" {
+        condition = "username LIKE ? OR email LIKE ?"
+        args = append(args, "%"+keyword+"%", "%"+keyword+"%")
+    }
+
+    return s.userRepo.GetPage(ctx, page, pageSize, condition, args...)
+}
+```
+
+### 泛型仓库的优势
+
+1. **代码复用**：所有实体共享相同的仓库实现，显著减少重复代码
+2. **类型安全**：利用Go泛型特性确保类型安全，编译期就能发现类型错误
+3. **功能丰富**：提供了完整的CRUD操作和高级查询功能
+4. **缓存支持**：通过装饰器模式轻松添加缓存功能，提高性能
+5. **事务支持**：内置事务支持，确保数据一致性
 
 ## 数据库查询选项系统
 
@@ -518,32 +789,3 @@ func (s *Service) List(query *request.YourQuery) ([]YourModel, int64, error) {
     return items, total, nil
 }
 ```
-
-## 依赖注入规范
-
-本项目使用依赖注入模式管理各种资源，推荐以下访问方式：
-
-```go
-// 通过依赖注入获取数据库连接
-// 在仓库层
-func NewUserRepository(db *gorm.DB) *UserRepository {
-    return &UserRepository{db: db}
-}
-
-// 在服务层
-func NewUserService(userRepo *UserRepository) *UserService {
-    return &UserService{userRepo: userRepo}
-}
-
-// 在控制器层
-func NewUserController(userService *UserService) *UserController {
-    return &UserController{userService: userService}
-}
-```
-
-这种依赖注入的方式有以下优点：
-
-1. 更好的可测试性：可以轻松地模拟依赖，使得单元测试更加容易
-2. 更好的可维护性：依赖关系更加明确，代码更加易于理解和维护
-3. 更好的灵活性：可以轻松地替换依赖的实现，而不需要修改使用它的代码
-4. 避免全局状态：全局状态会导致代码难以理解和测试，依赖注入可以避免这个问题
