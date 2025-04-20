@@ -22,11 +22,11 @@ func NewUserController(params ControllerParams) *UserController {
 	// 注册生命周期钩子
 	params.LC.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("UserController initialized")
+			logger.InfoContext(ctx, "UserController initialized")
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("UserController stopped")
+			logger.InfoContext(ctx, "UserController stopped")
 			return nil
 		},
 	})
@@ -41,15 +41,18 @@ type UserController struct {
 
 // UserLogin 普通用户登录
 func (ctrl *UserController) UserLogin(ctx *gin.Context) {
+	// 获取请求上下文
+	reqCtx := ctx.Request.Context()
+
 	// 记录请求开始
-	logger.Info("UserLogin 开始处理登录请求",
+	logger.InfoContext(reqCtx, "UserLogin 开始处理登录请求",
 		"client_ip", ctx.ClientIP(),
 		"user_agent", ctx.Request.UserAgent())
 
 	var req v1.LoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		// 记录参数验证错误
-		logger.Warn("UserLogin 请求参数验证失败",
+		logger.WarnContext(reqCtx, "UserLogin 请求参数验证失败",
 			"error", err,
 			"client_ip", ctx.ClientIP())
 		response.Error(ctx, errorx.ErrInvalidParams.WithError(err))
@@ -60,7 +63,7 @@ func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 	clientIP := ctx.ClientIP()
 
 	// 记录尝试登录信息
-	logger.Info("UserLogin 尝试登录",
+	logger.InfoContext(reqCtx, "UserLogin 尝试登录",
 		"username", req.Username,
 		"ip", clientIP)
 
@@ -73,14 +76,14 @@ func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 
 			// 如果是用户不存在或密码错误，记录为警告
 			if errCode == errorx.ErrorUserNotFoundCode || errCode == errorx.ErrorUserPasswordErrorCode {
-				logger.Warn("UserLogin 登录失败",
+				logger.WarnContext(reqCtx, "UserLogin 登录失败",
 					"error", err,
 					"username", req.Username,
 					"ip", clientIP,
 					"error_code", errCode)
 			} else {
 				// 其他错误记录为错误
-				logger.Error("UserLogin 登录失败",
+				logger.ErrorContext(reqCtx, "UserLogin 登录失败",
 					"error", err,
 					"username", req.Username,
 					"ip", clientIP,
@@ -88,7 +91,7 @@ func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 			}
 		} else {
 			// 非AppError类型的错误记录为错误
-			logger.Error("UserLogin 登录失败",
+			logger.ErrorContext(reqCtx, "UserLogin 登录失败",
 				"error", err,
 				"username", req.Username,
 				"ip", clientIP)
@@ -100,7 +103,7 @@ func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 	}
 
 	// 记录登录成功
-	logger.Info("UserLogin 登录成功",
+	logger.InfoContext(reqCtx, "UserLogin 登录成功",
 		"username", req.Username,
 		"access_token", tokenResponse.AccessToken[:10]+"...", // 只显示令牌前10个字符
 		"ip", clientIP)
@@ -188,7 +191,7 @@ func (ctrl *UserController) RefreshToken(c *gin.Context) {
 	// 使用控制器中的服务实例
 	tokenResponse, err := ctrl.sysUserService.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		logger.LogError("RefreshToken 刷新访问令牌失败", err,
+		logger.LogErrorContext(c.Request.Context(), "RefreshToken 刷新访问令牌失败", err,
 			"refresh_token", req.RefreshToken)
 		response.Error(c, err)
 		return

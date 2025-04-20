@@ -68,13 +68,13 @@ func (s *FileService) UploadFile(ctx context.Context, fileHeader *multipart.File
 	storagePath := s.getStoragePath(fileType, fileName)
 
 	// 上传文件到存储
-	err = s.storage.Put(storagePath, file)
+	err = s.storage.Put(ctx, storagePath, file)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("上传文件到存储失败: %s", storagePath))
 	}
 
 	// 获取文件访问URL
-	fileURL, err := s.storage.GetURL(storagePath)
+	fileURL, err := s.storage.GetURL(ctx, storagePath)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("获取文件访问URL失败: %s", storagePath))
 	}
@@ -162,7 +162,7 @@ func (s *FileService) DeleteFile(ctx context.Context, id string, currentUserID i
 	}
 
 	// 删除存储中的文件
-	if err := s.storage.Delete(file.Path); err != nil {
+	if err := s.storage.Delete(ctx, file.Path); err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("删除存储中的文件失败: %s", file.Path))
 	}
 
@@ -183,7 +183,7 @@ func (s *FileService) GetFileContent(ctx context.Context, id string, currentUser
 	}
 
 	// 获取文件流
-	fileStream, err := s.storage.GetStream(file.Path)
+	fileStream, err := s.storage.GetStream(ctx, file.Path)
 	if err != nil {
 		return nil, "", errorx.WrapError(err, fmt.Sprintf("获取文件流失败: %s", file.Path))
 	}

@@ -25,7 +25,8 @@ func ErrorLogger() gin.HandlerFunc {
 			err := c.Errors.Last().Err
 
 			// 记录请求信息
-			logger.Error("API error occurred",
+			ctx := c.Request.Context()
+			logger.ErrorContext(ctx, "API error occurred",
 				"method", c.Request.Method,
 				"path", c.Request.URL.Path,
 				"ip", c.ClientIP(),
@@ -90,12 +91,13 @@ func RequestLogger() gin.HandlerFunc {
 		}
 
 		// 根据状态码选择日志级别
+		ctx := c.Request.Context()
 		if status >= 500 {
-			logger.Error("Server error", fields...)
+			logger.ErrorContext(ctx, "Server error", fields...)
 		} else if status >= 400 {
-			logger.Warn("Client error", fields...)
+			logger.WarnContext(ctx, "Client error", fields...)
 		} else {
-			logger.Info("Request completed", fields...)
+			logger.InfoContext(ctx, "Request completed", fields...)
 		}
 	}
 }

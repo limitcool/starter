@@ -128,7 +128,7 @@ func (r *RoleRepo) AssignRolesToUser(ctx context.Context, userID int64, roleIDs 
 	}()
 
 	// 删除原有的用户角色关联
-	if err := tx.Where("user_id = ?", userID).Delete(&model.UserRole{}).Error; err != nil {
+	if err := tx.WithContext(ctx).Where("user_id = ?", userID).Delete(&model.UserRole{}).Error; err != nil {
 		tx.Rollback()
 		return errorx.WrapError(err, fmt.Sprintf("删除原有的用户角色关联失败: userID=%d", userID))
 	}
@@ -142,13 +142,13 @@ func (r *RoleRepo) AssignRolesToUser(ctx context.Context, userID int64, roleIDs 
 				RoleID: roleID,
 			})
 		}
-		if err := tx.Create(&userRoles).Error; err != nil {
+		if err := tx.WithContext(ctx).Create(&userRoles).Error; err != nil {
 			tx.Rollback()
 			return errorx.WrapError(err, fmt.Sprintf("创建用户角色关联失败: userID=%d, roleIDs=%v", userID, roleIDs))
 		}
 	}
 
-	if err := tx.Commit().Error; err != nil {
+	if err := tx.WithContext(ctx).Commit().Error; err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("提交事务失败: 为用户分配角色, userID=%d, roleIDs=%v", userID, roleIDs))
 	}
 	return nil
@@ -183,7 +183,7 @@ func (r *RoleRepo) AssignMenusToRole(ctx context.Context, roleID uint, menuIDs [
 	}()
 
 	// 删除原有的角色菜单关联
-	if err := tx.Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error; err != nil {
+	if err := tx.WithContext(ctx).Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error; err != nil {
 		tx.Rollback()
 		return errorx.WrapError(err, fmt.Sprintf("删除原有的角色菜单关联失败: roleID=%d", roleID))
 	}
@@ -197,13 +197,13 @@ func (r *RoleRepo) AssignMenusToRole(ctx context.Context, roleID uint, menuIDs [
 				MenuID: menuID,
 			})
 		}
-		if err := tx.Create(&roleMenus).Error; err != nil {
+		if err := tx.WithContext(ctx).Create(&roleMenus).Error; err != nil {
 			tx.Rollback()
 			return errorx.WrapError(err, fmt.Sprintf("创建角色菜单关联失败: roleID=%d, menuIDs=%v", roleID, menuIDs))
 		}
 	}
 
-	if err := tx.Commit().Error; err != nil {
+	if err := tx.WithContext(ctx).Commit().Error; err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("提交事务失败: 为角色分配菜单, roleID=%d, menuIDs=%v", roleID, menuIDs))
 	}
 	return nil

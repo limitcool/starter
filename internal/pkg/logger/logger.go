@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 
@@ -52,6 +53,16 @@ func parseLogLevel(level logconfig.LogLevel) Level {
 //   - err: 当前错误
 //   - keyvals: 额外的键值对信息，按照 key1, value1, key2, value2... 格式提供
 func LogErrorWithStack(msg string, err error, keyvals ...any) {
+	LogErrorWithStackContext(context.Background(), msg, err, keyvals...)
+}
+
+// LogErrorWithStackContext 使用上下文记录错误日志，包含错误详情和堆栈信息
+// 参数:
+//   - ctx: 上下文
+//   - msg: 错误消息
+//   - err: 当前错误
+//   - keyvals: 额外的键值对信息，按照 key1, value1, key2, value2... 格式提供
+func LogErrorWithStackContext(ctx context.Context, msg string, err error, keyvals ...any) {
 	// 构建日志字段
 	fields := make([]any, 0, len(keyvals)+4) // 预分配空间
 
@@ -108,5 +119,5 @@ func LogErrorWithStack(msg string, err error, keyvals ...any) {
 	fields = append(fields, keyvals...)
 
 	// 记录错误
-	Error(msg, fields...)
+	ErrorContext(ctx, msg, fields...)
 }

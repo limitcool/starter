@@ -163,28 +163,48 @@ func WithField(key string, value any) Logger {
 
 // LogError 记录错误并添加上下文信息
 func LogError(msg string, err error, keysAndValues ...any) {
+	LogErrorContext(context.Background(), msg, err, keysAndValues...)
+}
+
+// LogErrorContext 使用上下文记录错误并添加上下文信息
+func LogErrorContext(ctx context.Context, msg string, err error, keysAndValues ...any) {
 	fields := make([]any, 0, len(keysAndValues)+2)
 	fields = append(fields, "error", err)
 	fields = append(fields, keysAndValues...)
-	Error(msg, fields...)
+	ErrorContext(ctx, msg, fields...)
 }
 
 // LogWarn 记录警告并添加上下文信息
 func LogWarn(msg string, err error, keysAndValues ...any) {
+	LogWarnContext(context.Background(), msg, err, keysAndValues...)
+}
+
+// LogWarnContext 使用上下文记录警告并添加上下文信息
+func LogWarnContext(ctx context.Context, msg string, err error, keysAndValues ...any) {
 	fields := make([]any, 0, len(keysAndValues)+2)
 	fields = append(fields, "error", err)
 	fields = append(fields, keysAndValues...)
-	Warn(msg, fields...)
+	WarnContext(ctx, msg, fields...)
 }
 
 // LogInfo 记录信息并添加上下文信息
 func LogInfo(msg string, keysAndValues ...any) {
-	Info(msg, keysAndValues...)
+	LogInfoContext(context.Background(), msg, keysAndValues...)
+}
+
+// LogInfoContext 使用上下文记录信息并添加上下文信息
+func LogInfoContext(ctx context.Context, msg string, keysAndValues ...any) {
+	InfoContext(ctx, msg, keysAndValues...)
 }
 
 // LogDebug 记录调试信息并添加上下文信息
 func LogDebug(msg string, keysAndValues ...any) {
-	Debug(msg, keysAndValues...)
+	LogDebugContext(context.Background(), msg, keysAndValues...)
+}
+
+// LogDebugContext 使用上下文记录调试信息并添加上下文信息
+func LogDebugContext(ctx context.Context, msg string, keysAndValues ...any) {
+	DebugContext(ctx, msg, keysAndValues...)
 }
 
 // DebugContext 使用上下文记录调试级别日志

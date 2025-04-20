@@ -34,11 +34,11 @@ func NewUserService(params ServiceParams, authService *AuthService) *UserService
 	// 注册生命周期钩子
 	params.LC.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("UserService initialized")
+			logger.InfoContext(ctx, "UserService initialized")
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("UserService stopped")
+			logger.InfoContext(ctx, "UserService stopped")
 			return nil
 		},
 	})
@@ -133,7 +133,7 @@ func (s *UserService) Login(ctx context.Context, username, password string, ip s
 	// 使用认证服务生成令牌
 	// 普通用户默认角色
 	roles := []string{"user"}
-	return s.authService.GenerateTokens(uint(user.ID), user.Username, enum.UserTypeUser, roles)
+	return s.authService.GenerateTokensWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeUser, roles)
 }
 
 // UpdateUser 更新用户信息

@@ -283,9 +283,9 @@ func (r *MenuRepo) GetPermsByRoleIDs(ctx context.Context, roleIDs []uint) ([]str
 }
 
 // AssociateAPI 关联菜单和API
-func (r *MenuRepo) AssociateAPI(menuID uint, apiIDs []uint) error {
+func (r *MenuRepo) AssociateAPI(ctx context.Context, menuID uint, apiIDs []uint) error {
 	// 开始事务
-	tx := r.DB.Begin()
+	tx := r.DB.WithContext(ctx).Begin()
 	defer func() {
 		if rec := recover(); rec != nil {
 			tx.Rollback()
@@ -294,7 +294,7 @@ func (r *MenuRepo) AssociateAPI(menuID uint, apiIDs []uint) error {
 
 	// 获取菜单
 	var menu model.Menu
-	if err := tx.First(&menu, menuID).Error; err != nil {
+	if err := tx.WithContext(ctx).First(&menu, menuID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errorx.Errorf(errorx.ErrNotFound, "菜单ID %d 不存在", menuID)
@@ -303,7 +303,7 @@ func (r *MenuRepo) AssociateAPI(menuID uint, apiIDs []uint) error {
 	}
 
 	// 删除原有关联
-	if err := tx.Where("menu_id = ?", menuID).Delete(&model.MenuAPI{}).Error; err != nil {
+	if err := tx.WithContext(ctx).Where("menu_id = ?", menuID).Delete(&model.MenuAPI{}).Error; err != nil {
 		tx.Rollback()
 		return errorx.WrapError(err, "删除菜单API关联失败")
 	}
@@ -317,13 +317,13 @@ func (r *MenuRepo) AssociateAPI(menuID uint, apiIDs []uint) error {
 				APIID:  apiID,
 			})
 		}
-		if err := tx.Create(&menuAPIs).Error; err != nil {
+		if err := tx.WithContext(ctx).Create(&menuAPIs).Error; err != nil {
 			tx.Rollback()
 			return errorx.WrapError(err, "创建菜单API关联失败")
 		}
 	}
 
-	if err := tx.Commit().Error; err != nil {
+	if err := tx.WithContext(ctx).Commit().Error; err != nil {
 		return errorx.WrapError(err, "提交事务失败")
 	}
 
@@ -361,7 +361,7 @@ func (r *MenuRepo) AssignMenuToRole(ctx context.Context, roleID uint, menuIDs []
 		}
 	}
 
-	if err := tx.Commit().Error; err != nil {
+	if err := tx.WithContext(ctx).Commit().Error; err != nil {
 		return errorx.WrapError(err, "提交事务失败")
 	}
 
@@ -369,7 +369,7 @@ func (r *MenuRepo) AssignMenuToRole(ctx context.Context, roleID uint, menuIDs []
 }
 
 // BuildMenuTree 构建菜单树
-func (r *MenuRepo) BuildMenuTree(menus []*model.Menu) []*model.MenuTree {
+func (r *MenuRepo) BuildMenuTree(ctx context.Context, menus []*model.Menu) []*model.MenuTree {
 	// 创建一个映射，用于快速查找菜单
 	menuMap := make(map[uint]*model.MenuTree)
 
@@ -454,7 +454,7 @@ func (r *MenuRepo) GetRolesByMenuID(ctx context.Context, menuID uint) ([]*model.
 	}
 
 	var roles []*model.Role
-	err = r.DB.Where("id IN ?", roleIDs).Find(&roles).Error
+	err = r.DB.WithContext(ctx).Where("id IN ?", roleIDs).Find(&roles).Error
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: roleIDs=%v", roleIDs))
 	}

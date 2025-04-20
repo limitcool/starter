@@ -2,6 +2,7 @@
 package i18n
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -70,7 +71,7 @@ func Setup(config Config, fsys fs.FS) error {
 			return fmt.Errorf("failed to parse language file %s: %v", path, err)
 		}
 
-		logger.Info("Language file loaded", "path", path, "language", lang)
+		logger.InfoContext(context.Background(), "Language file loaded", "path", path, "language", lang)
 
 		// 初始化语言对应的localizer
 		localizerMux.Lock()
@@ -91,7 +92,12 @@ func SetupWithEmbedFS(config Config, embedFS embed.FS, dir string) error {
 }
 
 // Translate 翻译消息
-func Translate(messageID string, lang string, args map[string]interface{}) string {
+func Translate(messageID string, lang string, args map[string]any) string {
+	return TranslateContext(context.Background(), messageID, lang, args)
+}
+
+// TranslateContext 使用上下文翻译消息
+func TranslateContext(ctx context.Context, messageID string, lang string, args map[string]any) string {
 	if lang == "" {
 		lang = defaultLang
 	}
@@ -123,7 +129,7 @@ func Translate(messageID string, lang string, args map[string]interface{}) strin
 	})
 
 	if err != nil {
-		logger.Debug("Failed to translate message", "message_id", messageID, "lang", lang, "error", err)
+		logger.DebugContext(ctx, "Failed to translate message", "message_id", messageID, "lang", lang, "error", err)
 		return messageID
 	}
 
@@ -131,14 +137,19 @@ func Translate(messageID string, lang string, args map[string]interface{}) strin
 }
 
 // T 翻译消息的简便方法
-func T(messageID string, lang string, args ...interface{}) string {
+func T(messageID string, lang string, args ...any) string {
+	return TContext(context.Background(), messageID, lang, args...)
+}
+
+// TContext 使用上下文翻译消息的简便方法
+func TContext(ctx context.Context, messageID string, lang string, args ...any) string {
 	// 将可变参数转换为map
-	argsMap := make(map[string]interface{})
+	argsMap := make(map[string]any)
 
 	if len(args) > 0 {
 		// 如果是单个参数且为map，直接使用
 		if len(args) == 1 {
-			if m, ok := args[0].(map[string]interface{}); ok {
+			if m, ok := args[0].(map[string]any); ok {
 				argsMap = m
 			}
 		} else {
@@ -154,11 +165,16 @@ func T(messageID string, lang string, args ...interface{}) string {
 		}
 	}
 
-	return Translate(messageID, lang, argsMap)
+	return TranslateContext(ctx, messageID, lang, argsMap)
 }
 
 // GetSupportedLanguages 获取支持的语言列表
 func GetSupportedLanguages() []string {
+	return GetSupportedLanguagesContext(context.Background())
+}
+
+// GetSupportedLanguagesContext 使用上下文获取支持的语言列表
+func GetSupportedLanguagesContext(ctx context.Context) []string {
 	localizerMux.RLock()
 	defer localizerMux.RUnlock()
 
@@ -172,5 +188,10 @@ func GetSupportedLanguages() []string {
 
 // GetDefaultLanguage 获取默认语言
 func GetDefaultLanguage() string {
+	return GetDefaultLanguageContext(context.Background())
+}
+
+// GetDefaultLanguageContext 使用上下文获取默认语言
+func GetDefaultLanguageContext(ctx context.Context) string {
 	return defaultLang
 }

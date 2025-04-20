@@ -39,12 +39,13 @@ func CasbinMiddleware(permissionService *services.PermissionService, config *con
 		// 请求的方法
 		act := c.Request.Method
 
-		logger.Debug("检查权限", "userID", userID, "object", obj, "action", act)
+		ctx := c.Request.Context()
+		logger.DebugContext(ctx, "检查权限", "userID", userID, "object", obj, "action", act)
 
 		// 检查权限
-		pass, err := permissionService.CheckPermission(c.Request.Context(), userID, obj, act)
+		pass, err := permissionService.CheckPermission(ctx, userID, obj, act)
 		if err != nil {
-			logger.Error("权限检查错误", "error", err)
+			logger.ErrorContext(ctx, "权限检查错误", "error", err)
 			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
 			return
@@ -58,7 +59,8 @@ func CasbinMiddleware(permissionService *services.PermissionService, config *con
 				for _, role := range roles {
 					roleNames = append(roleNames, role.Name)
 				}
-				logger.Debug("权限检查失败", "userID", userID, "roles", strings.Join(roleNames, ","))
+				ctx := c.Request.Context()
+				logger.DebugContext(ctx, "权限检查失败", "userID", userID, "roles", strings.Join(roleNames, ","))
 			}
 
 			response.Error(c, errorx.ErrAccessDenied)
@@ -66,7 +68,8 @@ func CasbinMiddleware(permissionService *services.PermissionService, config *con
 			return
 		}
 
-		logger.Debug("权限检查通过", "userID", userID)
+		ctx := c.Request.Context()
+		logger.DebugContext(ctx, "权限检查通过", "userID", userID)
 		c.Next()
 	}
 }
@@ -104,7 +107,8 @@ func PermissionCodeMiddleware(permissionService *services.PermissionService, con
 		// 获取用户角色
 		roles, err := permissionService.GetUserRoles(c.Request.Context(), userID)
 		if err != nil {
-			logger.Error("获取用户角色失败", "error", err)
+			ctx := c.Request.Context()
+			logger.ErrorContext(ctx, "获取用户角色失败", "error", err)
 			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
 			return
@@ -122,7 +126,8 @@ func PermissionCodeMiddleware(permissionService *services.PermissionService, con
 			// 检查角色是否有权限
 			pass, err := permissionService.CheckPermission(c.Request.Context(), role.Code, requiredPerm, "*")
 			if err != nil {
-				logger.Error("权限检查错误", "error", err)
+				ctx := c.Request.Context()
+				logger.ErrorContext(ctx, "权限检查错误", "error", err)
 				continue
 			}
 
@@ -165,7 +170,8 @@ func RequirePermission(permCode string, permissionService *services.PermissionSe
 		// 获取用户角色
 		roles, err := permissionService.GetUserRoles(c.Request.Context(), strconv.FormatUint(userID, 10))
 		if err != nil {
-			logger.Error("获取用户角色失败", "error", err)
+			ctx := c.Request.Context()
+			logger.ErrorContext(ctx, "获取用户角色失败", "error", err)
 			response.Error(c, errorx.ErrCasbinService)
 			c.Abort()
 			return
@@ -183,7 +189,8 @@ func RequirePermission(permCode string, permissionService *services.PermissionSe
 			// 检查角色是否有权限
 			pass, err := permissionService.CheckPermission(c.Request.Context(), role.Code, permCode, "*")
 			if err != nil {
-				logger.Error("权限检查错误", "error", err)
+				ctx := c.Request.Context()
+				logger.ErrorContext(ctx, "权限检查错误", "error", err)
 				continue
 			}
 
@@ -194,7 +201,8 @@ func RequirePermission(permCode string, permissionService *services.PermissionSe
 		}
 
 		if !hasPermission {
-			logger.Warn("权限检查失败", "userID", userID, "permCode", permCode)
+			ctx := c.Request.Context()
+			logger.WarnContext(ctx, "权限检查失败", "userID", userID, "permCode", permCode)
 			response.Error(c, errorx.ErrAccessDenied)
 			c.Abort()
 			return

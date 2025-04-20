@@ -1,10 +1,12 @@
 package cache
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
 // CacheType 缓存类型
@@ -62,6 +64,11 @@ func WithRedisKeyPrefix(prefix string) func(*RedisOptions) {
 
 // Create 创建缓存
 func (f *Factory) Create(name string, cacheType CacheType, opts ...Option) (Cache, error) {
+	return f.CreateWithContext(context.Background(), name, cacheType, opts...)
+}
+
+// CreateWithContext 使用上下文创建缓存
+func (f *Factory) CreateWithContext(ctx context.Context, name string, cacheType CacheType, opts ...Option) (Cache, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -75,6 +82,7 @@ func (f *Factory) Create(name string, cacheType CacheType, opts ...Option) (Cach
 	switch cacheType {
 	case Memory:
 		cache = NewMemoryCache(opts...)
+		logger.DebugContext(ctx, "Created memory cache", "name", name)
 	case Redis:
 		return nil, fmt.Errorf("cache: use CreateRedis method to create Redis cache")
 	default:
@@ -88,6 +96,11 @@ func (f *Factory) Create(name string, cacheType CacheType, opts ...Option) (Cach
 
 // CreateRedis 创建Redis缓存
 func (f *Factory) CreateRedis(name string, client *redis.Client, opts ...Option) (Cache, error) {
+	return f.CreateRedisWithContext(context.Background(), name, client, opts...)
+}
+
+// CreateRedisWithContext 使用上下文创建Redis缓存
+func (f *Factory) CreateRedisWithContext(ctx context.Context, name string, client *redis.Client, opts ...Option) (Cache, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -98,6 +111,7 @@ func (f *Factory) CreateRedis(name string, client *redis.Client, opts ...Option)
 
 	// 创建Redis缓存
 	cache := NewRedisCache(client, opts...)
+	logger.DebugContext(ctx, "Created Redis cache", "name", name)
 
 	// 保存缓存
 	f.caches[name] = cache
@@ -106,6 +120,11 @@ func (f *Factory) CreateRedis(name string, client *redis.Client, opts ...Option)
 
 // Get 获取缓存
 func (f *Factory) Get(name string) (Cache, error) {
+	return f.GetWithContext(context.Background(), name)
+}
+
+// GetWithContext 使用上下文获取缓存
+func (f *Factory) GetWithContext(ctx context.Context, name string) (Cache, error) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
@@ -119,6 +138,11 @@ func (f *Factory) Get(name string) (Cache, error) {
 
 // Delete 删除缓存
 func (f *Factory) Delete(name string) error {
+	return f.DeleteWithContext(context.Background(), name)
+}
+
+// DeleteWithContext 使用上下文删除缓存
+func (f *Factory) DeleteWithContext(ctx context.Context, name string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
@@ -139,6 +163,11 @@ func (f *Factory) Delete(name string) error {
 
 // Close 关闭所有缓存
 func (f *Factory) Close() error {
+	return f.CloseWithContext(context.Background())
+}
+
+// CloseWithContext 使用上下文关闭所有缓存
+func (f *Factory) CloseWithContext(ctx context.Context) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 

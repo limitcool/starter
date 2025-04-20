@@ -85,8 +85,11 @@ func Error(c *gin.Context, err error, msg ...string) {
 		message    string
 	)
 
+	// 获取请求上下文
+	ctx := c.Request.Context()
+
 	// 尝试使用错误链推导错误码
-	err = errorx.WrapError(err, "")
+	err = errorx.WrapErrorWithContext(ctx, err, "")
 
 	// 获取错误信息
 	if appErr, ok := err.(*errorx.AppError); ok {
@@ -113,7 +116,7 @@ func Error(c *gin.Context, err error, msg ...string) {
 	traceID := getTraceIDFromContext(c)
 
 	// 记录错误到日志
-	logger.Error("API error occurred",
+	logger.ErrorContext(ctx, "API error occurred",
 		"code", errorCode,
 		"message", message,
 		"trace_id", traceID,
@@ -121,7 +124,7 @@ func Error(c *gin.Context, err error, msg ...string) {
 		"path", c.Request.URL.Path,
 		"method", c.Request.Method,
 		"client_ip", c.ClientIP(),
-		"error_chain", errorx.FormatErrorChain(err),
+		"error_chain", errorx.FormatErrorChainWithContext(ctx, err),
 	)
 
 	// 统一响应结构
@@ -158,6 +161,12 @@ func getRequestID(c *gin.Context) string {
 		}
 	}
 
+	// 从请求上下文中获取
+	ctx := c.Request.Context()
+	if reqID, ok := ctx.Value("request_id").(string); ok && reqID != "" {
+		return reqID
+	}
+
 	// 生成新的UUID作为请求ID
 	newID := uuid.New().String()
 	// 将请求ID存储到上下文中
@@ -172,6 +181,12 @@ func getTraceIDFromContext(c *gin.Context) string {
 		if strID, ok := traceID.(string); ok && strID != "" {
 			return strID
 		}
+	}
+
+	// 从请求上下文中获取
+	ctx := c.Request.Context()
+	if traceID, ok := ctx.Value("trace_id").(string); ok && traceID != "" {
+		return traceID
 	}
 
 	// 如果上下文中没有，尝试从请求头中获取

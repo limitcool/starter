@@ -33,6 +33,9 @@ type FileStorage interface {
 
 	// URL 获取文件URL
 	URL(path string) string
+
+	// URLWithContext 使用上下文获取文件URL
+	URLWithContext(ctx context.Context, path string) string
 }
 
 // NewFileStorage 创建文件存储
@@ -116,6 +119,11 @@ func (s *LocalStorage) List(ctx context.Context, prefix string) ([]string, error
 
 // URL 获取文件URL
 func (s *LocalStorage) URL(path string) string {
+	return s.URLWithContext(context.Background(), path)
+}
+
+// URLWithContext 使用上下文获取文件URL
+func (s *LocalStorage) URLWithContext(ctx context.Context, path string) string {
 	// 实现URL生成逻辑
 	return ""
 }
@@ -156,6 +164,11 @@ func (s *S3Storage) List(ctx context.Context, prefix string) ([]string, error) {
 
 // URL 获取文件URL
 func (s *S3Storage) URL(path string) string {
+	return s.URLWithContext(context.Background(), path)
+}
+
+// URLWithContext 使用上下文获取文件URL
+func (s *S3Storage) URLWithContext(ctx context.Context, path string) string {
 	// 实现URL生成逻辑
 	return ""
 }

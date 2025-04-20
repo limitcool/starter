@@ -106,7 +106,7 @@ func (r *UserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID uint) 
 
 	// 查找用户
 	user := model.User{}
-	if err := tx.First(&user, userID).Error; err != nil {
+	if err := tx.WithContext(ctx).First(&user, userID).Error; err != nil {
 		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			notFoundErr := errorx.Errorf(errorx.ErrUserNotFound, "用户ID %d 不存在", userID)
@@ -117,12 +117,12 @@ func (r *UserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID uint) 
 
 	// 更新用户头像
 	user.AvatarFileID = fileID
-	if err := tx.Save(&user).Error; err != nil {
+	if err := tx.WithContext(ctx).Save(&user).Error; err != nil {
 		tx.Rollback()
 		return errorx.WrapError(err, fmt.Sprintf("更新用户头像失败: id=%d, fileID=%d", userID, fileID))
 	}
 
-	if err := tx.Commit().Error; err != nil {
+	if err := tx.WithContext(ctx).Commit().Error; err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("提交事务失败: 更新用户头像, userID=%d, fileID=%d", userID, fileID))
 	}
 	return nil

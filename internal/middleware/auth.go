@@ -65,23 +65,25 @@ func JWTAuth(config *configs.Config) gin.HandlerFunc {
 
 		// 如果没有token,返回错误并中止
 		if token == "" {
-			logger.Error("No authentication token provided")
+			ctx := c.Request.Context()
+			logger.ErrorContext(ctx, "No authentication token provided")
 			response.Error(c, errorx.ErrUserNoLogin)
 			c.Abort()
 			return
 		}
 
 		// 解析token
-		claims, err := jwt.ParseToken(token, config.JwtAuth.AccessSecret)
+		ctx := c.Request.Context()
+		claims, err := jwt.ParseTokenWithContext(ctx, token, config.JwtAuth.AccessSecret)
 		if err != nil {
-			logger.Error("Authentication token parse failed", "error", err)
+			logger.ErrorContext(ctx, "Authentication token parse failed", "error", err)
 			response.Error(c, errorx.ErrUserTokenError)
 			c.Abort()
 			return
 		}
 
 		// 将claims存入请求上下文
-		ctx := context.WithValue(c.Request.Context(), TokenKey, claims)
+		ctx = context.WithValue(ctx, TokenKey, claims)
 
 		// 将用户ID存入请求上下文
 		if userId, exists := (*claims)["user_id"]; exists {

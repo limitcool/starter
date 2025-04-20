@@ -24,8 +24,11 @@ var Module = fx.Options(
 
 // NewEnforcer 创建Casbin执行器
 func NewEnforcer(lc fx.Lifecycle, cfg *configs.Config, db *gorm.DB) (*casbin.Enforcer, error) {
+	// 使用默认上下文
+	ctx := context.Background()
+
 	if !cfg.Casbin.Enabled {
-		logger.Info("Casbin disabled")
+		logger.InfoContext(ctx, "Casbin disabled")
 		return nil, nil
 	}
 
@@ -33,7 +36,7 @@ func NewEnforcer(lc fx.Lifecycle, cfg *configs.Config, db *gorm.DB) (*casbin.Enf
 		return nil, fmt.Errorf("database not initialized")
 	}
 
-	logger.Info("Initializing Casbin")
+	logger.InfoContext(ctx, "Initializing Casbin")
 
 	// 创建适配器
 	adapter, err := gormadapter.NewAdapterByDB(db)
@@ -86,7 +89,7 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
 				time.Sleep(time.Duration(cfg.Casbin.AutoLoadInterval) * time.Second)
 				err := enforcer.LoadPolicy()
 				if err != nil {
-					logger.Error("Failed to auto load policy", "error", err)
+					logger.ErrorContext(context.Background(), "Failed to auto load policy", "error", err)
 				}
 			}
 		}()
@@ -95,11 +98,11 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
 	// 注册生命周期钩子
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("Casbin initialized successfully")
+			logger.InfoContext(ctx, "Casbin initialized successfully")
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Cleaning up Casbin")
+			logger.InfoContext(ctx, "Cleaning up Casbin")
 			return nil
 		},
 	})
@@ -109,8 +112,11 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
 
 // NewCasbinService 创建Casbin服务
 func NewCasbinService(db *gorm.DB, cfg *configs.Config) (Service, error) {
+	// 使用默认上下文
+	ctx := context.Background()
+
 	if !cfg.Casbin.Enabled {
-		logger.Info("Casbin disabled")
+		logger.InfoContext(ctx, "Casbin disabled")
 		return nil, nil
 	}
 

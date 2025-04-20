@@ -32,12 +32,22 @@ func NewOperationLogService(logRepo *repository.OperationLogRepo) *OperationLogS
 
 // CreateSysUserLog 创建系统用户操作日志
 func (s *OperationLogService) CreateSysUserLog(c *gin.Context, userID int64, username string, module, action, description string, startTime time.Time) error {
-	return s.logRepo.CreateSysUserLog(c, userID, username, module, action, description, startTime)
+	return s.CreateSysUserLogWithContext(c.Request.Context(), c, userID, username, module, action, description, startTime)
+}
+
+// CreateSysUserLogWithContext 使用上下文创建系统用户操作日志
+func (s *OperationLogService) CreateSysUserLogWithContext(ctx context.Context, c *gin.Context, userID int64, username string, module, action, description string, startTime time.Time) error {
+	return s.logRepo.CreateSysUserLogWithContext(ctx, c, userID, username, module, action, description, startTime)
 }
 
 // CreateUserLog 创建普通用户操作日志
 func (s *OperationLogService) CreateUserLog(c *gin.Context, userID int64, username string, module, action, description string, startTime time.Time) error {
-	return s.logRepo.CreateUserLog(c, userID, username, module, action, description, startTime)
+	return s.CreateUserLogWithContext(c.Request.Context(), c, userID, username, module, action, description, startTime)
+}
+
+// CreateUserLogWithContext 使用上下文创建普通用户操作日志
+func (s *OperationLogService) CreateUserLogWithContext(ctx context.Context, c *gin.Context, userID int64, username string, module, action, description string, startTime time.Time) error {
+	return s.logRepo.CreateUserLogWithContext(ctx, c, userID, username, module, action, description, startTime)
 }
 
 // GetOperationLogs 分页获取操作日志

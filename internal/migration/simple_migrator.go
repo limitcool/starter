@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -43,25 +44,35 @@ func NewSimpleMigrator(db *gorm.DB, config *configs.Config) *SimpleMigrator {
 
 // Initialize 初始化迁移系统
 func (m *SimpleMigrator) Initialize() error {
+	return m.InitializeWithContext(context.Background())
+}
+
+// InitializeWithContext 使用上下文初始化迁移系统
+func (m *SimpleMigrator) InitializeWithContext(ctx context.Context) error {
 	// 创建迁移表
-	if err := m.db.AutoMigrate(&SimpleMigration{}); err != nil {
+	if err := m.db.WithContext(ctx).AutoMigrate(&SimpleMigration{}); err != nil {
 		return fmt.Errorf("创建迁移表失败: %w", err)
 	}
 
-	logger.Info("迁移系统初始化完成")
+	logger.InfoContext(ctx, "迁移系统初始化完成")
 	return nil
 }
 
 // Migrate 执行所有未运行的迁移
 func (m *SimpleMigrator) Migrate() error {
+	return m.MigrateWithContext(context.Background())
+}
+
+// MigrateWithContext 使用上下文执行所有未运行的迁移
+func (m *SimpleMigrator) MigrateWithContext(ctx context.Context) error {
 	// 先检查迁移表是否存在
-	if err := m.Initialize(); err != nil {
+	if err := m.InitializeWithContext(ctx); err != nil {
 		return err
 	}
 
 	// 获取已运行的迁移
 	var ranMigrations []SimpleMigration
-	if err := m.db.Find(&ranMigrations).Error; err != nil {
+	if err := m.db.WithContext(ctx).Find(&ranMigrations).Error; err != nil {
 		return fmt.Errorf("获取已运行迁移失败: %w", err)
 	}
 
@@ -72,11 +83,11 @@ func (m *SimpleMigrator) Migrate() error {
 
 	// 获取最新批次号
 	var lastBatch int
-	m.db.Model(&SimpleMigration{}).Select("COALESCE(MAX(batch), 0)").Scan(&lastBatch)
+	m.db.WithContext(ctx).Model(&SimpleMigration{}).Select("COALESCE(MAX(batch), 0)").Scan(&lastBatch)
 	currentBatch := lastBatch + 1
 
 	// 获取所有迁移
-	migrations, err := m.loadMigrations()
+	migrations, err := m.loadMigrationsWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("加载迁移失败: %w", err)
 	}
@@ -84,16 +95,16 @@ func (m *SimpleMigrator) Migrate() error {
 	// 执行未运行的迁移
 	for _, migration := range migrations {
 		if _, ok := ranMigrationNames[migration.Name]; !ok {
-			logger.Info("执行迁移", "name", migration.Name)
+			logger.InfoContext(ctx, "执行迁移", "name", migration.Name)
 
 			// 开始事务
-			tx := m.db.Begin()
+			tx := m.db.WithContext(ctx).Begin()
 			if tx.Error != nil {
 				return fmt.Errorf("开始事务失败: %w", tx.Error)
 			}
 
 			// 执行迁移
-			if err := migration.Up(tx); err != nil {
+			if err := migration.Up(tx.WithContext(ctx)); err != nil {
 				tx.Rollback()
 				return fmt.Errorf("迁移失败 (%s): %w", migration.Name, err)
 			}
@@ -104,17 +115,17 @@ func (m *SimpleMigrator) Migrate() error {
 				CreatedAt: time.Now(),
 				Batch:     currentBatch,
 			}
-			if err := tx.Create(&record).Error; err != nil {
+			if err := tx.WithContext(ctx).Create(&record).Error; err != nil {
 				tx.Rollback()
 				return fmt.Errorf("记录迁移失败: %w", err)
 			}
 
 			// 提交事务
-			if err := tx.Commit().Error; err != nil {
+			if err := tx.WithContext(ctx).Commit().Error; err != nil {
 				return fmt.Errorf("提交事务失败: %w", err)
 			}
 
-			logger.Info("迁移完成", "name", migration.Name)
+			logger.InfoContext(ctx, "迁移完成", "name", migration.Name)
 		}
 	}
 
@@ -123,11 +134,16 @@ func (m *SimpleMigrator) Migrate() error {
 
 // Rollback 回滚最后一批迁移
 func (m *SimpleMigrator) Rollback() error {
+	return m.RollbackWithContext(context.Background())
+}
+
+// RollbackWithContext 使用上下文回滚最后一批迁移
+func (m *SimpleMigrator) RollbackWithContext(ctx context.Context) error {
 	// 获取最后一批迁移
 	var lastMigrations []SimpleMigration
 	var lastBatch int
 
-	if err := m.db.Model(&SimpleMigration{}).Select("COALESCE(MAX(batch), 0)").Scan(&lastBatch).Error; err != nil {
+	if err := m.db.WithContext(ctx).Model(&SimpleMigration{}).Select("COALESCE(MAX(batch), 0)").Scan(&lastBatch).Error; err != nil {
 		return fmt.Errorf("获取最后批次失败: %w", err)
 	}
 
@@ -135,12 +151,12 @@ func (m *SimpleMigrator) Rollback() error {
 		return errors.New("没有可回滚的迁移")
 	}
 
-	if err := m.db.Where("batch = ?", lastBatch).Order("id DESC").Find(&lastMigrations).Error; err != nil {
+	if err := m.db.WithContext(ctx).Where("batch = ?", lastBatch).Order("id DESC").Find(&lastMigrations).Error; err != nil {
 		return fmt.Errorf("获取最后批次迁移失败: %w", err)
 	}
 
 	// 获取所有迁移
-	migrations, err := m.loadMigrations()
+	migrations, err := m.loadMigrationsWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("加载迁移失败: %w", err)
 	}
@@ -155,36 +171,36 @@ func (m *SimpleMigrator) Rollback() error {
 	for _, migration := range lastMigrations {
 		migrationItem, ok := migrationsMap[migration.Name]
 		if !ok || migrationItem.Down == nil {
-			logger.Warn("没有找到回滚函数", "name", migration.Name)
+			logger.WarnContext(ctx, "没有找到回滚函数", "name", migration.Name)
 			continue
 		}
 
-		logger.Info("回滚迁移", "name", migration.Name)
+		logger.InfoContext(ctx, "回滚迁移", "name", migration.Name)
 
 		// 开始事务
-		tx := m.db.Begin()
+		tx := m.db.WithContext(ctx).Begin()
 		if tx.Error != nil {
 			return fmt.Errorf("开始事务失败: %w", tx.Error)
 		}
 
 		// 执行回滚
-		if err := migrationItem.Down(tx); err != nil {
+		if err := migrationItem.Down(tx.WithContext(ctx)); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("回滚失败 (%s): %w", migration.Name, err)
 		}
 
 		// 删除迁移记录
-		if err := tx.Delete(&migration).Error; err != nil {
+		if err := tx.WithContext(ctx).Delete(&migration).Error; err != nil {
 			tx.Rollback()
 			return fmt.Errorf("删除迁移记录失败: %w", err)
 		}
 
 		// 提交事务
-		if err := tx.Commit().Error; err != nil {
+		if err := tx.WithContext(ctx).Commit().Error; err != nil {
 			return fmt.Errorf("提交事务失败: %w", err)
 		}
 
-		logger.Info("回滚完成", "name", migration.Name)
+		logger.InfoContext(ctx, "回滚完成", "name", migration.Name)
 	}
 
 	return nil
@@ -192,9 +208,14 @@ func (m *SimpleMigrator) Rollback() error {
 
 // Reset 重置所有迁移
 func (m *SimpleMigrator) Reset() error {
+	return m.ResetWithContext(context.Background())
+}
+
+// ResetWithContext 使用上下文重置所有迁移
+func (m *SimpleMigrator) ResetWithContext(ctx context.Context) error {
 	// 获取所有迁移，按反向顺序
 	var allMigrations []SimpleMigration
-	if err := m.db.Order("id DESC").Find(&allMigrations).Error; err != nil {
+	if err := m.db.WithContext(ctx).Order("id DESC").Find(&allMigrations).Error; err != nil {
 		return fmt.Errorf("获取所有迁移失败: %w", err)
 	}
 
@@ -203,7 +224,7 @@ func (m *SimpleMigrator) Reset() error {
 	}
 
 	// 获取所有迁移
-	migrations, err := m.loadMigrations()
+	migrations, err := m.loadMigrationsWithContext(ctx)
 	if err != nil {
 		return fmt.Errorf("加载迁移失败: %w", err)
 	}
@@ -218,36 +239,36 @@ func (m *SimpleMigrator) Reset() error {
 	for _, migration := range allMigrations {
 		migrationItem, ok := migrationsMap[migration.Name]
 		if !ok || migrationItem.Down == nil {
-			logger.Warn("没有找到回滚函数", "name", migration.Name)
+			logger.WarnContext(ctx, "没有找到回滚函数", "name", migration.Name)
 			continue
 		}
 
-		logger.Info("重置迁移", "name", migration.Name)
+		logger.InfoContext(ctx, "重置迁移", "name", migration.Name)
 
 		// 开始事务
-		tx := m.db.Begin()
+		tx := m.db.WithContext(ctx).Begin()
 		if tx.Error != nil {
 			return fmt.Errorf("开始事务失败: %w", tx.Error)
 		}
 
 		// 执行回滚
-		if err := migrationItem.Down(tx); err != nil {
+		if err := migrationItem.Down(tx.WithContext(ctx)); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("重置失败 (%s): %w", migration.Name, err)
 		}
 
 		// 删除迁移记录
-		if err := tx.Delete(&migration).Error; err != nil {
+		if err := tx.WithContext(ctx).Delete(&migration).Error; err != nil {
 			tx.Rollback()
 			return fmt.Errorf("删除迁移记录失败: %w", err)
 		}
 
 		// 提交事务
-		if err := tx.Commit().Error; err != nil {
+		if err := tx.WithContext(ctx).Commit().Error; err != nil {
 			return fmt.Errorf("提交事务失败: %w", err)
 		}
 
-		logger.Info("重置完成", "name", migration.Name)
+		logger.InfoContext(ctx, "重置完成", "name", migration.Name)
 	}
 
 	return nil
@@ -255,9 +276,14 @@ func (m *SimpleMigrator) Reset() error {
 
 // Status 获取迁移状态
 func (m *SimpleMigrator) Status() ([]map[string]any, error) {
+	return m.StatusWithContext(context.Background())
+}
+
+// StatusWithContext 使用上下文获取迁移状态
+func (m *SimpleMigrator) StatusWithContext(ctx context.Context) ([]map[string]any, error) {
 	// 获取所有已运行的迁移
 	var ranMigrations []SimpleMigration
-	if err := m.db.Find(&ranMigrations).Error; err != nil {
+	if err := m.db.WithContext(ctx).Find(&ranMigrations).Error; err != nil {
 		return nil, fmt.Errorf("获取已运行迁移失败: %w", err)
 	}
 
@@ -267,7 +293,7 @@ func (m *SimpleMigrator) Status() ([]map[string]any, error) {
 	}
 
 	// 获取所有迁移
-	migrations, err := m.loadMigrations()
+	migrations, err := m.loadMigrationsWithContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("加载迁移失败: %w", err)
 	}
@@ -302,6 +328,11 @@ type SimpleMigrationItem struct {
 
 // loadMigrations 加载所有迁移
 func (m *SimpleMigrator) loadMigrations() ([]*SimpleMigrationItem, error) {
+	return m.loadMigrationsWithContext(context.Background())
+}
+
+// loadMigrationsWithContext 使用上下文加载所有迁移
+func (m *SimpleMigrator) loadMigrationsWithContext(ctx context.Context) ([]*SimpleMigrationItem, error) {
 	// 这里我们将返回所有注册的迁移
 	// 在实际实现中，你可以从文件系统或其他地方加载迁移
 	migrations := make([]*SimpleMigrationItem, 0)
@@ -321,8 +352,13 @@ func (m *SimpleMigrator) loadMigrations() ([]*SimpleMigrationItem, error) {
 
 // InitializeSimpleMigrator 初始化简化版迁移器
 func InitializeSimpleMigrator(db *gorm.DB, config *configs.Config) (*SimpleMigrator, error) {
+	return InitializeSimpleMigratorWithContext(context.Background(), db, config)
+}
+
+// InitializeSimpleMigratorWithContext 使用上下文初始化简化版迁移器
+func InitializeSimpleMigratorWithContext(ctx context.Context, db *gorm.DB, config *configs.Config) (*SimpleMigrator, error) {
 	migrator := NewSimpleMigrator(db, config)
-	err := migrator.Initialize()
+	err := migrator.InitializeWithContext(ctx)
 	return migrator, err
 }
 
@@ -345,6 +381,11 @@ func GetAllMigrations() []*SimpleMigrationItem {
 
 // ScanMigrationFiles 扫描迁移文件目录
 func ScanMigrationFiles(dir string) ([]string, error) {
+	return ScanMigrationFilesWithContext(context.Background(), dir)
+}
+
+// ScanMigrationFilesWithContext 使用上下文扫描迁移文件目录
+func ScanMigrationFilesWithContext(ctx context.Context, dir string) ([]string, error) {
 	var files []string
 
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {

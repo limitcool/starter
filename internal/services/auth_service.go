@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -33,6 +34,11 @@ func VerifyPassword(password, hashedPassword string) bool {
 // GenerateTokens 生成访问令牌和刷新令牌
 // 提取通用的令牌生成逻辑
 func (s *AuthService) GenerateTokens(userID uint, username string, userType enum.UserType, roles []string) (*v1.LoginResponse, error) {
+	return s.GenerateTokensWithContext(context.Background(), userID, username, userType, roles)
+}
+
+// GenerateTokensWithContext 使用上下文生成访问令牌和刷新令牌
+func (s *AuthService) GenerateTokensWithContext(ctx context.Context, userID uint, username string, userType enum.UserType, roles []string) (*v1.LoginResponse, error) {
 	// 获取配置
 	cfg := s.config
 
@@ -76,6 +82,11 @@ func (s *AuthService) GenerateTokens(userID uint, username string, userType enum
 // GenerateAccessToken 只生成访问令牌
 // 用于刷新令牌时只需要生成新的访问令牌
 func (s *AuthService) GenerateAccessToken(userID uint, username string, userType enum.UserType, roles []string) (string, error) {
+	return s.GenerateAccessTokenWithContext(context.Background(), userID, username, userType, roles)
+}
+
+// GenerateAccessTokenWithContext 使用上下文只生成访问令牌
+func (s *AuthService) GenerateAccessTokenWithContext(ctx context.Context, userID uint, username string, userType enum.UserType, roles []string) (string, error) {
 	// 获取配置
 	cfg := s.config
 
@@ -98,6 +109,11 @@ func (s *AuthService) GenerateAccessToken(userID uint, username string, userType
 
 // ValidateRefreshToken 验证刷新令牌
 func (s *AuthService) ValidateRefreshToken(refreshToken string) (*jwtpkg.CustomClaims, error) {
+	return s.ValidateRefreshTokenWithContext(context.Background(), refreshToken)
+}
+
+// ValidateRefreshTokenWithContext 使用上下文验证刷新令牌
+func (s *AuthService) ValidateRefreshTokenWithContext(ctx context.Context, refreshToken string) (*jwtpkg.CustomClaims, error) {
 	// 获取配置
 	cfg := s.config
 
@@ -118,6 +134,11 @@ func (s *AuthService) ValidateRefreshToken(refreshToken string) (*jwtpkg.CustomC
 
 // CreateLoginResponse 创建登录响应
 func (s *AuthService) CreateLoginResponse(accessToken, refreshToken string) *v1.LoginResponse {
+	return s.CreateLoginResponseWithContext(context.Background(), accessToken, refreshToken)
+}
+
+// CreateLoginResponseWithContext 使用上下文创建登录响应
+func (s *AuthService) CreateLoginResponseWithContext(ctx context.Context, accessToken, refreshToken string) *v1.LoginResponse {
 	// 获取配置
 	cfg := s.config
 

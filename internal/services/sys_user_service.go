@@ -74,13 +74,13 @@ func (s *SysUserService) Login(ctx context.Context, username, password string, i
 	}
 
 	// 使用认证服务生成令牌
-	return s.authService.GenerateTokens(uint(user.ID), user.Username, enum.UserTypeSysUser, user.RoleCodes)
+	return s.authService.GenerateTokensWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeSysUser, user.RoleCodes)
 }
 
 // RefreshToken 刷新访问令牌
 func (s *SysUserService) RefreshToken(ctx context.Context, refreshToken string) (*v1.LoginResponse, error) {
 	// 验证刷新令牌
-	claims, err := s.authService.ValidateRefreshToken(refreshToken)
+	claims, err := s.authService.ValidateRefreshTokenWithContext(ctx, refreshToken)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (s *SysUserService) RefreshToken(ctx context.Context, refreshToken string) 
 		}
 
 		// 生成新的访问令牌
-		accessToken, err := s.authService.GenerateAccessToken(uint(user.ID), user.Username, enum.UserTypeSysUser, user.RoleCodes)
+		accessToken, err := s.authService.GenerateAccessTokenWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeSysUser, user.RoleCodes)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +132,7 @@ func (s *SysUserService) RefreshToken(ctx context.Context, refreshToken string) 
 		}
 
 		// 生成新的访问令牌
-		accessToken, err := s.authService.GenerateAccessToken(uint(user.ID), user.Username, enum.UserTypeUser, []string{"user"})
+		accessToken, err := s.authService.GenerateAccessTokenWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeUser, []string{"user"})
 		if err != nil {
 			return nil, err
 		}

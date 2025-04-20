@@ -146,7 +146,7 @@ func (s *MenuService) GetMenuTree(ctx context.Context) ([]*model.MenuTree, error
 	if err != nil {
 		return nil, errorx.WrapError(err, "获取所有菜单失败")
 	}
-	return s.menuRepo.BuildMenuTree(menus), nil
+	return s.menuRepo.BuildMenuTree(ctx, menus), nil
 }
 
 // GetUserMenuTree 获取用户菜单树
@@ -160,7 +160,7 @@ func (s *MenuService) GetUserMenuTree(ctx context.Context, userID string, roles 
 			if err != nil {
 				return nil, errorx.WrapError(err, "获取所有菜单失败")
 			}
-			return s.menuRepo.BuildMenuTree(allMenus), nil
+			return s.menuRepo.BuildMenuTree(ctx, allMenus), nil
 		}
 
 		// 获取角色菜单
@@ -195,7 +195,7 @@ func (s *MenuService) GetUserMenuTree(ctx context.Context, userID string, roles 
 	}
 
 	// 构建菜单树
-	return s.menuRepo.BuildMenuTree(menus), nil
+	return s.menuRepo.BuildMenuTree(ctx, menus), nil
 }
 
 // GetMenuPermsByUserID 获取用户菜单权限标识

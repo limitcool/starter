@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -97,10 +98,15 @@ func isSupported(lang string, supportedLangs []string) bool {
 
 // TranslateError 翻译错误消息的辅助函数
 func TranslateError(c *gin.Context, messageID string) string {
+	return TranslateErrorWithContext(c.Request.Context(), c, messageID)
+}
+
+// TranslateErrorWithContext 使用上下文翻译错误消息的辅助函数
+func TranslateErrorWithContext(ctx context.Context, c *gin.Context, messageID string) string {
 	lang, exists := c.Get("lang")
 	if !exists {
 		// 如果上下文中没有语言信息，使用默认语言
-		return i18n.T(messageID, i18n.GetDefaultLanguage())
+		return i18n.TContext(ctx, messageID, i18n.GetDefaultLanguageContext(ctx))
 	}
-	return i18n.T(messageID, lang.(string))
+	return i18n.TContext(ctx, messageID, lang.(string))
 }

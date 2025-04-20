@@ -46,7 +46,7 @@ func (s *MenuAPIService) AssignAPIsToMenu(ctx context.Context, menuID uint, apiI
 	}
 
 	// 开始数据库事务
-	tx := s.menuRepo.DB.Begin()
+	tx := s.menuRepo.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -54,13 +54,13 @@ func (s *MenuAPIService) AssignAPIsToMenu(ctx context.Context, menuID uint, apiI
 	}()
 
 	// 在事务中清除现有关联
-	if err := tx.Where("menu_id = ?", menuID).Delete(&model.MenuAPI{}).Error; err != nil {
+	if err := tx.WithContext(ctx).Where("menu_id = ?", menuID).Delete(&model.MenuAPI{}).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("清除菜单API关联失败: %w", err)
 	}
 
 	// 删除菜单相关的权限记录
-	if err := tx.Where("menu_id = ? AND api_id IS NOT NULL", menuID).Delete(&model.Permission{}).Error; err != nil {
+	if err := tx.WithContext(ctx).Where("menu_id = ? AND api_id IS NOT NULL", menuID).Delete(&model.Permission{}).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("删除菜单API权限失败: %w", err)
 	}
@@ -82,7 +82,7 @@ func (s *MenuAPIService) AssignAPIsToMenu(ctx context.Context, menuID uint, apiI
 		// 获取API
 		api, err := s.apiRepo.GetByID(ctx, apiID)
 		if err != nil {
-			logger.Warn("获取API失败", "api_id", apiID, "error", err)
+			logger.WarnContext(ctx, "获取API失败", "api_id", apiID, "error", err)
 			continue
 		}
 
@@ -112,7 +112,7 @@ func (s *MenuAPIService) AssignAPIsToMenu(ctx context.Context, menuID uint, apiI
 
 	// 批量插入菜单API关联
 	if len(menuAPIs) > 0 {
-		if err := tx.Create(&menuAPIs).Error; err != nil {
+		if err := tx.WithContext(ctx).Create(&menuAPIs).Error; err != nil {
 			tx.Rollback()
 			return fmt.Errorf("批量创建菜单API关联失败: %w", err)
 		}
@@ -120,14 +120,14 @@ func (s *MenuAPIService) AssignAPIsToMenu(ctx context.Context, menuID uint, apiI
 
 	// 批量插入权限记录
 	if len(permissions) > 0 {
-		if err := tx.Create(&permissions).Error; err != nil {
+		if err := tx.WithContext(ctx).Create(&permissions).Error; err != nil {
 			tx.Rollback()
 			return fmt.Errorf("批量创建权限记录失败: %w", err)
 		}
 	}
 
 	// 提交数据库事务
-	if err := tx.Commit().Error; err != nil {
+	if err := tx.WithContext(ctx).Commit().Error; err != nil {
 		return fmt.Errorf("提交事务失败: %w", err)
 	}
 
@@ -135,11 +135,11 @@ func (s *MenuAPIService) AssignAPIsToMenu(ctx context.Context, menuID uint, apiI
 	if len(casbinPolicies) > 0 {
 		success, err := s.casbinService.AddPolicies(ctx, casbinPolicies)
 		if err != nil || !success {
-			logger.Error("批量添加Casbin权限策略失败", "error", err)
+			logger.ErrorContext(ctx, "批量添加Casbin权限策略失败", "error", err)
 			// 这里不回滚数据库事务，因为数据库事务已经提交
 			// 可以在后续的同步操作中修复Casbin状态
 		} else {
-			logger.Info("批量添加Casbin权限策略成功", "count", len(casbinPolicies))
+			logger.InfoContext(ctx, "批量添加Casbin权限策略成功", "count", len(casbinPolicies))
 		}
 	}
 
@@ -156,7 +156,7 @@ func (s *MenuAPIService) AssignMenuToRole(ctx context.Context, roleID uint, menu
 	}
 
 	// 开始数据库事务
-	tx := s.menuRepo.DB.Begin()
+	tx := s.menuRepo.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -164,7 +164,7 @@ func (s *MenuAPIService) AssignMenuToRole(ctx context.Context, roleID uint, menu
 	}()
 
 	// 在事务中删除原有的角色菜单关联
-	if err := tx.Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error; err != nil {
+	if err := tx.WithContext(ctx).Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("删除角色菜单关联失败: %w", err)
 	}
@@ -178,14 +178,14 @@ func (s *MenuAPIService) AssignMenuToRole(ctx context.Context, roleID uint, menu
 				MenuID: menuID,
 			})
 		}
-		if err := tx.Create(&roleMenus).Error; err != nil {
+		if err := tx.WithContext(ctx).Create(&roleMenus).Error; err != nil {
 			tx.Rollback()
 			return fmt.Errorf("创建角色菜单关联失败: %w", err)
 		}
 	}
 
 	// 提交数据库事务
-	if err := tx.Commit().Error; err != nil {
+	if err := tx.WithContext(ctx).Commit().Error; err != nil {
 		return fmt.Errorf("提交事务失败: %w", err)
 	}
 
@@ -197,7 +197,7 @@ func (s *MenuAPIService) AssignMenuToRole(ctx context.Context, roleID uint, menu
 		// 获取菜单关联的所有API
 		apis, err := s.apiRepo.GetByMenuID(ctx, menuID)
 		if err != nil {
-			logger.Warn("获取菜单API失败", "menu_id", menuID, "error", err)
+			logger.WarnContext(ctx, "获取菜单API失败", "menu_id", menuID, "error", err)
 			continue
 		}
 
@@ -212,17 +212,17 @@ func (s *MenuAPIService) AssignMenuToRole(ctx context.Context, roleID uint, menu
 		// 先删除该角色的所有权限
 		_, err := s.casbinService.DeleteRole(ctx, role.Code)
 		if err != nil {
-			logger.Error("删除角色权限失败", "role", role.Code, "error", err)
+			logger.ErrorContext(ctx, "删除角色权限失败", "role", role.Code, "error", err)
 			// 这里不回滚数据库事务，因为数据库事务已经提交
 		}
 
 		// 批量添加策略
 		success, err := s.casbinService.AddPolicies(ctx, casbinPolicies)
 		if err != nil || !success {
-			logger.Error("批量添加Casbin权限策略失败", "role", role.Code, "error", err)
+			logger.ErrorContext(ctx, "批量添加Casbin权限策略失败", "role", role.Code, "error", err)
 			// 这里不回滚数据库事务，因为数据库事务已经提交
 		} else {
-			logger.Info("批量添加角色API权限成功", "role", role.Code, "count", len(casbinPolicies))
+			logger.InfoContext(ctx, "批量添加角色API权限成功", "role", role.Code, "count", len(casbinPolicies))
 		}
 	}
 
@@ -239,7 +239,7 @@ func (s *MenuAPIService) SyncMenuAPIPermissions(ctx context.Context) error {
 	}
 
 	// 开始数据库事务
-	tx := s.menuRepo.DB.Begin()
+	tx := s.menuRepo.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -247,7 +247,7 @@ func (s *MenuAPIService) SyncMenuAPIPermissions(ctx context.Context) error {
 	}()
 
 	// 清除所有权限记录中的API关联
-	if err := tx.Model(&model.Permission{}).Where("api_id IS NOT NULL").Update("api_id", nil).Error; err != nil {
+	if err := tx.WithContext(ctx).Model(&model.Permission{}).Where("api_id IS NOT NULL").Update("api_id", nil).Error; err != nil {
 		tx.Rollback()
 		return fmt.Errorf("清除权限API关联失败: %w", err)
 	}
@@ -268,7 +268,7 @@ func (s *MenuAPIService) SyncMenuAPIPermissions(ctx context.Context) error {
 		// 获取拥有该菜单的所有角色
 		roles, err := s.roleRepo.GetRolesByMenuID(ctx, menu.ID)
 		if err != nil {
-			logger.Warn("获取菜单角色失败", "menu_id", menu.ID, "error", err)
+			logger.WarnContext(ctx, "获取菜单角色失败", "menu_id", menu.ID, "error", err)
 			continue
 		}
 
@@ -296,20 +296,20 @@ func (s *MenuAPIService) SyncMenuAPIPermissions(ctx context.Context) error {
 	// 批量插入权限记录
 	if len(permissions) > 0 {
 		// 先删除所有API相关的权限记录
-		if err := tx.Where("api_id IS NOT NULL").Delete(&model.Permission{}).Error; err != nil {
+		if err := tx.WithContext(ctx).Where("api_id IS NOT NULL").Delete(&model.Permission{}).Error; err != nil {
 			tx.Rollback()
 			return fmt.Errorf("删除API权限记录失败: %w", err)
 		}
 
 		// 创建新的权限记录
-		if err := tx.Create(&permissions).Error; err != nil {
+		if err := tx.WithContext(ctx).Create(&permissions).Error; err != nil {
 			tx.Rollback()
 			return fmt.Errorf("批量创建权限记录失败: %w", err)
 		}
 	}
 
 	// 提交数据库事务
-	if err := tx.Commit().Error; err != nil {
+	if err := tx.WithContext(ctx).Commit().Error; err != nil {
 		return fmt.Errorf("提交事务失败: %w", err)
 	}
 
@@ -319,21 +319,21 @@ func (s *MenuAPIService) SyncMenuAPIPermissions(ctx context.Context) error {
 		s.casbinService.GetEnforcer().ClearPolicy()
 		// 重新加载策略
 		if err := s.casbinService.GetEnforcer().LoadPolicy(); err != nil {
-			logger.Error("加载Casbin策略失败", "error", err)
+			logger.ErrorContext(ctx, "加载Casbin策略失败", "error", err)
 			return fmt.Errorf("加载Casbin策略失败: %w", err)
 		}
 
 		// 批量添加策略
 		success, err := s.casbinService.AddPolicies(ctx, casbinPolicies)
 		if err != nil || !success {
-			logger.Error("批量添加Casbin权限策略失败", "error", err)
+			logger.ErrorContext(ctx, "批量添加Casbin权限策略失败", "error", err)
 			return fmt.Errorf("批量添加Casbin权限策略失败: %w", err)
 		}
 
-		logger.Info("批量添加Casbin权限策略成功", "count", len(casbinPolicies))
+		logger.InfoContext(ctx, "批量添加Casbin权限策略成功", "count", len(casbinPolicies))
 	}
 
-	logger.Info("同步菜单API权限完成")
+	logger.InfoContext(ctx, "同步菜单API权限完成")
 	return nil
 }
 
@@ -362,7 +362,7 @@ func (s *MenuAPIService) GetAPIRoles(ctx context.Context, apiID uint) ([]*model.
 	for _, menuID := range menuIDs {
 		roles, err := s.roleRepo.GetRolesByMenuID(ctx, menuID)
 		if err != nil {
-			logger.Warn("获取菜单角色失败", "menu_id", menuID, "error", err)
+			logger.WarnContext(ctx, "获取菜单角色失败", "menu_id", menuID, "error", err)
 			continue
 		}
 

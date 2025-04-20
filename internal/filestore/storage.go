@@ -1,6 +1,7 @@
 package filestore
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -68,7 +69,7 @@ func New(config Config) (*Storage, error) {
 }
 
 // Put 上传文件
-func (s *Storage) Put(path string, reader io.Reader) error {
+func (s *Storage) Put(ctx context.Context, path string, reader io.Reader) error {
 	_, err := s.oss.Put(path, reader)
 	if err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("上传文件失败: %s", path))
@@ -77,7 +78,7 @@ func (s *Storage) Put(path string, reader io.Reader) error {
 }
 
 // Get 获取文件
-func (s *Storage) Get(path string) (*os.File, error) {
+func (s *Storage) Get(ctx context.Context, path string) (*os.File, error) {
 	file, err := s.oss.Get(path)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("获取文件失败: %s", path))
@@ -86,7 +87,7 @@ func (s *Storage) Get(path string) (*os.File, error) {
 }
 
 // GetStream 获取文件流
-func (s *Storage) GetStream(path string) (io.ReadCloser, error) {
+func (s *Storage) GetStream(ctx context.Context, path string) (io.ReadCloser, error) {
 	stream, err := s.oss.GetStream(path)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("获取文件流失败: %s", path))
@@ -95,7 +96,7 @@ func (s *Storage) GetStream(path string) (io.ReadCloser, error) {
 }
 
 // Delete 删除文件
-func (s *Storage) Delete(path string) error {
+func (s *Storage) Delete(ctx context.Context, path string) error {
 	err := s.oss.Delete(path)
 	if err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("删除文件失败: %s", path))
@@ -104,7 +105,7 @@ func (s *Storage) Delete(path string) error {
 }
 
 // List 列出目录下的文件
-func (s *Storage) List(path string) ([]*oss.Object, error) {
+func (s *Storage) List(ctx context.Context, path string) ([]*oss.Object, error) {
 	objects, err := s.oss.List(path)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("获取文件列表失败: %s", path))
@@ -113,7 +114,7 @@ func (s *Storage) List(path string) ([]*oss.Object, error) {
 }
 
 // GetURL 获取文件URL
-func (s *Storage) GetURL(path string) (string, error) {
+func (s *Storage) GetURL(ctx context.Context, path string) (string, error) {
 	// 确保路径使用正斜杠
 	normalizedPath := strings.ReplaceAll(path, "\\", "/")
 
@@ -133,11 +134,16 @@ func (s *Storage) GetURL(path string) (string, error) {
 
 // GetEndpoint 获取存储端点
 func (s *Storage) GetEndpoint() string {
+	return s.GetEndpointWithContext(context.Background())
+}
+
+// GetEndpointWithContext 使用上下文获取存储端点
+func (s *Storage) GetEndpointWithContext(ctx context.Context) string {
 	return s.oss.GetEndpoint()
 }
 
-// 生成存储路径
-func GeneratePath(baseDir, fileName string) string {
+// GeneratePath 生成存储路径
+func GeneratePath(ctx context.Context, baseDir, fileName string) string {
 	// 清理文件名，移除危险字符
 	fileName = filepath.Base(fileName)
 

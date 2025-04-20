@@ -101,7 +101,7 @@ func (s *PermissionService) AssignPermissionToRole(ctx context.Context, roleID u
 	}
 
 	// 开始数据库事务
-	tx := s.permissionRepo.DB.Begin()
+	tx := s.permissionRepo.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -109,7 +109,7 @@ func (s *PermissionService) AssignPermissionToRole(ctx context.Context, roleID u
 	}()
 
 	// 在事务中执行数据库操作
-	if err := tx.Where("role_id = ?", roleID).Delete(&model.RolePermission{}).Error; err != nil {
+	if err := tx.WithContext(ctx).Where("role_id = ?", roleID).Delete(&model.RolePermission{}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -123,14 +123,14 @@ func (s *PermissionService) AssignPermissionToRole(ctx context.Context, roleID u
 				PermissionID: permID,
 			})
 		}
-		if err := tx.Create(&rolePermissions).Error; err != nil {
+		if err := tx.WithContext(ctx).Create(&rolePermissions).Error; err != nil {
 			tx.Rollback()
 			return err
 		}
 	}
 
 	// 提交数据库事务
-	if err := tx.Commit().Error; err != nil {
+	if err := tx.WithContext(ctx).Commit().Error; err != nil {
 		return err
 	}
 
@@ -141,7 +141,7 @@ func (s *PermissionService) AssignPermissionToRole(ctx context.Context, roleID u
 	if err != nil {
 		// 如果 Casbin 操作失败，记录错误但不回滚数据库事务
 		// 因为数据库事务已经提交，我们可以在后续的同步操作中修复 Casbin 状态
-		logger.Error("删除 Casbin 角色权限失败", "error", err)
+		logger.ErrorContext(ctx, "删除 Casbin 角色权限失败", "error", err)
 		// 这里可以添加重试逻辑或触发异步修复任务
 	}
 
@@ -152,7 +152,7 @@ func (s *PermissionService) AssignPermissionToRole(ctx context.Context, roleID u
 		for _, permID := range permissionIDs {
 			perm, err := s.permissionRepo.GetByID(ctx, permID)
 			if err != nil {
-				logger.Warn("获取权限信息失败", "permission_id", permID, "error", err)
+				logger.WarnContext(ctx, "获取权限信息失败", "permission_id", permID, "error", err)
 				continue
 			}
 
@@ -164,7 +164,7 @@ func (s *PermissionService) AssignPermissionToRole(ctx context.Context, roleID u
 		if len(policies) > 0 {
 			success, err := s.casbinService.AddPolicies(ctx, policies)
 			if err != nil || !success {
-				logger.Error("批量添加 Casbin 权限策略失败", "error", err)
+				logger.ErrorContext(ctx, "批量添加 Casbin 权限策略失败", "error", err)
 				// 这里可以添加重试逻辑或触发异步修复任务
 			}
 		}
@@ -241,7 +241,7 @@ func (s *PermissionService) AssignRolesToUser(ctx context.Context, userID string
 	if len(currentRoles) > 0 {
 		success, err := s.casbinService.DeleteRolesForUser(ctx, userID)
 		if err != nil || !success {
-			logger.Error("批量删除用户角色失败", "error", err)
+			logger.ErrorContext(ctx, "批量删除用户角色失败", "error", err)
 			// 这里可以添加重试逻辑或触发异步修复任务
 		}
 	}
@@ -253,7 +253,7 @@ func (s *PermissionService) AssignRolesToUser(ctx context.Context, userID string
 		for _, roleID := range roleIDs {
 			role, err := s.roleRepo.GetByID(ctx, roleID)
 			if err != nil {
-				logger.Warn("获取角色信息失败", "role_id", roleID, "error", err)
+				logger.WarnContext(ctx, "获取角色信息失败", "role_id", roleID, "error", err)
 				continue
 			}
 			roleCodes = append(roleCodes, role.Code)
@@ -263,7 +263,7 @@ func (s *PermissionService) AssignRolesToUser(ctx context.Context, userID string
 		if len(roleCodes) > 0 {
 			success, err := s.casbinService.AddRolesForUser(ctx, userID, roleCodes)
 			if err != nil || !success {
-				logger.Error("批量添加用户角色失败", "error", err)
+				logger.ErrorContext(ctx, "批量添加用户角色失败", "error", err)
 				// 这里可以添加重试逻辑或触发异步修复任务
 			}
 		}

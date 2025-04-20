@@ -339,11 +339,16 @@ func getEntityID[T Entity](entity *T) any {
 
 // WithCache 为仓库添加缓存支持
 func WithCache[T Entity](repo Repository[T], cacheName string, prefix string, expiration time.Duration) (Repository[T], error) {
+	return WithCacheContext(context.Background(), repo, cacheName, prefix, expiration)
+}
+
+// WithCacheContext 使用上下文为仓库添加缓存支持
+func WithCacheContext[T Entity](ctx context.Context, repo Repository[T], cacheName string, prefix string, expiration time.Duration) (Repository[T], error) {
 	// 获取缓存
-	cacheInstance, err := cache.GetFactory().Get(cacheName)
+	cacheInstance, err := cache.GetFactory().GetWithContext(ctx, cacheName)
 	if err != nil {
 		// 如果缓存不存在，创建一个新的内存缓存
-		cacheInstance, err = cache.GetFactory().Create(cacheName, cache.Memory,
+		cacheInstance, err = cache.GetFactory().CreateWithContext(ctx, cacheName, cache.Memory,
 			cache.WithExpiration(expiration),
 			cache.WithMaxEntries(10000),
 		)

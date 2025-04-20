@@ -81,6 +81,11 @@ func (r *OperationLogRepo) Create(ctx context.Context, log *model.OperationLog) 
 
 // CreateSysUserLog 创建系统用户操作日志
 func (r *OperationLogRepo) CreateSysUserLog(c *gin.Context, userID int64, username string, module, action, description string, startTime time.Time) error {
+	return r.CreateSysUserLogWithContext(c.Request.Context(), c, userID, username, module, action, description, startTime)
+}
+
+// CreateSysUserLogWithContext 使用上下文创建系统用户操作日志
+func (r *OperationLogRepo) CreateSysUserLogWithContext(ctx context.Context, c *gin.Context, userID int64, username string, module, action, description string, startTime time.Time) error {
 	// 计算执行时间
 	executeTime := time.Since(startTime).Milliseconds()
 
@@ -124,11 +129,16 @@ func (r *OperationLogRepo) CreateSysUserLog(c *gin.Context, userID int64, userna
 		Username:    username,
 	}
 
-	return r.Create(c.Request.Context(), &operationLog)
+	return r.Create(ctx, &operationLog)
 }
 
 // CreateUserLog 创建普通用户操作日志
 func (r *OperationLogRepo) CreateUserLog(c *gin.Context, userID int64, username string, module, action, description string, startTime time.Time) error {
+	return r.CreateUserLogWithContext(c.Request.Context(), c, userID, username, module, action, description, startTime)
+}
+
+// CreateUserLogWithContext 使用上下文创建普通用户操作日志
+func (r *OperationLogRepo) CreateUserLogWithContext(ctx context.Context, c *gin.Context, userID int64, username string, module, action, description string, startTime time.Time) error {
 	// 计算执行时间
 	executeTime := time.Since(startTime).Milliseconds()
 
@@ -172,7 +182,7 @@ func (r *OperationLogRepo) CreateUserLog(c *gin.Context, userID int64, username 
 		Username:    username,
 	}
 
-	return r.Create(c.Request.Context(), &operationLog)
+	return r.Create(ctx, &operationLog)
 }
 
 // GetLogs 获取操作日志列表

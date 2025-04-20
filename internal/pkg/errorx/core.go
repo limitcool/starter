@@ -1,6 +1,7 @@
 package errorx
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"strings"
@@ -111,6 +112,13 @@ func Errorf(baseErr *AppError, format string, args ...any) error {
 // 用法: WrapError(err, "查询用户失败")
 // 如果不需要添加消息，可以传入空字符串: WrapError(err, "")
 func WrapError(err error, message string) error {
+	return WrapErrorWithContext(context.Background(), err, message)
+}
+
+// WrapErrorWithContext 使用上下文包装错误并添加上下文信息和位置信息
+// 用法: WrapErrorWithContext(ctx, err, "查询用户失败")
+// 如果不需要添加消息，可以传入空字符串: WrapErrorWithContext(ctx, err, "")
+func WrapErrorWithContext(ctx context.Context, err error, message string) error {
 	if err == nil {
 		return nil
 	}
@@ -143,6 +151,12 @@ func WrapError(err error, message string) error {
 // FormatErrorChain 格式化错误链，包括位置信息
 // 用法: FormatErrorChain(err)
 func FormatErrorChain(err error) string {
+	return FormatErrorChainWithContext(context.Background(), err)
+}
+
+// FormatErrorChainWithContext 使用上下文格式化错误链，包括位置信息
+// 用法: FormatErrorChainWithContext(ctx, err)
+func FormatErrorChainWithContext(ctx context.Context, err error) string {
 	if err == nil {
 		return ""
 	}
@@ -154,6 +168,12 @@ func FormatErrorChain(err error) string {
 // GetUserMessage 获取用户友好的错误消息
 // 用法: GetUserMessage(err)
 func GetUserMessage(err error) string {
+	return GetUserMessageWithContext(context.Background(), err)
+}
+
+// GetUserMessageWithContext 使用上下文获取用户友好的错误消息
+// 用法: GetUserMessageWithContext(ctx, err)
+func GetUserMessageWithContext(ctx context.Context, err error) string {
 	if err == nil {
 		return ""
 	}
@@ -170,6 +190,12 @@ func GetUserMessage(err error) string {
 // GetErrorCode 获取错误码
 // 用法: GetErrorCode(err)
 func GetErrorCode(err error) int {
+	return GetErrorCodeWithContext(context.Background(), err)
+}
+
+// GetErrorCodeWithContext 使用上下文获取错误码
+// 用法: GetErrorCodeWithContext(ctx, err)
+func GetErrorCodeWithContext(ctx context.Context, err error) int {
 	if err == nil {
 		return 0
 	}
@@ -186,6 +212,12 @@ func GetErrorCode(err error) int {
 // GetHttpStatus 获取HTTP状态码
 // 用法: GetHttpStatus(err)
 func GetHttpStatus(err error) int {
+	return GetHttpStatusWithContext(context.Background(), err)
+}
+
+// GetHttpStatusWithContext 使用上下文获取HTTP状态码
+// 用法: GetHttpStatusWithContext(ctx, err)
+func GetHttpStatusWithContext(ctx context.Context, err error) int {
 	if err == nil {
 		return 200
 	}
@@ -201,6 +233,11 @@ func GetHttpStatus(err error) int {
 
 // IsAppErr 检查错误是否是应用程序错误
 func IsAppErr(err error) bool {
+	return IsAppErrWithContext(context.Background(), err)
+}
+
+// IsAppErrWithContext 使用上下文检查错误是否是应用程序错误
+func IsAppErrWithContext(ctx context.Context, err error) bool {
 	var appErr *AppError
 	return errors.As(err, &appErr)
 }
@@ -223,6 +260,11 @@ func (e *AppError) Is(target error) bool {
 // IsAppError 检查错误是否是特定的应用程序错误
 // 兼容旧版的 Is 函数
 func Is(err error, target *AppError) bool {
+	return IsWithContext(context.Background(), err, target)
+}
+
+// IsWithContext 使用上下文检查错误是否是特定的应用程序错误
+func IsWithContext(ctx context.Context, err error, target *AppError) bool {
 	if err == nil || target == nil {
 		return false
 	}

@@ -61,10 +61,11 @@ func OperationLogMiddleware(logService *services.OperationLogService, module, ac
 		}
 
 		// 根据用户类型记录不同的日志
+		ctx := c.Request.Context()
 		if userType == "sys_user" {
-			_ = logService.CreateSysUserLog(c, userID, username, module, action, description, startTime)
+			_ = logService.CreateSysUserLogWithContext(ctx, c, userID, username, module, action, description, startTime)
 		} else {
-			_ = logService.CreateUserLog(c, userID, username, module, action, description, startTime)
+			_ = logService.CreateUserLogWithContext(ctx, c, userID, username, module, action, description, startTime)
 		}
 	}
 }

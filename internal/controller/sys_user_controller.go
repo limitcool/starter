@@ -23,7 +23,7 @@ func NewSysUserController(userService *services.SysUserService) *SysUserControll
 func (ctrl *SysUserController) SysUserLogin(c *gin.Context) {
 	var req v1.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.LogError("SysUserLogin 无效的请求参数", err)
+		logger.LogErrorContext(c.Request.Context(), "SysUserLogin 无效的请求参数", err)
 		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
@@ -35,7 +35,7 @@ func (ctrl *SysUserController) SysUserLogin(c *gin.Context) {
 	tokenResponse, err := ctrl.userService.Login(c.Request.Context(), req.Username, req.Password, clientIP)
 	if err != nil {
 		// 使用辅助函数记录错误，同时包含额外的上下文信息
-		logger.LogError("SysUserLogin 登录失败", err,
+		logger.LogErrorContext(c.Request.Context(), "SysUserLogin 登录失败", err,
 			"username", req.Username,
 			"ip", clientIP)
 
