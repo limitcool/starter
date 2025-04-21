@@ -6,8 +6,11 @@ import (
 
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/casbin"
+	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/repository"
+	"go.uber.org/fx"
 )
 
 // MenuService 菜单服务
@@ -18,12 +21,43 @@ type MenuService struct {
 }
 
 // NewMenuService 创建菜单服务
-func NewMenuService(menuRepo *repository.MenuRepo, roleRepo *repository.RoleRepo, casbinService casbin.Service) *MenuService {
-	return &MenuService{
+func NewMenuService(params ServiceParams, casbinService casbin.Service) *MenuService {
+	// 使用参数中的仓库和配置
+	menuRepo := params.MenuRepo
+	roleRepo := params.RoleRepo
+	config := params.Config
+	// 获取用户模式
+	userMode := enum.GetUserMode(config.Admin.UserMode)
+
+	// 如果是简单模式，返回一个空的实现
+	if userMode == enum.UserModeSimple {
+		return &MenuService{
+			menuRepo:      menuRepo,
+			roleRepo:      roleRepo,
+			casbinService: nil, // 简单模式不使用Casbin
+		}
+	}
+
+	// 分离模式，使用完整的实现
+	service := &MenuService{
 		menuRepo:      menuRepo,
 		roleRepo:      roleRepo,
 		casbinService: casbinService,
 	}
+
+	// 注册生命周期钩子
+	params.LC.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			logger.InfoContext(ctx, "MenuService initialized")
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			logger.InfoContext(ctx, "MenuService stopped")
+			return nil
+		},
+	})
+
+	return service
 }
 
 // CreateMenu 创建菜单

@@ -31,6 +31,9 @@ func NewUserController(params ControllerParams) *UserController {
 		},
 	})
 
+	// 将控制器添加到全局变量
+	Controllers.UserController = controller
+
 	return controller
 }
 
@@ -122,7 +125,8 @@ func (ctrl *UserController) UserRegister(c *gin.Context) {
 	// 获取客户端IP地址
 	clientIP := c.ClientIP()
 
-	user, err := ctrl.userService.Register(c.Request.Context(), req, clientIP)
+	// 普通用户注册，不是管理员
+	user, err := ctrl.userService.Register(c.Request.Context(), req, clientIP, false)
 	if err != nil {
 		response.Error(c, err)
 		return

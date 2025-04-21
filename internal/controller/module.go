@@ -12,13 +12,12 @@ var Module = fx.Options(
 	// 提供所有HTTP控制器
 	fx.Provide(NewUserController),
 	fx.Provide(NewAdminUserController),
-	fx.Provide(NewRoleController),
-	fx.Provide(NewMenuController),
-	fx.Provide(NewPermissionController),
-	fx.Provide(NewOperationLogController),
 	fx.Provide(NewFileController),
 	fx.Provide(NewAPIController),
 	fx.Provide(NewAdminController),
+
+	// 根据用户模式决定是否提供角色和菜单相关的控制器
+	fx.Invoke(RegisterControllers),
 
 	// 提供所有gRPC控制器
 	fx.Provide(NewAdminGRPCController),

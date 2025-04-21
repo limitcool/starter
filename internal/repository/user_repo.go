@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"go.uber.org/fx"
@@ -51,13 +52,25 @@ func NewUserRepo(params RepoParams) *UserRepo {
 // GetByID 根据ID获取用户
 func (r *UserRepo) GetByID(ctx context.Context, id int64) (*model.User, error) {
 	// 使用泛型仓库
-	return r.GenericRepo.GetByID(ctx, id)
+	user, err := r.GenericRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 返回用户
+	return user, nil
 }
 
 // GetByUsername 根据用户名获取用户
 func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*model.User, error) {
 	// 使用泛型仓库的高级查询
-	return r.GenericRepo.FindByField(ctx, "username", username)
+	user, err := r.GenericRepo.FindByField(ctx, "username", username)
+	if err != nil {
+		return nil, err
+	}
+
+	// 返回用户
+	return user, nil
 }
 
 // Create 创建用户
@@ -138,4 +151,43 @@ func (r *UserRepo) WithTx(tx *gorm.DB) *UserRepo {
 		DB:          tx,
 		GenericRepo: genericRepo,
 	}
+}
+
+// GetUserRoles 获取用户角色
+func (r *UserRepo) GetUserRoles(ctx context.Context, userID int64, isAdmin bool, userMode string) ([]string, error) {
+	// 如果是简单模式
+	if userMode == string(enum.UserModeSimple) {
+		// 如果是管理员
+		if isAdmin {
+			return []string{"admin"}, nil
+		}
+		// 普通用户
+		return []string{"user"}, nil
+	}
+
+	// 分离模式，从数据库查询角色
+	var roles []string
+	user := &model.User{}
+
+	// 查询用户及其角色
+	err := r.DB.WithContext(ctx).Preload("Roles").First(user, userID).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			notFoundErr := errorx.Errorf(errorx.ErrUserNotFound, "用户ID %d 不存在", userID)
+			return nil, errorx.WrapError(notFoundErr, "")
+		}
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询用户角色失败: id=%d", userID))
+	}
+
+	// 提取角色编码
+	for _, role := range user.Roles {
+		roles = append(roles, role.Code)
+	}
+
+	// 如果没有角色，返回默认角色
+	if len(roles) == 0 {
+		return []string{"user"}, nil
+	}
+
+	return roles, nil
 }

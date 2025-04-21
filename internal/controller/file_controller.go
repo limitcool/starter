@@ -23,9 +23,14 @@ type FileController struct {
 
 // NewFileController 创建文件控制器
 func NewFileController(fileService *services.FileService) *FileController {
-	return &FileController{
+	controller := &FileController{
 		fileService: fileService,
 	}
+
+	// 将控制器添加到全局变量
+	Controllers.FileController = controller
+
+	return controller
 }
 
 // UploadFile 上传文件

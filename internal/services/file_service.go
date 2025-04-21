@@ -125,8 +125,8 @@ func (s *FileService) GetFile(ctx context.Context, id string, currentUserID int6
 		return nil, errorx.Errorf(errorx.ErrAccessDenied, "您无权访问此文件")
 	}
 
-	// 系统用户可以访问所有文件
-	if currentUserType == enum.UserTypeSysUser {
+	// 系统用户和管理员用户可以访问所有文件
+	if currentUserType == enum.UserTypeSysUser || currentUserType == enum.UserTypeAdminUser {
 		return file, nil
 	}
 
@@ -156,7 +156,7 @@ func (s *FileService) DeleteFile(ctx context.Context, id string, currentUserID i
 		return err
 	}
 
-	// 权限检查：系统用户可以删除所有文件，普通用户只能删除自己上传的文件
+	// 权限检查：系统用户和管理员用户可以删除所有文件，普通用户只能删除自己上传的文件
 	if currentUserType == enum.UserTypeUser && (file.UploadedByType != uint8(enum.UserTypeUser) || file.UploadedBy != currentUserID) {
 		return errorx.Errorf(errorx.ErrAccessDenied, "您无权删除此文件")
 	}

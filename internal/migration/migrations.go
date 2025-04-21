@@ -6,6 +6,7 @@ import (
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
+	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -438,17 +439,33 @@ func RegisterAPIPathMigrations(migrator *Migrator) {
 	RegisterUpdateAPIPathsMigrations(migrator)
 }
 
+// 用户模式迁移在user_mode_migration.go中实现
+
 // RegisterAllMigrations 注册所有迁移
 func RegisterAllMigrations(migrator *Migrator) {
+	// 获取用户模式
+	userMode := enum.UserModeSeparate // 默认使用分离模式
+	if migrator.config != nil {
+		userMode = enum.GetUserMode(migrator.config.Admin.UserMode)
+	}
+
 	// 按顺序注册所有迁移
+	// 核心用户迁移（所有模式都需要）
 	RegisterCoreUserMigrations(migrator)
-	RegisterAdminUserMigrations(migrator) // 添加管理员用户迁移
-	RegisterRoleMigrations(migrator)
-	RegisterPermissionMigrations(migrator)
-	RegisterMenuMigrations(migrator)
-	RegisterOperationLogMigrations(migrator)
-	RegisterInitialDataMigrations(migrator) // 添加初始数据迁移
-	RegisterAPIPathMigrations(migrator)     // 添加API路径更新迁移
+
+	// 用户模式迁移（所有模式都需要）
+	RegisterUserModeMigrations(migrator)
+
+	// 分离模式特有的迁移
+	if userMode == enum.UserModeSeparate {
+		RegisterAdminUserMigrations(migrator) // 添加管理员用户迁移
+		RegisterRoleMigrations(migrator)
+		RegisterPermissionMigrations(migrator)
+		RegisterMenuMigrations(migrator)
+		RegisterOperationLogMigrations(migrator)
+		RegisterInitialDataMigrations(migrator) // 添加初始数据迁移
+		RegisterAPIPathMigrations(migrator)     // 添加API路径更新迁移
+	}
 
 	// 添加自定义业务迁移...
 }

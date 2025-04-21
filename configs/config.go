@@ -178,6 +178,8 @@ type Admin struct {
 	Username string // 管理员用户名
 	Password string // 管理员密码
 	Nickname string // 管理员昵称
+	// 用户模式配置
+	UserMode string // 用户模式: separate(分离模式), unified(合并模式)
 }
 
 // I18n 国际化配置

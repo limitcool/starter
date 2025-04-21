@@ -44,37 +44,86 @@ func (s *AdminUserService) VerifyPassword(password, hashedPassword string) bool 
 	return VerifyPassword(password, hashedPassword)
 }
 
-// Login 用户登录
+// Login 管理员用户登录
 func (s *AdminUserService) Login(ctx context.Context, username, password string, ip string) (*v1.LoginResponse, error) {
-	// 获取用户
-	user, err := s.adminUserRepo.GetByUsername(ctx, username)
-	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("用户名 %s 不存在", username))
-	}
+	// 获取用户模式
+	userMode := enum.GetUserMode(s.config.Admin.UserMode)
 
-	// 检查用户是否启用
-	if !user.Enabled {
-		disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "用户 %s 已被禁用", username)
-		return nil, errorx.WrapError(disabledErr, "")
-	}
+	// 根据用户模式处理
+	if userMode == enum.UserModeSimple {
+		// 简单模式，使用普通用户表查询管理员用户
+		user, err := s.userRepo.GetByUsername(ctx, username)
+		if err != nil {
+			return nil, errorx.WrapError(err, fmt.Sprintf("用户名 %s 不存在", username))
+		}
 
-	// 验证密码
-	if !s.VerifyPassword(password, user.Password) {
-		passwordErr := errorx.Errorf(errorx.ErrUserPasswordError, "用户 %s 的密码错误", username)
-		return nil, errorx.WrapError(passwordErr, "")
-	}
+		// 检查是否是管理员
+		if !user.IsAdmin {
+			permErr := errorx.Errorf(errorx.ErrAccessDenied, "用户 %s 不是管理员", username)
+			return nil, errorx.WrapError(permErr, "")
+		}
 
-	// 更新最后登录时间和IP
-	fields := map[string]any{
-		"last_login": time.Now(),
-		"last_ip":    ip,
-	}
-	if err := s.adminUserRepo.UpdateFields(ctx, user.ID, fields); err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("更新用户 %s 的登录信息失败", username))
-	}
+		// 检查用户是否启用
+		if !user.Enabled {
+			disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "用户 %s 已被禁用", username)
+			return nil, errorx.WrapError(disabledErr, "")
+		}
 
-	// 使用认证服务生成令牌
-	return s.authService.GenerateTokensWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeAdminUser, user.RoleCodes)
+		// 验证密码
+		if !s.VerifyPassword(password, user.Password) {
+			passwordErr := errorx.Errorf(errorx.ErrUserPasswordError, "用户 %s 的密码错误", username)
+			return nil, errorx.WrapError(passwordErr, "")
+		}
+
+		// 更新最后登录时间和IP
+		fields := map[string]any{
+			"last_login": time.Now(),
+			"last_ip":    ip,
+		}
+		if err := s.userRepo.UpdateFields(ctx, user.ID, fields); err != nil {
+			return nil, errorx.WrapError(err, fmt.Sprintf("更新用户 %s 的登录信息失败", username))
+		}
+
+		// 获取用户角色
+		roles, err := s.userRepo.GetUserRoles(ctx, user.ID, user.IsAdmin, s.config.Admin.UserMode)
+		if err != nil {
+			// 如果获取角色失败，使用默认角色
+			roles = []string{"admin"}
+		}
+
+		// 生成令牌
+		return s.authService.GenerateTokensWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeAdminUser, roles)
+	} else {
+		// 分离模式，使用管理员用户表
+		user, err := s.adminUserRepo.GetByUsername(ctx, username)
+		if err != nil {
+			return nil, errorx.WrapError(err, fmt.Sprintf("用户名 %s 不存在", username))
+		}
+
+		// 检查用户是否启用
+		if !user.Enabled {
+			disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "用户 %s 已被禁用", username)
+			return nil, errorx.WrapError(disabledErr, "")
+		}
+
+		// 验证密码
+		if !s.VerifyPassword(password, user.Password) {
+			passwordErr := errorx.Errorf(errorx.ErrUserPasswordError, "用户 %s 的密码错误", username)
+			return nil, errorx.WrapError(passwordErr, "")
+		}
+
+		// 更新最后登录时间和IP
+		fields := map[string]any{
+			"last_login": time.Now(),
+			"last_ip":    ip,
+		}
+		if err := s.adminUserRepo.UpdateFields(ctx, user.ID, fields); err != nil {
+			return nil, errorx.WrapError(err, fmt.Sprintf("更新用户 %s 的登录信息失败", username))
+		}
+
+		// 使用认证服务生成令牌
+		return s.authService.GenerateTokensWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeAdminUser, user.RoleCodes)
+	}
 }
 
 // RefreshToken 刷新访问令牌
@@ -85,13 +134,48 @@ func (s *AdminUserService) RefreshToken(ctx context.Context, refreshToken string
 		return nil, err
 	}
 
-	// 获取用户类型
+	// 获取用户类型和用户模式
 	userType := claims.UserType
+	userMode := enum.GetUserMode(s.config.Admin.UserMode)
 
-	// 根据用户类型不同，查询不同的表
+	// 根据用户类型和用户模式处理
 	switch userType {
 	case enum.UserTypeAdminUser, enum.UserTypeSysUser: // 支持旧版本的UserTypeSysUser
-		// 系统用户 - 查询系统用户表
+		// 如果是简单模式，从普通用户表中查询管理员用户
+		if userMode == enum.UserModeSimple {
+			user, err := s.userRepo.GetByID(ctx, claims.UserID)
+			if err != nil {
+				return nil, errorx.WrapError(err, fmt.Sprintf("获取用户ID %d 失败", claims.UserID))
+			}
+
+			// 检查是否是管理员
+			if !user.IsAdmin {
+				permErr := errorx.Errorf(errorx.ErrAccessDenied, "用户ID %d 不是管理员", claims.UserID)
+				return nil, errorx.WrapError(permErr, "")
+			}
+
+			// 检查用户是否启用
+			if !user.Enabled {
+				disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "用户ID %d 已被禁用", claims.UserID)
+				return nil, errorx.WrapError(disabledErr, "")
+			}
+
+			// 获取用户角色
+			roles, roleErr := s.userRepo.GetUserRoles(ctx, user.ID, user.IsAdmin, s.config.Admin.UserMode)
+			if roleErr != nil {
+				// 如果获取角色失败，使用默认角色
+				roles = []string{"admin"}
+			}
+
+			// 生成新的访问令牌
+			accessToken, err := s.authService.GenerateAccessTokenWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeAdminUser, roles)
+			if err != nil {
+				return nil, err
+			}
+			return s.authService.CreateLoginResponse(accessToken, refreshToken), nil
+		}
+
+		// 分离模式 - 查询管理员用户表
 		user, err := s.adminUserRepo.GetByID(ctx, claims.UserID)
 		if err != nil {
 			if errorx.IsAppErr(err) {
@@ -131,8 +215,25 @@ func (s *AdminUserService) RefreshToken(ctx context.Context, refreshToken string
 			return nil, errorx.WrapError(disabledErr, "")
 		}
 
+		// 获取用户角色
+		roles, roleErr := s.userRepo.GetUserRoles(ctx, user.ID, user.IsAdmin, s.config.Admin.UserMode)
+		if roleErr != nil {
+			// 如果获取角色失败，使用默认角色
+			if user.IsAdmin {
+				roles = []string{"admin"}
+			} else {
+				roles = []string{"user"}
+			}
+		}
+
+		// 判断用户类型
+		userType := enum.UserTypeUser
+		if user.IsAdmin {
+			userType = enum.UserTypeAdminUser
+		}
+
 		// 生成新的访问令牌
-		accessToken, err := s.authService.GenerateAccessTokenWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeUser, []string{"user"})
+		accessToken, err := s.authService.GenerateAccessTokenWithContext(ctx, uint(user.ID), user.Username, userType, roles)
 		if err != nil {
 			return nil, err
 		}

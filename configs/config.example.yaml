@@ -119,6 +119,7 @@ admin:
   username: "admin"
   password: "admin123"
   email: "admin@example.com"
+  user_mode: "separate" # separate(分离模式), simple(简单模式)
 
 grpc:
   enabled: false

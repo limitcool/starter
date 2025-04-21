@@ -14,9 +14,14 @@ type AdminUserController struct {
 }
 
 func NewAdminUserController(userService *services.AdminUserService) *AdminUserController {
-	return &AdminUserController{
+	controller := &AdminUserController{
 		userService: userService,
 	}
+
+	// 将控制器添加到全局变量
+	Controllers.AdminUserController = controller
+
+	return controller
 }
 
 // AdminUserLogin 管理员用户登录

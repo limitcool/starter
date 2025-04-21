@@ -13,9 +13,14 @@ type AdminController struct {
 
 // NewAdminController 创建管理系统控制器
 func NewAdminController(adminService *services.AdminService) *AdminController {
-	return &AdminController{
+	controller := &AdminController{
 		adminService: adminService,
 	}
+
+	// 将控制器添加到全局变量
+	Controllers.AdminController = controller
+
+	return controller
 }
 
 // GetSystemSettings 获取系统设置

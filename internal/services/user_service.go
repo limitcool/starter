@@ -58,7 +58,7 @@ func (s *UserService) VerifyPassword(password, hashedPassword string) bool {
 }
 
 // Register 用户注册
-func (s *UserService) Register(ctx context.Context, req v1.UserRegisterRequest, registerIP string) (*model.User, error) {
+func (s *UserService) Register(ctx context.Context, req v1.UserRegisterRequest, registerIP string, isAdmin bool) (*model.User, error) {
 	isExist, err := s.userRepo.IsExist(ctx, req.Username)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("检查用户名 %s 是否存在失败", req.Username))
@@ -86,6 +86,7 @@ func (s *UserService) Register(ctx context.Context, req v1.UserRegisterRequest, 
 		Birthday:   &time.Time{},
 		Address:    req.Address,
 		RegisterIP: registerIP,
+		IsAdmin:    isAdmin, // 设置是否为管理员
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
@@ -130,10 +131,27 @@ func (s *UserService) Login(ctx context.Context, username, password string, ip s
 		return nil, errorx.WrapError(err, fmt.Sprintf("更新用户 %s 的登录信息失败", username))
 	}
 
-	// 使用认证服务生成令牌
-	// 普通用户默认角色
-	roles := []string{"user"}
-	return s.authService.GenerateTokensWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeUser, roles)
+	// 用户模式在GetUserRoles中使用
+
+	// 判断用户类型
+	userType := enum.UserTypeUser
+	if user.IsAdmin {
+		userType = enum.UserTypeAdminUser
+	}
+
+	// 获取用户角色
+	roles, err := s.userRepo.GetUserRoles(ctx, user.ID, user.IsAdmin, s.config.Admin.UserMode)
+	if err != nil {
+		// 如果获取角色失败，使用默认角色
+		if user.IsAdmin {
+			roles = []string{"admin"}
+		} else {
+			roles = []string{"user"}
+		}
+	}
+
+	// 生成令牌
+	return s.authService.GenerateTokensWithContext(ctx, uint(user.ID), user.Username, userType, roles)
 }
 
 // UpdateUser 更新用户信息
@@ -187,3 +205,9 @@ func (s *UserService) ChangePassword(ctx context.Context, id int64, oldPassword,
 }
 
 // 该函数已移动到 controller/user.go 中的 UserInfo 方法
+
+// RegisterAdmin 注册管理员用户
+func (s *UserService) RegisterAdmin(ctx context.Context, req v1.UserRegisterRequest, registerIP string) (*model.User, error) {
+	// 调用通用注册方法，并设置为管理员
+	return s.Register(ctx, req, registerIP, true)
+}

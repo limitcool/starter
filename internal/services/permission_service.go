@@ -8,9 +8,11 @@ import (
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/casbin"
+	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/repository"
 	"github.com/spf13/viper"
+	"go.uber.org/fx"
 )
 
 // PermissionService 权限服务
@@ -24,13 +26,37 @@ type PermissionService struct {
 }
 
 // NewPermissionService 创建权限服务
-func NewPermissionService(
-	permissionRepo *repository.PermissionRepo,
-	roleRepo *repository.RoleRepo,
-	menuRepo *repository.MenuRepo,
-	casbinService casbin.Service,
-	config *configs.Config,
-) *PermissionService {
+func NewPermissionService(params ServiceParams, casbinService casbin.Service) *PermissionService {
+	// 使用参数中的仓库和配置
+	permissionRepo := params.PermissionRepo
+	roleRepo := params.RoleRepo
+	menuRepo := params.MenuRepo
+	config := params.Config
+	// 获取用户模式
+	userMode := enum.GetUserMode(config.Admin.UserMode)
+
+	// 如果是简单模式，返回一个空的实现
+	if userMode == enum.UserModeSimple {
+		// 创建 PermissionService 实例
+		ps := &PermissionService{
+			permissionRepo: permissionRepo,
+			roleRepo:       roleRepo,
+			menuRepo:       menuRepo,
+			casbinService:  nil, // 简单模式不使用Casbin
+			config:         config,
+		}
+
+		// 初始化 MenuService
+		ps.menuService = NewMenuService(ServiceParams{
+			MenuRepo: menuRepo,
+			RoleRepo: roleRepo,
+			Config:   config,
+			LC:       params.LC,
+		}, nil)
+
+		return ps
+	}
+
 	// 创建 PermissionService 实例
 	ps := &PermissionService{
 		permissionRepo: permissionRepo,
@@ -40,8 +66,25 @@ func NewPermissionService(
 		config:         config,
 	}
 
+	// 注册生命周期钩子
+	params.LC.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			logger.InfoContext(ctx, "PermissionService initialized")
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			logger.InfoContext(ctx, "PermissionService stopped")
+			return nil
+		},
+	})
+
 	// 初始化 MenuService
-	ps.menuService = NewMenuService(menuRepo, roleRepo, casbinService)
+	ps.menuService = NewMenuService(ServiceParams{
+		MenuRepo: menuRepo,
+		RoleRepo: roleRepo,
+		Config:   config,
+		LC:       params.LC,
+	}, casbinService)
 
 	return ps
 }
@@ -185,6 +228,15 @@ func (s *PermissionService) GetPermissionsByUserID(ctx context.Context, userID u
 
 // CheckPermission 检查权限
 func (s *PermissionService) CheckPermission(ctx context.Context, userID string, obj string, act string) (bool, error) {
+	// 获取用户模式
+	userMode := enum.GetUserMode(s.config.Admin.UserMode)
+
+	// 如果是简单模式，直接返回true
+	if userMode == enum.UserModeSimple || s.casbinService == nil {
+		return true, nil
+	}
+
+	// 分离模式，使用Casbin检查权限
 	return s.casbinService.CheckPermission(ctx, userID, obj, act)
 }
 

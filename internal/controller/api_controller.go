@@ -18,10 +18,15 @@ type APIController struct {
 
 // NewAPIController 创建API控制器
 func NewAPIController(apiService *services.APIService, menuAPIService *services.MenuAPIService) *APIController {
-	return &APIController{
+	controller := &APIController{
 		apiService:     apiService,
 		menuAPIService: menuAPIService,
 	}
+
+	// 将控制器添加到全局变量
+	Controllers.APIController = controller
+
+	return controller
 }
 
 // GetAPIs 获取API列表
