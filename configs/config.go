@@ -61,6 +61,7 @@ type Database struct {
 	MaxOpenConn     int
 	ConnMaxLifeTime time.Duration
 	SlowThreshold   time.Duration // 慢查询时长，默认500ms
+	SSLMode         string        // SSL模式，默认disable，可选值：disable, require, verify-ca, verify-full
 }
 
 // Config jwt config

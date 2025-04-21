@@ -235,7 +235,7 @@ func (ctrl *FileController) UpdateSysUserAvatar(c *gin.Context) {
 	}
 
 	// 更新头像
-	avatarURL, err := ctrl.fileService.UpdateSysUserAvatar(c.Request.Context(), cast.ToInt64(userID), avatar)
+	avatarURL, err := ctrl.fileService.UpdateAdminUserAvatar(c.Request.Context(), cast.ToInt64(userID), avatar)
 	if err != nil {
 		response.Error(c, err)
 		return

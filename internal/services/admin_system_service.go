@@ -9,27 +9,27 @@ import (
 	"go.uber.org/fx"
 )
 
-// SystemService 系统服务
-type SystemService struct {
-	systemRepo *repository.SystemRepo
+// AdminSystemService 系统服务
+type AdminSystemService struct {
+	systemRepo *repository.AdminSystemRepo
 	config     *configs.Config
 }
 
-// NewSystemService 创建系统服务
-func NewSystemService(params ServiceParams) *SystemService {
-	service := &SystemService{
-		systemRepo: params.SystemRepo,
+// NewAdminSystemService 创建系统服务
+func NewAdminSystemService(params ServiceParams) *AdminSystemService {
+	service := &AdminSystemService{
+		systemRepo: params.AdminSystemRepo,
 		config:     params.Config,
 	}
 
 	// 注册生命周期钩子
 	params.LC.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("SystemService initialized")
+			logger.Info("AdminSystemService initialized")
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("SystemService stopped")
+			logger.Info("AdminSystemService stopped")
 			return nil
 		},
 	})
@@ -38,7 +38,7 @@ func NewSystemService(params ServiceParams) *SystemService {
 }
 
 // GetSystemSettings 获取系统设置
-func (s *SystemService) GetSystemSettings(ctx context.Context) map[string]any {
+func (s *AdminSystemService) GetSystemSettings(ctx context.Context) map[string]any {
 	// 使用服务实例中的配置
 	config := s.config
 

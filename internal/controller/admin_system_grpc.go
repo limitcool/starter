@@ -13,23 +13,23 @@ import (
 	"google.golang.org/grpc"
 )
 
-// SystemGRPCController gRPC系统控制器
-type SystemGRPCController struct {
+// AdminSystemGRPCController gRPC系统控制器
+type AdminSystemGRPCController struct {
 	pb.UnimplementedSystemServiceServer
 	config        *configs.Config
-	systemService *services.SystemService
+	systemService *services.AdminSystemService
 }
 
-// NewSystemGRPCController 创建gRPC系统控制器
-func NewSystemGRPCController(config *configs.Config, systemService *services.SystemService) *SystemGRPCController {
-	return &SystemGRPCController{
+// NewAdminSystemGRPCController 创建gRPC系统控制器
+func NewAdminSystemGRPCController(config *configs.Config, systemService *services.AdminSystemService) *AdminSystemGRPCController {
+	return &AdminSystemGRPCController{
 		config:        config,
 		systemService: systemService,
 	}
 }
 
 // GetSystemInfo 获取系统信息
-func (c *SystemGRPCController) GetSystemInfo(ctx context.Context, req *pb.SystemInfoRequest) (*pb.SystemInfoResponse, error) {
+func (c *AdminSystemGRPCController) GetSystemInfo(ctx context.Context, req *pb.SystemInfoRequest) (*pb.SystemInfoResponse, error) {
 	// 记录请求
 	logger.InfoContext(ctx, "GetSystemInfo called", "request_id", req.RequestId)
 
@@ -47,25 +47,25 @@ func (c *SystemGRPCController) GetSystemInfo(ctx context.Context, req *pb.System
 	return resp, nil
 }
 
-// SystemGRPCControllerParams gRPC系统控制器参数
-type SystemGRPCControllerParams struct {
+// AdminSystemGRPCControllerParams gRPC系统控制器参数
+type AdminSystemGRPCControllerParams struct {
 	fx.In
 
 	LC            fx.Lifecycle
 	Config        *configs.Config
-	SystemService *services.SystemService
+	SystemService *services.AdminSystemService
 	GRPCServer    *grpc.Server `optional:"true"`
 }
 
-// RegisterSystemGRPCController 注册gRPC系统控制器
-func RegisterSystemGRPCController(params SystemGRPCControllerParams) {
+// RegisterAdminSystemGRPCController 注册gRPC系统控制器
+func RegisterAdminSystemGRPCController(params AdminSystemGRPCControllerParams) {
 	// 如果gRPC服务未启用或服务器为nil，直接返回
 	if !params.Config.GRPC.Enabled || params.GRPCServer == nil {
 		return
 	}
 
 	// 创建控制器
-	controller := NewSystemGRPCController(params.Config, params.SystemService)
+	controller := NewAdminSystemGRPCController(params.Config, params.SystemService)
 
 	// 注册服务
 	pb.RegisterSystemServiceServer(params.GRPCServer, controller)
@@ -73,11 +73,11 @@ func RegisterSystemGRPCController(params SystemGRPCControllerParams) {
 	// 注册生命周期钩子
 	params.LC.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("gRPC系统服务已注册", "service", "SystemService")
+			logger.Info("gRPC管理系统服务已注册", "service", "AdminSystemService")
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("gRPC系统服务已停止", "service", "SystemService")
+			logger.Info("gRPC管理系统服务已停止", "service", "AdminSystemService")
 			return nil
 		},
 	})

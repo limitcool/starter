@@ -664,7 +664,7 @@ The project integrates the Casbin RBAC permission system and dynamic menu system
 
 1. Role and menu association:
    ```
-   POST /api/v1/admin/role/menu
+   POST /api/v1/admin-api/roles/menu
    {
      "role_id": 1,
      "menu_ids": [1, 2, 3]
@@ -673,10 +673,10 @@ The project integrates the Casbin RBAC permission system and dynamic menu system
 
 2. Role and permission association:
    ```
-   POST /api/v1/admin/role/permission
+   POST /api/v1/admin-api/roles/permission
    {
      "role_code": "admin",
-     "object": "/api/v1/admin/user",
+     "object": "/api/v1/admin-api/users",
      "action": "GET"
    }
    ```

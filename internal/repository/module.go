@@ -11,7 +11,7 @@ import (
 var Module = fx.Options(
 	// 提供所有仓库
 	fx.Provide(NewUserRepo),
-	fx.Provide(NewSysUserRepo),
+	fx.Provide(NewAdminUserRepo),
 	fx.Provide(NewRoleRepo),
 	fx.Provide(NewMenuRepo),
 	fx.Provide(NewMenuButtonRepo),
@@ -19,7 +19,8 @@ var Module = fx.Options(
 	fx.Provide(NewOperationLogRepo),
 	fx.Provide(NewFileRepo),
 	fx.Provide(NewAPIRepo),
-	fx.Provide(NewSystemRepo),
+	fx.Provide(NewAdminSystemRepo),
+	// 不再提供旧的类型
 )
 
 // RepoParams 仓库参数

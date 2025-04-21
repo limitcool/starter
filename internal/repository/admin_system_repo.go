@@ -8,25 +8,25 @@ import (
 	"gorm.io/gorm"
 )
 
-// SystemRepo 系统仓库
-type SystemRepo struct {
+// AdminSystemRepo 系统仓库
+type AdminSystemRepo struct {
 	DB *gorm.DB
 }
 
-// NewSystemRepo 创建系统仓库
-func NewSystemRepo(params RepoParams) *SystemRepo {
-	repo := &SystemRepo{
+// NewAdminSystemRepo 创建系统仓库
+func NewAdminSystemRepo(params RepoParams) *AdminSystemRepo {
+	repo := &AdminSystemRepo{
 		DB: params.DB,
 	}
 
 	// 注册生命周期钩子
 	params.LC.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("SystemRepo initialized")
+			logger.Info("AdminSystemRepo initialized")
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("SystemRepo stopped")
+			logger.Info("AdminSystemRepo stopped")
 			return nil
 		},
 	})
@@ -35,8 +35,8 @@ func NewSystemRepo(params RepoParams) *SystemRepo {
 }
 
 // GetSystemSettings 获取系统设置
-func (r *SystemRepo) GetSystemSettings(ctx context.Context) (map[string]any, error) {
+func (r *AdminSystemRepo) GetSystemSettings(ctx context.Context) (map[string]any, error) {
 	// 这里可以从数据库中获取系统设置
-	// 目前我们返回一个空的map，因为SystemService会使用配置文件中的设置
+	// 目前我们返回一个空的map，因为AdminSystemService会使用配置文件中的设置
 	return map[string]any{}, nil
 }

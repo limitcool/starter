@@ -15,8 +15,8 @@ import (
 
 func NewUserController(params ControllerParams) *UserController {
 	controller := &UserController{
-		sysUserService: params.SysUserService,
-		userService:    params.UserService,
+		adminUserService: params.AdminUserService,
+		userService:      params.UserService,
 	}
 
 	// 注册生命周期钩子
@@ -35,8 +35,8 @@ func NewUserController(params ControllerParams) *UserController {
 }
 
 type UserController struct {
-	sysUserService *services.SysUserService
-	userService    *services.UserService
+	adminUserService *services.AdminUserService
+	userService      *services.UserService
 }
 
 // UserLogin 普通用户登录
@@ -189,7 +189,7 @@ func (ctrl *UserController) RefreshToken(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	tokenResponse, err := ctrl.sysUserService.RefreshToken(c.Request.Context(), req.RefreshToken)
+	tokenResponse, err := ctrl.adminUserService.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		logger.LogErrorContext(c.Request.Context(), "RefreshToken 刷新访问令牌失败", err,
 			"refresh_token", req.RefreshToken)

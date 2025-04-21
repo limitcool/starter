@@ -13,9 +13,9 @@ import (
 	"github.com/limitcool/starter/internal/repository"
 )
 
-// SysUserService 用户服务
-type SysUserService struct {
-	sysUserRepo   *repository.SysUserRepo
+// AdminUserService 管理员用户服务
+type AdminUserService struct {
+	adminUserRepo *repository.AdminUserRepo
 	userRepo      *repository.UserRepo
 	roleService   *RoleService
 	casbinService casbin.Service
@@ -23,13 +23,13 @@ type SysUserService struct {
 	authService   *AuthService
 }
 
-// NewSysUserService 创建用户服务
-func NewSysUserService(sysUserRepo *repository.SysUserRepo, userRepo *repository.UserRepo, roleService *RoleService, casbinService casbin.Service, config *configs.Config) *SysUserService {
+// NewAdminUserService 创建管理员用户服务
+func NewAdminUserService(adminUserRepo *repository.AdminUserRepo, userRepo *repository.UserRepo, roleService *RoleService, casbinService casbin.Service, config *configs.Config) *AdminUserService {
 	// 创建认证服务
 	authService := NewAuthService(config)
 
-	return &SysUserService{
-		sysUserRepo:   sysUserRepo,
+	return &AdminUserService{
+		adminUserRepo: adminUserRepo,
 		userRepo:      userRepo,
 		roleService:   roleService,
 		casbinService: casbinService,
@@ -39,15 +39,15 @@ func NewSysUserService(sysUserRepo *repository.SysUserRepo, userRepo *repository
 }
 
 // VerifyPassword 验证用户密码
-func (s *SysUserService) VerifyPassword(password, hashedPassword string) bool {
+func (s *AdminUserService) VerifyPassword(password, hashedPassword string) bool {
 	// 使用通用的 VerifyPassword 函数
 	return VerifyPassword(password, hashedPassword)
 }
 
 // Login 用户登录
-func (s *SysUserService) Login(ctx context.Context, username, password string, ip string) (*v1.LoginResponse, error) {
+func (s *AdminUserService) Login(ctx context.Context, username, password string, ip string) (*v1.LoginResponse, error) {
 	// 获取用户
-	user, err := s.sysUserRepo.GetByUsername(ctx, username)
+	user, err := s.adminUserRepo.GetByUsername(ctx, username)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("用户名 %s 不存在", username))
 	}
@@ -69,16 +69,16 @@ func (s *SysUserService) Login(ctx context.Context, username, password string, i
 		"last_login": time.Now(),
 		"last_ip":    ip,
 	}
-	if err := s.sysUserRepo.UpdateFields(ctx, user.ID, fields); err != nil {
+	if err := s.adminUserRepo.UpdateFields(ctx, user.ID, fields); err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("更新用户 %s 的登录信息失败", username))
 	}
 
 	// 使用认证服务生成令牌
-	return s.authService.GenerateTokensWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeSysUser, user.RoleCodes)
+	return s.authService.GenerateTokensWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeAdminUser, user.RoleCodes)
 }
 
 // RefreshToken 刷新访问令牌
-func (s *SysUserService) RefreshToken(ctx context.Context, refreshToken string) (*v1.LoginResponse, error) {
+func (s *AdminUserService) RefreshToken(ctx context.Context, refreshToken string) (*v1.LoginResponse, error) {
 	// 验证刷新令牌
 	claims, err := s.authService.ValidateRefreshTokenWithContext(ctx, refreshToken)
 	if err != nil {
@@ -90,24 +90,24 @@ func (s *SysUserService) RefreshToken(ctx context.Context, refreshToken string) 
 
 	// 根据用户类型不同，查询不同的表
 	switch userType {
-	case enum.UserTypeSysUser:
+	case enum.UserTypeAdminUser, enum.UserTypeSysUser: // 支持旧版本的UserTypeSysUser
 		// 系统用户 - 查询系统用户表
-		user, err := s.sysUserRepo.GetByID(ctx, claims.UserID)
+		user, err := s.adminUserRepo.GetByID(ctx, claims.UserID)
 		if err != nil {
 			if errorx.IsAppErr(err) {
-				return nil, errorx.WrapError(err, fmt.Sprintf("获取系统用户ID %d 失败", claims.UserID))
+				return nil, errorx.WrapError(err, fmt.Sprintf("获取管理员用户ID %d 失败", claims.UserID))
 			}
-			return nil, errorx.WrapError(err, fmt.Sprintf("获取系统用户ID %d 失败", claims.UserID))
+			return nil, errorx.WrapError(err, fmt.Sprintf("获取管理员用户ID %d 失败", claims.UserID))
 		}
 
 		// 检查用户是否启用
 		if !user.Enabled {
-			disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "系统用户ID %d 已被禁用", claims.UserID)
+			disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "管理员用户ID %d 已被禁用", claims.UserID)
 			return nil, errorx.WrapError(disabledErr, "")
 		}
 
 		// 生成新的访问令牌
-		accessToken, err := s.authService.GenerateAccessTokenWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeSysUser, user.RoleCodes)
+		accessToken, err := s.authService.GenerateAccessTokenWithContext(ctx, uint(user.ID), user.Username, enum.UserTypeAdminUser, user.RoleCodes)
 		if err != nil {
 			return nil, err
 		}

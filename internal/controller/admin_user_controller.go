@@ -9,21 +9,21 @@ import (
 	"github.com/limitcool/starter/internal/services"
 )
 
-type SysUserController struct {
-	userService *services.SysUserService
+type AdminUserController struct {
+	userService *services.AdminUserService
 }
 
-func NewSysUserController(userService *services.SysUserService) *SysUserController {
-	return &SysUserController{
+func NewAdminUserController(userService *services.AdminUserService) *AdminUserController {
+	return &AdminUserController{
 		userService: userService,
 	}
 }
 
-// SysUserLogin 系统用户登录
-func (ctrl *SysUserController) SysUserLogin(c *gin.Context) {
+// AdminUserLogin 管理员用户登录
+func (ctrl *AdminUserController) AdminUserLogin(c *gin.Context) {
 	var req v1.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.LogErrorContext(c.Request.Context(), "SysUserLogin 无效的请求参数", err)
+		logger.LogErrorContext(c.Request.Context(), "AdminUserLogin 无效的请求参数", err)
 		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
@@ -35,7 +35,7 @@ func (ctrl *SysUserController) SysUserLogin(c *gin.Context) {
 	tokenResponse, err := ctrl.userService.Login(c.Request.Context(), req.Username, req.Password, clientIP)
 	if err != nil {
 		// 使用辅助函数记录错误，同时包含额外的上下文信息
-		logger.LogErrorContext(c.Request.Context(), "SysUserLogin 登录失败", err,
+		logger.LogErrorContext(c.Request.Context(), "AdminUserLogin 登录失败", err,
 			"username", req.Username,
 			"ip", clientIP)
 

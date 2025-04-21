@@ -432,15 +432,23 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 	})
 }
 
+// RegisterAPIPathMigrations 注册API路径更新迁移
+func RegisterAPIPathMigrations(migrator *Migrator) {
+	// 注册API路径更新迁移
+	RegisterUpdateAPIPathsMigrations(migrator)
+}
+
 // RegisterAllMigrations 注册所有迁移
 func RegisterAllMigrations(migrator *Migrator) {
 	// 按顺序注册所有迁移
 	RegisterCoreUserMigrations(migrator)
+	RegisterAdminUserMigrations(migrator) // 添加管理员用户迁移
 	RegisterRoleMigrations(migrator)
 	RegisterPermissionMigrations(migrator)
 	RegisterMenuMigrations(migrator)
 	RegisterOperationLogMigrations(migrator)
 	RegisterInitialDataMigrations(migrator) // 添加初始数据迁移
+	RegisterAPIPathMigrations(migrator)     // 添加API路径更新迁移
 
 	// 添加自定义业务迁移...
 }

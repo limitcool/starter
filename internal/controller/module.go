@@ -11,20 +11,20 @@ import (
 var Module = fx.Options(
 	// 提供所有HTTP控制器
 	fx.Provide(NewUserController),
-	fx.Provide(NewSysUserController),
+	fx.Provide(NewAdminUserController),
 	fx.Provide(NewRoleController),
 	fx.Provide(NewMenuController),
 	fx.Provide(NewPermissionController),
 	fx.Provide(NewOperationLogController),
 	fx.Provide(NewFileController),
 	fx.Provide(NewAPIController),
-	fx.Provide(NewSystemController),
+	fx.Provide(NewAdminSystemController),
 
 	// 提供所有gRPC控制器
-	fx.Provide(NewSystemGRPCController),
+	fx.Provide(NewAdminSystemGRPCController),
 
 	// 注册gRPC控制器
-	fx.Invoke(RegisterSystemGRPCController),
+	fx.Invoke(RegisterAdminSystemGRPCController),
 )
 
 // ControllerParams 控制器参数
@@ -37,7 +37,7 @@ type ControllerParams struct {
 
 	// 服务
 	UserService         *services.UserService
-	SysUserService      *services.SysUserService
+	AdminUserService    *services.AdminUserService
 	RoleService         *services.RoleService
 	MenuService         *services.MenuService
 	MenuAPIService      *services.MenuAPIService
@@ -45,5 +45,5 @@ type ControllerParams struct {
 	OperationLogService *services.OperationLogService
 	FileService         *services.FileService
 	APIService          *services.APIService
-	SystemService       *services.SystemService
+	AdminSystemService  *services.AdminSystemService
 }

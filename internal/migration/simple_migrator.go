@@ -321,18 +321,15 @@ func (m *SimpleMigrator) StatusWithContext(ctx context.Context) ([]map[string]an
 
 // SimpleMigrationItem 表示单个迁移项
 type SimpleMigrationItem struct {
-	Name string                // 迁移名称，如 "create_users_table"
+	Name string               // 迁移名称，如 "create_users_table"
 	Up   func(*gorm.DB) error // 向上迁移函数
 	Down func(*gorm.DB) error // 向下迁移函数
 }
 
-// loadMigrations 加载所有迁移
-func (m *SimpleMigrator) loadMigrations() ([]*SimpleMigrationItem, error) {
-	return m.loadMigrationsWithContext(context.Background())
-}
+// 删除未使用的方法
 
 // loadMigrationsWithContext 使用上下文加载所有迁移
-func (m *SimpleMigrator) loadMigrationsWithContext(ctx context.Context) ([]*SimpleMigrationItem, error) {
+func (m *SimpleMigrator) loadMigrationsWithContext(_ context.Context) ([]*SimpleMigrationItem, error) {
 	// 这里我们将返回所有注册的迁移
 	// 在实际实现中，你可以从文件系统或其他地方加载迁移
 	migrations := make([]*SimpleMigrationItem, 0)

@@ -30,7 +30,7 @@ func initAPIs(tx *gorm.DB) error {
 	apis := []model.API{
 		// 用户管理API
 		{
-			Path:        "/api/v1/admin/users",
+			Path:        "/api/v1/admin-api/users",
 			Method:      "GET",
 			Name:        "获取用户列表",
 			Description: "获取系统用户列表",
@@ -38,7 +38,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/users",
+			Path:        "/api/v1/admin-api/users",
 			Method:      "POST",
 			Name:        "创建用户",
 			Description: "创建系统用户",
@@ -46,7 +46,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/users/:id",
+			Path:        "/api/v1/admin-api/users/:id",
 			Method:      "PUT",
 			Name:        "更新用户",
 			Description: "更新系统用户信息",
@@ -54,7 +54,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/users/:id",
+			Path:        "/api/v1/admin-api/users/:id",
 			Method:      "DELETE",
 			Name:        "删除用户",
 			Description: "删除系统用户",
@@ -63,7 +63,7 @@ func initAPIs(tx *gorm.DB) error {
 		},
 		// 角色管理API
 		{
-			Path:        "/api/v1/admin/roles",
+			Path:        "/api/v1/admin-api/roles",
 			Method:      "GET",
 			Name:        "获取角色列表",
 			Description: "获取角色列表",
@@ -71,7 +71,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/roles",
+			Path:        "/api/v1/admin-api/roles",
 			Method:      "POST",
 			Name:        "创建角色",
 			Description: "创建角色",
@@ -79,7 +79,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/roles/:id",
+			Path:        "/api/v1/admin-api/roles/:id",
 			Method:      "PUT",
 			Name:        "更新角色",
 			Description: "更新角色信息",
@@ -87,7 +87,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/roles/:id",
+			Path:        "/api/v1/admin-api/roles/:id",
 			Method:      "DELETE",
 			Name:        "删除角色",
 			Description: "删除角色",
@@ -96,7 +96,7 @@ func initAPIs(tx *gorm.DB) error {
 		},
 		// 菜单管理API
 		{
-			Path:        "/api/v1/admin/menus",
+			Path:        "/api/v1/admin-api/menus",
 			Method:      "GET",
 			Name:        "获取菜单列表",
 			Description: "获取菜单列表",
@@ -104,7 +104,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/menus",
+			Path:        "/api/v1/admin-api/menus",
 			Method:      "POST",
 			Name:        "创建菜单",
 			Description: "创建菜单",
@@ -112,7 +112,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/menus/:id",
+			Path:        "/api/v1/admin-api/menus/:id",
 			Method:      "PUT",
 			Name:        "更新菜单",
 			Description: "更新菜单信息",
@@ -120,7 +120,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/menus/:id",
+			Path:        "/api/v1/admin-api/menus/:id",
 			Method:      "DELETE",
 			Name:        "删除菜单",
 			Description: "删除菜单",
@@ -129,7 +129,7 @@ func initAPIs(tx *gorm.DB) error {
 		},
 		// 权限管理API
 		{
-			Path:        "/api/v1/admin/permissions",
+			Path:        "/api/v1/admin-api/permissions",
 			Method:      "GET",
 			Name:        "获取权限列表",
 			Description: "获取权限列表",
@@ -137,7 +137,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/permissions",
+			Path:        "/api/v1/admin-api/permissions",
 			Method:      "POST",
 			Name:        "创建权限",
 			Description: "创建权限",
@@ -145,7 +145,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/permissions/:id",
+			Path:        "/api/v1/admin-api/permissions/:id",
 			Method:      "PUT",
 			Name:        "更新权限",
 			Description: "更新权限信息",
@@ -153,7 +153,7 @@ func initAPIs(tx *gorm.DB) error {
 			Enabled:     true,
 		},
 		{
-			Path:        "/api/v1/admin/permissions/:id",
+			Path:        "/api/v1/admin-api/permissions/:id",
 			Method:      "DELETE",
 			Name:        "删除权限",
 			Description: "删除权限",
@@ -253,7 +253,7 @@ func dropAPIs(tx *gorm.DB) error {
 	if err := tx.Where("type = ?", enum.PermissionTypeAPI).Delete(&model.Permission{}).Error; err != nil {
 		return err
 	}
-	
+
 	// 删除所有API
 	return tx.Delete(&model.API{}).Error
 }

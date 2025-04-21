@@ -22,12 +22,17 @@ const (
 type UserType uint8
 
 const (
-	UserTypeSysUser UserType = iota + 1 // 系统用户
-	UserTypeUser                        // 普通用户
+	UserTypeSysUser   UserType = iota + 1 // 系统用户(旧版本，保留为了兼容)
+	UserTypeUser                          // 普通用户
+	UserTypeAdminUser                     // 管理员用户(新版本)
 )
 
 func (u UserType) String() string {
-	return []string{"sys_user", "user"}[u-1]
+	names := []string{"sys_user", "user", "admin_user"}
+	if int(u) <= 0 || int(u) > len(names) {
+		return "unknown"
+	}
+	return names[u-1]
 }
 
 type TokenType uint8

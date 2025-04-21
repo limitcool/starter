@@ -149,19 +149,46 @@ func createCasbinRuleTable(tx *gorm.DB) error {
 		return nil
 	}
 
-	// 创建Casbin规则表
-	sql := `CREATE TABLE casbin_rule (
-		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-		ptype VARCHAR(100) DEFAULT NULL,
-		v0 VARCHAR(100) DEFAULT NULL,
-		v1 VARCHAR(100) DEFAULT NULL,
-		v2 VARCHAR(100) DEFAULT NULL,
-		v3 VARCHAR(100) DEFAULT NULL,
-		v4 VARCHAR(100) DEFAULT NULL,
-		v5 VARCHAR(100) DEFAULT NULL,
-		PRIMARY KEY (id),
-		UNIQUE KEY idx_casbin_rule (ptype,v0,v1,v2,v3,v4,v5)
-	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+	// 获取数据库类型
+	var dbType string
+	if tx.Dialector.Name() == "mysql" || tx.Dialector.Name() == "sqlite" {
+		// MySQL或SQLite语法
+		dbType = "mysql"
+	} else {
+		// PostgreSQL语法
+		dbType = "postgres"
+	}
+
+	// 根据数据库类型选择不同的SQL语句
+	var sql string
+	if dbType == "mysql" {
+		// MySQL语法
+		sql = `CREATE TABLE casbin_rule (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			ptype VARCHAR(100) DEFAULT NULL,
+			v0 VARCHAR(100) DEFAULT NULL,
+			v1 VARCHAR(100) DEFAULT NULL,
+			v2 VARCHAR(100) DEFAULT NULL,
+			v3 VARCHAR(100) DEFAULT NULL,
+			v4 VARCHAR(100) DEFAULT NULL,
+			v5 VARCHAR(100) DEFAULT NULL,
+			PRIMARY KEY (id),
+			UNIQUE KEY idx_casbin_rule (ptype,v0,v1,v2,v3,v4,v5)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+	} else {
+		// PostgreSQL语法
+		sql = `CREATE TABLE casbin_rule (
+			id BIGSERIAL PRIMARY KEY,
+			ptype VARCHAR(100) DEFAULT NULL,
+			v0 VARCHAR(100) DEFAULT NULL,
+			v1 VARCHAR(100) DEFAULT NULL,
+			v2 VARCHAR(100) DEFAULT NULL,
+			v3 VARCHAR(100) DEFAULT NULL,
+			v4 VARCHAR(100) DEFAULT NULL,
+			v5 VARCHAR(100) DEFAULT NULL,
+			UNIQUE (ptype,v0,v1,v2,v3,v4,v5)
+		);`
+	}
 
 	return tx.Exec(sql).Error
 }
@@ -362,7 +389,7 @@ func initAdminUser(tx *gorm.DB, config ...*configs.Config) error {
 
 	// 检查是否已有管理员用户
 	var count int64
-	if err := tx.Model(&model.SysUser{}).Where("username = ?", username).Count(&count).Error; err != nil {
+	if err := tx.Model(&model.AdminUser{}).Where("username = ?", username).Count(&count).Error; err != nil {
 		return err
 	}
 
@@ -384,7 +411,7 @@ func initAdminUser(tx *gorm.DB, config ...*configs.Config) error {
 	}
 
 	// 使用雪花ID
-	adminUser := model.SysUser{
+	adminUser := model.AdminUser{
 		Username: username,
 		Password: hashedPassword,
 		Nickname: nickname,
@@ -397,23 +424,26 @@ func initAdminUser(tx *gorm.DB, config ...*configs.Config) error {
 	}
 
 	// 关联角色
-	userRole := model.UserRole{
-		UserID: adminUser.ID,
-		RoleID: adminRole.ID,
+	userRole := struct {
+		AdminUserID int64 `gorm:"column:admin_user_id"`
+		RoleID      int64 `gorm:"column:role_id"`
+	}{
+		AdminUserID: adminUser.ID,
+		RoleID:      int64(adminRole.ID),
 	}
 
-	return tx.Create(&userRole).Error
+	return tx.Table("admin_user_role").Create(&userRole).Error
 }
 
 func dropAdminUser(tx *gorm.DB) error {
 	// 获取管理员用户
-	var adminUser model.SysUser
+	var adminUser model.AdminUser
 	if err := tx.Where("username = ?", "admin").First(&adminUser).Error; err != nil {
 		return nil // 如果不存在，直接返回
 	}
 
 	// 删除用户角色关联
-	if err := tx.Where("user_id = ?", adminUser.ID).Delete(&model.UserRole{}).Error; err != nil {
+	if err := tx.Table("admin_user_role").Where("admin_user_id = ?", adminUser.ID).Delete(nil).Error; err != nil {
 		return err
 	}
 

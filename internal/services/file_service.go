@@ -18,19 +18,19 @@ import (
 
 // FileService 文件服务
 type FileService struct {
-	storage     *filestore.Storage
-	fileRepo    *repository.FileRepo
-	userRepo    *repository.UserRepo
-	sysUserRepo *repository.SysUserRepo
+	storage       *filestore.Storage
+	fileRepo      *repository.FileRepo
+	userRepo      *repository.UserRepo
+	adminUserRepo *repository.AdminUserRepo
 }
 
 // NewFileService 创建文件服务
-func NewFileService(storage *filestore.Storage, fileRepo *repository.FileRepo, userRepo *repository.UserRepo, sysUserRepo *repository.SysUserRepo) *FileService {
+func NewFileService(storage *filestore.Storage, fileRepo *repository.FileRepo, userRepo *repository.UserRepo, adminUserRepo *repository.AdminUserRepo) *FileService {
 	return &FileService{
-		storage:     storage,
-		fileRepo:    fileRepo,
-		userRepo:    userRepo,
-		sysUserRepo: sysUserRepo,
+		storage:       storage,
+		fileRepo:      fileRepo,
+		userRepo:      userRepo,
+		adminUserRepo: adminUserRepo,
 	}
 }
 
@@ -212,10 +212,10 @@ func (s *FileService) UpdateUserAvatar(ctx context.Context, userID int64, fileHe
 	return file.URL, nil
 }
 
-// UpdateSysUserAvatar 更新系统用户头像
-func (s *FileService) UpdateSysUserAvatar(ctx context.Context, userID int64, fileHeader *multipart.FileHeader) (string, error) {
+// UpdateAdminUserAvatar 更新管理员用户头像
+func (s *FileService) UpdateAdminUserAvatar(ctx context.Context, userID int64, fileHeader *multipart.FileHeader) (string, error) {
 	// 上传头像文件（图片类型，头像用途）
-	file, err := s.UploadFile(ctx, fileHeader, model.FileTypeImage, userID, enum.UserTypeSysUser, false)
+	file, err := s.UploadFile(ctx, fileHeader, model.FileTypeImage, userID, enum.UserTypeAdminUser, false)
 	if err != nil {
 		return "", err
 	}
@@ -225,8 +225,8 @@ func (s *FileService) UpdateSysUserAvatar(ctx context.Context, userID int64, fil
 		return "", errorx.ErrDatabase.WithError(err)
 	}
 
-	// 更新系统用户头像
-	if err := s.sysUserRepo.UpdateAvatar(ctx, userID, file.ID); err != nil {
+	// 更新管理员用户头像
+	if err := s.adminUserRepo.UpdateAvatar(ctx, userID, file.ID); err != nil {
 		return "", err
 	}
 

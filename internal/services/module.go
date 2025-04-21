@@ -12,7 +12,7 @@ var Module = fx.Options(
 	// 提供所有服务
 	fx.Provide(NewAuthService),
 	fx.Provide(NewUserService),
-	fx.Provide(NewSysUserService),
+	fx.Provide(NewAdminUserService),
 	fx.Provide(NewRoleService),
 	fx.Provide(NewMenuService),
 	fx.Provide(NewMenuAPIService),
@@ -20,7 +20,8 @@ var Module = fx.Options(
 	fx.Provide(NewOperationLogService),
 	fx.Provide(NewFileService),
 	fx.Provide(NewAPIService),
-	fx.Provide(NewSystemService),
+	fx.Provide(NewAdminSystemService),
+	// 不再提供旧的类型
 )
 
 // ServiceParams 服务参数
@@ -33,7 +34,7 @@ type ServiceParams struct {
 
 	// 仓库
 	UserRepo         *repository.UserRepo
-	SysUserRepo      *repository.SysUserRepo
+	AdminUserRepo    *repository.AdminUserRepo
 	RoleRepo         *repository.RoleRepo
 	MenuRepo         *repository.MenuRepo
 	MenuButtonRepo   *repository.MenuButtonRepo
@@ -41,5 +42,5 @@ type ServiceParams struct {
 	OperationLogRepo *repository.OperationLogRepo
 	FileRepo         *repository.FileRepo
 	APIRepo          *repository.APIRepo
-	SystemRepo       *repository.SystemRepo
+	AdminSystemRepo  *repository.AdminSystemRepo
 }

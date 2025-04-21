@@ -55,3 +55,17 @@ func (r *FileRepo) UpdateFileUsage(ctx context.Context, file *model.File, usage 
 	// 使用泛型仓库
 	return r.genericRepo.Update(ctx, file)
 }
+
+// UpdateUserAvatar 更新用户头像
+func (r *FileRepo) UpdateUserAvatar(ctx context.Context, userID int64, fileID uint) error {
+	// 这里应该实现更新用户头像的逻辑
+	// 当前只是一个占位实现
+	return nil
+}
+
+// UpdateAdminUserAvatar 更新管理员用户头像
+func (r *FileRepo) UpdateAdminUserAvatar(ctx context.Context, userID int64, fileID uint) error {
+	// 这里应该实现更新管理员用户头像的逻辑
+	// 当前只是一个占位实现
+	return nil
+}

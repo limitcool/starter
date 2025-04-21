@@ -11,18 +11,18 @@ import (
 	"gorm.io/gorm"
 )
 
-// SysUserRepo 系统用户仓库
-type SysUserRepo struct {
+// AdminUserRepo 管理员用户仓库
+type AdminUserRepo struct {
 	DB          *gorm.DB
-	genericRepo *GenericRepo[model.SysUser] // 泛型仓库
+	genericRepo *GenericRepo[model.AdminUser] // 泛型仓库
 }
 
-// NewSysUserRepo 创建系统用户仓库
-func NewSysUserRepo(params RepoParams) *SysUserRepo {
-	genericRepo := NewGenericRepo[model.SysUser](params.DB)
+// NewAdminUserRepo 创建管理员用户仓库
+func NewAdminUserRepo(params RepoParams) *AdminUserRepo {
+	genericRepo := NewGenericRepo[model.AdminUser](params.DB)
 	genericRepo.SetErrorCode(errorx.ErrorUserNotFoundCode) // 设置错误码
 
-	repo := &SysUserRepo{
+	repo := &AdminUserRepo{
 		DB:          params.DB,
 		genericRepo: genericRepo,
 	}
@@ -31,13 +31,13 @@ func NewSysUserRepo(params RepoParams) *SysUserRepo {
 	params.LC.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			if params.Logger != nil {
-				logger.Info("SysUserRepo initialized")
+				logger.Info("AdminUserRepo initialized")
 			}
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			if params.Logger != nil {
-				logger.Info("SysUserRepo stopped")
+				logger.Info("AdminUserRepo stopped")
 			}
 			return nil
 		},
@@ -46,8 +46,8 @@ func NewSysUserRepo(params RepoParams) *SysUserRepo {
 	return repo
 }
 
-// GetByID 根据ID获取系统用户
-func (r *SysUserRepo) GetByID(ctx context.Context, id int64) (*model.SysUser, error) {
+// GetByID 根据ID获取管理员用户
+func (r *AdminUserRepo) GetByID(ctx context.Context, id int64) (*model.AdminUser, error) {
 	// 使用泛型仓库获取用户
 	user, err := r.genericRepo.GetByID(ctx, id)
 	if err != nil {
@@ -56,7 +56,7 @@ func (r *SysUserRepo) GetByID(ctx context.Context, id int64) (*model.SysUser, er
 
 	// 获取用户的角色
 	if err := r.DB.WithContext(ctx).Model(user).Association("Roles").Find(&user.Roles); err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("查询系统用户角色失败: id=%d", id))
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询管理员用户角色失败: id=%d", id))
 	}
 
 	// 提取角色编码
@@ -67,8 +67,8 @@ func (r *SysUserRepo) GetByID(ctx context.Context, id int64) (*model.SysUser, er
 	return user, nil
 }
 
-// GetByUsername 根据用户名获取系统用户
-func (r *SysUserRepo) GetByUsername(ctx context.Context, username string) (*model.SysUser, error) {
+// GetByUsername 根据用户名获取管理员用户
+func (r *AdminUserRepo) GetByUsername(ctx context.Context, username string) (*model.AdminUser, error) {
 	// 使用泛型仓库获取用户
 	user, err := r.genericRepo.FindByField(ctx, "username", username)
 	if err != nil {
@@ -77,7 +77,7 @@ func (r *SysUserRepo) GetByUsername(ctx context.Context, username string) (*mode
 
 	// 获取用户的角色
 	if err := r.DB.WithContext(ctx).Model(user).Association("Roles").Find(&user.Roles); err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("查询系统用户角色失败: username=%s", username))
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询管理员用户角色失败: username=%s", username))
 	}
 
 	// 提取角色编码
@@ -88,32 +88,32 @@ func (r *SysUserRepo) GetByUsername(ctx context.Context, username string) (*mode
 	return user, nil
 }
 
-// Create 创建系统用户
-func (r *SysUserRepo) Create(ctx context.Context, user *model.SysUser) error {
+// Create 创建管理员用户
+func (r *AdminUserRepo) Create(ctx context.Context, user *model.AdminUser) error {
 	// 使用泛型仓库
 	return r.genericRepo.Create(ctx, user)
 }
 
-// Update 更新系统用户
-func (r *SysUserRepo) Update(ctx context.Context, user *model.SysUser) error {
+// Update 更新管理员用户
+func (r *AdminUserRepo) Update(ctx context.Context, user *model.AdminUser) error {
 	// 使用泛型仓库
 	return r.genericRepo.Update(ctx, user)
 }
 
-// UpdateFields 更新系统用户字段
-func (r *SysUserRepo) UpdateFields(ctx context.Context, id int64, fields map[string]any) error {
+// UpdateFields 更新管理员用户字段
+func (r *AdminUserRepo) UpdateFields(ctx context.Context, id int64, fields map[string]any) error {
 	// 使用泛型仓库
 	return r.genericRepo.UpdateFields(ctx, id, fields)
 }
 
-// Delete 删除系统用户
-func (r *SysUserRepo) Delete(ctx context.Context, id int64) error {
+// Delete 删除管理员用户
+func (r *AdminUserRepo) Delete(ctx context.Context, id int64) error {
 	// 使用泛型仓库
 	return r.genericRepo.Delete(ctx, id)
 }
 
-// List 获取系统用户列表
-func (r *SysUserRepo) List(ctx context.Context, query *model.SysUserQuery) ([]model.SysUser, int64, error) {
+// List 获取管理员用户列表
+func (r *AdminUserRepo) List(ctx context.Context, query *model.AdminUserQuery) ([]model.AdminUser, int64, error) {
 	// 构建查询条件
 	conditions := []string{}
 	args := []any{}
@@ -164,12 +164,12 @@ func (r *SysUserRepo) List(ctx context.Context, query *model.SysUserQuery) ([]mo
 	return r.genericRepo.GetPage(ctx, int(query.Page), int(query.PageSize), condition, args...)
 }
 
-// UpdateAvatar 更新系统用户头像
-func (r *SysUserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID uint) error {
+// UpdateAvatar 更新管理员用户头像
+func (r *AdminUserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID uint) error {
 	// 使用泛型仓库的事务支持
 	return r.genericRepo.Transaction(ctx, func(tx *gorm.DB) error {
 		// 创建事务中的泛型仓库
-		txRepo := r.genericRepo.WithTx(tx).(*GenericRepo[model.SysUser])
+		txRepo := r.genericRepo.WithTx(tx).(*GenericRepo[model.AdminUser])
 
 		// 查找用户
 		user, err := txRepo.GetByID(ctx, userID)

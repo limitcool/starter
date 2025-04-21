@@ -109,7 +109,7 @@ func (s *ErrorMonitorService) ResetStats(ctx context.Context) {
 }
 
 // triggerAlert 触发报警
-func (s *ErrorMonitorService) triggerAlert(ctx context.Context, err *errorx.AppError, stat *ErrorStat) {
+func (s *ErrorMonitorService) triggerAlert(_ context.Context, err *errorx.AppError, stat *ErrorStat) {
 	// 这里可以实现各种报警方式，如发送邮件、短信、钉钉等
 	// 目前仅记录日志
 	logger.Warn("Error threshold reached",

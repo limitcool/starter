@@ -4,8 +4,8 @@ import (
 	"time"
 )
 
-// SysUser 系统用户
-type SysUser struct {
+// AdminUser 管理员用户
+type AdminUser struct {
 	SnowflakeModel
 
 	Username     string     `json:"username" gorm:"size:50;not null;unique;comment:用户名"`
@@ -22,19 +22,23 @@ type SysUser struct {
 	LastIP       string     `json:"last_ip" gorm:"size:50;comment:最后登录IP"`
 
 	// 关联
-	Roles     []*Role  `json:"roles" gorm:"many2many:sys_user_role;"` // 关联的角色
-	RoleIDs   []int64  `json:"role_ids" gorm:"-"`                     // 角色ID列表，不映射到数据库
-	RoleCodes []string `json:"role_codes" gorm:"-"`                   // 角色编码列表
+	Roles     []*Role  `json:"roles" gorm:"many2many:admin_user_role;"` // 关联的角色
+	RoleIDs   []int64  `json:"role_ids" gorm:"-"`                       // 角色ID列表，不映射到数据库
+	RoleCodes []string `json:"role_codes" gorm:"-"`                     // 角色编码列表
 }
 
-func (SysUser) TableName() string {
-	return "sys_user"
+func (AdminUser) TableName() string {
+	return "admin_user"
 }
 
+func NewAdminUser() *AdminUser {
+	return &AdminUser{}
+}
+
+// SysUser 为了向后兼容
+type SysUser = AdminUser
+
+// NewSysUser 为了向后兼容
 func NewSysUser() *SysUser {
-	return &SysUser{}
+	return NewAdminUser()
 }
-
-// 已移除 GetUserByUsername 方法到 repository/sys_user_repo.go
-
-// 已移除 GetUserByID 方法到 repository/sys_user_repo.go

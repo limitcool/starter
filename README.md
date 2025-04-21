@@ -670,7 +670,7 @@ GRPC:
 
 1. 角色与菜单关联:
    ```
-   POST /api/v1/admin/role/menu
+   POST /api/v1/admin-api/roles/menu
    {
      "role_id": 1,
      "menu_ids": [1, 2, 3]
@@ -679,10 +679,10 @@ GRPC:
 
 2. 角色与权限关联:
    ```
-   POST /api/v1/admin/role/permission
+   POST /api/v1/admin-api/roles/permission
    {
      "role_code": "admin",
-     "object": "/api/v1/admin/user",
+     "object": "/api/v1/admin-api/users",
      "action": "GET"
    }
    ```

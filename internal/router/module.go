@@ -30,14 +30,14 @@ type RouterParams struct {
 
 	// 控制器
 	UserController         *controller.UserController
-	SysUserController      *controller.SysUserController
+	AdminUserController    *controller.AdminUserController
 	RoleController         *controller.RoleController
 	MenuController         *controller.MenuController
 	PermissionController   *controller.PermissionController
 	OperationLogController *controller.OperationLogController
 	FileController         *controller.FileController
 	APIController          *controller.APIController
-	SystemController       *controller.SystemController
+	AdminSystemController  *controller.AdminSystemController
 }
 
 // RouterResult 路由结果
@@ -118,6 +118,9 @@ func registerRoutes(r *gin.Engine, params RouterParams) {
 		// 用户路由
 		userRoutes(v1, params)
 
+		// 管理员路由
+		adminRoutes(v1, params)
+
 		// 其他路由可以在这里添加
 	}
 }
@@ -141,5 +144,115 @@ func userRoutes(r *gin.RouterGroup, params RouterParams) {
 
 		// 修改密码
 		users.POST("/change-password", params.UserController.UserChangePassword)
+	}
+}
+
+// adminRoutes 管理员路由
+func adminRoutes(r *gin.RouterGroup, params RouterParams) {
+	// 管理员路由
+	admin := r.Group("/admin-api")
+	{
+		// 管理员登录
+		admin.POST("/login", params.AdminUserController.AdminUserLogin)
+
+		// 角色管理
+		roles := admin.Group("/roles")
+		{
+			// 获取角色列表
+			roles.GET("", params.RoleController.GetRoles)
+
+			// 获取角色详情
+			roles.GET("/:id", params.RoleController.GetRole)
+
+			// 创建角色
+			roles.POST("", params.RoleController.CreateRole)
+
+			// 更新角色
+			roles.PUT("/:id", params.RoleController.UpdateRole)
+
+			// 删除角色
+			roles.DELETE("/:id", params.RoleController.DeleteRole)
+
+			// 为角色分配菜单
+			roles.POST("/menu", params.RoleController.AssignMenuToRole)
+
+			// 为角色设置权限
+			roles.POST("/permission", params.RoleController.SetRolePermission)
+
+			// 删除角色权限
+			roles.DELETE("/permission", params.RoleController.DeleteRolePermission)
+
+			// 获取角色权限
+			roles.GET("/:id/permissions", params.PermissionController.GetRolePermissions)
+
+			// 为角色分配权限
+			roles.POST("/:id/permissions", params.PermissionController.AssignPermissionsToRole)
+		}
+
+		// 菜单管理
+		menus := admin.Group("/menus")
+		{
+			// 获取菜单详情
+			menus.GET("/:id", params.MenuController.GetMenu)
+
+			// 获取菜单树
+			menus.GET("/tree", params.MenuController.GetMenuTree)
+
+			// 获取用户菜单
+			menus.GET("/user", params.MenuController.GetUserMenus)
+
+			// 获取用户菜单权限
+			menus.GET("/user/perms", params.MenuController.GetUserMenuPerms)
+
+			// 创建菜单
+			menus.POST("", params.MenuController.CreateMenu)
+
+			// 更新菜单
+			menus.PUT("/:id", params.MenuController.UpdateMenu)
+
+			// 删除菜单
+			menus.DELETE("/:id", params.MenuController.DeleteMenu)
+		}
+
+		// 权限管理
+		permissions := admin.Group("/permissions")
+		{
+			// 获取权限列表
+			permissions.GET("", params.PermissionController.GetPermissions)
+
+			// 获取权限详情
+			permissions.GET("/:id", params.PermissionController.GetPermission)
+
+			// 获取用户权限
+			permissions.GET("/user", params.PermissionController.GetUserPermissions)
+
+			// 获取用户菜单
+			permissions.GET("/user/menus", params.PermissionController.GetUserMenus)
+
+			// 获取用户角色
+			permissions.GET("/user/roles", params.PermissionController.GetUserRoles)
+
+			// 为用户分配角色
+			permissions.POST("/user/:id/roles", params.PermissionController.AssignRolesToUser)
+
+			// 创建权限
+			permissions.POST("", params.PermissionController.CreatePermission)
+
+			// 更新权限
+			permissions.PUT("/:id", params.PermissionController.UpdatePermission)
+
+			// 删除权限
+			permissions.DELETE("/:id", params.PermissionController.DeletePermission)
+
+			// 更新权限系统设置
+			permissions.PUT("/settings", params.PermissionController.UpdatePermissionSettings)
+		}
+
+		// 系统设置
+		system := admin.Group("/system")
+		{
+			// 获取系统设置
+			system.GET("/settings", params.AdminSystemController.GetSystemSettings)
+		}
 	}
 }

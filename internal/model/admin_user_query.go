@@ -1,7 +1,7 @@
 package model
 
-// SysUserQuery 系统用户查询参数
-type SysUserQuery struct {
+// AdminUserQuery 管理员用户查询参数
+type AdminUserQuery struct {
 	Page      int64  `json:"page" form:"page"`           // 页码
 	PageSize  int64  `json:"page_size" form:"page_size"` // 每页大小
 	Username  string `json:"username" form:"username"`   // 用户名
@@ -14,7 +14,7 @@ type SysUserQuery struct {
 }
 
 // Normalize 标准化查询参数
-func (q *SysUserQuery) Normalize() {
+func (q *AdminUserQuery) Normalize() {
 	if q.Page <= 0 {
 		q.Page = 1
 	}
@@ -25,3 +25,6 @@ func (q *SysUserQuery) Normalize() {
 		q.PageSize = 100
 	}
 }
+
+// SysUserQuery 为了向后兼容
+type SysUserQuery = AdminUserQuery

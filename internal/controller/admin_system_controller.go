@@ -8,17 +8,17 @@ import (
 
 // 获取系统设置
 
-func NewSystemController(systemService *services.SystemService) *SystemController {
-	return &SystemController{
+func NewAdminSystemController(systemService *services.AdminSystemService) *AdminSystemController {
+	return &AdminSystemController{
 		systemService: systemService,
 	}
 }
 
-type SystemController struct {
-	systemService *services.SystemService
+type AdminSystemController struct {
+	systemService *services.AdminSystemService
 }
 
-func (sc *SystemController) GetSystemSettings(c *gin.Context) {
+func (sc *AdminSystemController) GetSystemSettings(c *gin.Context) {
 	// 获取系统设置
 	settings := sc.systemService.GetSystemSettings(c.Request.Context())
 

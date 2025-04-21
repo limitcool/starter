@@ -3,6 +3,7 @@ package sqldb
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
 
 	"github.com/glebarez/sqlite"
 	"github.com/limitcool/starter/configs"
@@ -20,11 +21,22 @@ func getDSN(c *configs.Config) string {
 	case configs.DriverSqlite:
 		return fmt.Sprintf("%s.db", c.Database.DBName)
 	case configs.DriverPostgres:
-		return fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
+		// 使用url.QueryEscape处理密码中的特殊字符
+		password := url.QueryEscape(c.Database.Password)
+
+		// 构建连接字符串
+		sslMode := "disable"
+		if c.Database.SSLMode != "" {
+			sslMode = c.Database.SSLMode
+		}
+
+		return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
 			c.Database.UserName,
-			c.Database.Password,
+			password,
 			c.Database.Host,
+			c.Database.Port,
 			c.Database.DBName,
+			sslMode,
 		)
 	case configs.DriverMysql:
 		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=%t&loc=%s",
