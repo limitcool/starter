@@ -19,7 +19,7 @@ var Module = fx.Options(
 	fx.Provide(NewOperationLogRepo),
 	fx.Provide(NewFileRepo),
 	fx.Provide(NewAPIRepo),
-	fx.Provide(NewAdminSystemRepo),
+	fx.Provide(NewAdminRepo),
 	// 不再提供旧的类型
 )
 

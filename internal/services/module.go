@@ -20,7 +20,7 @@ var Module = fx.Options(
 	fx.Provide(NewOperationLogService),
 	fx.Provide(NewFileService),
 	fx.Provide(NewAPIService),
-	fx.Provide(NewAdminSystemService),
+	fx.Provide(NewAdminService),
 	// 不再提供旧的类型
 )
 
@@ -42,5 +42,5 @@ type ServiceParams struct {
 	OperationLogRepo *repository.OperationLogRepo
 	FileRepo         *repository.FileRepo
 	APIRepo          *repository.APIRepo
-	AdminSystemRepo  *repository.AdminSystemRepo
+	AdminRepo        *repository.AdminRepo
 }

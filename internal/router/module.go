@@ -37,7 +37,7 @@ type RouterParams struct {
 	OperationLogController *controller.OperationLogController
 	FileController         *controller.FileController
 	APIController          *controller.APIController
-	AdminSystemController  *controller.AdminSystemController
+	AdminController        *controller.AdminController
 }
 
 // RouterResult 路由结果
@@ -252,7 +252,7 @@ func adminRoutes(r *gin.RouterGroup, params RouterParams) {
 		system := admin.Group("/system")
 		{
 			// 获取系统设置
-			system.GET("/settings", params.AdminSystemController.GetSystemSettings)
+			system.GET("/settings", params.AdminController.GetSystemSettings)
 		}
 	}
 }

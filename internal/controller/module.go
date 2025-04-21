@@ -18,13 +18,13 @@ var Module = fx.Options(
 	fx.Provide(NewOperationLogController),
 	fx.Provide(NewFileController),
 	fx.Provide(NewAPIController),
-	fx.Provide(NewAdminSystemController),
+	fx.Provide(NewAdminController),
 
 	// 提供所有gRPC控制器
-	fx.Provide(NewAdminSystemGRPCController),
+	fx.Provide(NewAdminGRPCController),
 
 	// 注册gRPC控制器
-	fx.Invoke(RegisterAdminSystemGRPCController),
+	fx.Invoke(RegisterAdminGRPCController),
 )
 
 // ControllerParams 控制器参数
@@ -45,5 +45,5 @@ type ControllerParams struct {
 	OperationLogService *services.OperationLogService
 	FileService         *services.FileService
 	APIService          *services.APIService
-	AdminSystemService  *services.AdminSystemService
+	AdminService        *services.AdminService
 }
