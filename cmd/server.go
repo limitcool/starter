@@ -10,6 +10,7 @@ import (
 	"github.com/limitcool/starter/internal/filestore"
 	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/logger"
+	"github.com/limitcool/starter/internal/pkg/usermode"
 	"github.com/limitcool/starter/internal/repository"
 	"github.com/limitcool/starter/internal/router"
 	"github.com/limitcool/starter/internal/server"
@@ -78,6 +79,8 @@ func runServer(cmd *cobra.Command, args []string) {
 		),
 
 		// 添加所有模块
+		// 首先添加用户模式模块，因为其他模块可能依赖它
+		usermode.Module,
 		sqldb.Module,
 		redisdb.Module,
 		filestore.Module,

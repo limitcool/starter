@@ -9,14 +9,17 @@ import (
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/controller"
 	"github.com/limitcool/starter/internal/middleware"
-	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/logger"
+	"github.com/limitcool/starter/internal/pkg/usermode"
 	"github.com/limitcool/starter/internal/repository"
 	"go.uber.org/fx"
 )
 
 // Module 路由模块
 var Module = fx.Options(
+	// 提供路由注册器
+	fx.Provide(ProvideRouteRegistrar),
+
 	// 提供路由
 	fx.Provide(NewRouter),
 )
@@ -25,10 +28,14 @@ var Module = fx.Options(
 type RouterParams struct {
 	fx.In
 
-	Config   *configs.Config
-	LC       fx.Lifecycle
-	Enforcer *casbin.Enforcer `optional:"true"`
-	Logger   *logger.Logger   `optional:"true"`
+	Config         *configs.Config
+	LC             fx.Lifecycle
+	Enforcer       *casbin.Enforcer `optional:"true"`
+	Logger         *logger.Logger   `optional:"true"`
+	UserModeService *usermode.Service
+
+	// 路由注册器
+	RouteRegistrar RouteRegistrarInterface
 
 	// 控制器
 	UserController         *controller.UserController
@@ -73,12 +80,18 @@ func NewRouter(params RouterParams) RouterResult {
 	r.Use(middleware.Cors())
 	r.Use(middleware.ErrorHandler())
 
-	// 获取用户模式
-	userMode := enum.GetUserMode(params.Config.Admin.UserMode)
+	// 使用用户模式服务
+	ctx := context.Background()
 
 	// 在分离模式下添加Casbin中间件（如果启用）
-	if userMode == enum.UserModeSeparate && params.Config.Casbin.Enabled && params.Enforcer != nil {
-		r.Use(middleware.CasbinMiddleware(params.PermissionController.GetPermissionService(), params.Config))
+	if params.UserModeService.IsSeparateMode() && params.Config.Casbin.Enabled && params.Enforcer != nil {
+		// 检查PermissionController是否为空
+		if params.PermissionController != nil {
+			r.Use(middleware.CasbinMiddleware(params.PermissionController.GetPermissionService(), params.Config))
+			logger.InfoContext(ctx, "添加Casbin中间件")
+		} else {
+			logger.WarnContext(ctx, "权限控制器为空，无法添加Casbin中间件")
+		}
 	}
 
 	// 注册路由
@@ -87,23 +100,23 @@ func NewRouter(params RouterParams) RouterResult {
 	// 注册生命周期钩子
 	params.LC.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("Router initialized successfully")
+			logger.InfoContext(ctx, "Router initialized successfully")
 
 			// 打印路由信息
-			logger.Info("==================================================")
-			logger.Info("路由信息:")
+			logger.InfoContext(ctx, "==================================================")
+			logger.InfoContext(ctx, "路由信息:")
 
 			// 获取所有路由
 			routes := r.Routes()
 			for _, route := range routes {
-				logger.Info(fmt.Sprintf("%-7s %s", route.Method, route.Path))
+				logger.InfoContext(ctx, fmt.Sprintf("%-7s %s", route.Method, route.Path))
 			}
 
-			logger.Info("==================================================")
+			logger.InfoContext(ctx, "==================================================")
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Router stopped")
+			logger.InfoContext(ctx, "Router stopped")
 			return nil
 		},
 	})
@@ -120,20 +133,11 @@ func registerRoutes(r *gin.Engine, params RouterParams) {
 		})
 	})
 
-	// 获取用户模式
-	userMode := enum.GetUserMode(params.Config.Admin.UserMode)
-
 	// API版本
 	v1 := r.Group("/api/v1")
 	{
-		// 根据用户模式注册不同的路由
-		if userMode == enum.UserModeSimple {
-			// 简单模式 - 使用简化的路由
-			registerSimpleRoutes(v1, params)
-		} else {
-			// 分离模式 - 使用完整的路由
-			registerSeparateRoutes(v1, params)
-		}
+		// 使用路由注册器注册路由
+		params.RouteRegistrar.RegisterRoutes(v1, params)
 
 		// 其他路由可以在这里添加
 	}

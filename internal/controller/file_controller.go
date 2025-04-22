@@ -27,8 +27,7 @@ func NewFileController(fileService *services.FileService) *FileController {
 		fileService: fileService,
 	}
 
-	// 将控制器添加到全局变量
-	Controllers.FileController = controller
+	// 不再使用全局变量
 
 	return controller
 }

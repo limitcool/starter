@@ -23,7 +23,8 @@ func ErrorHandler() gin.HandlerFunc {
 				requestID, _ := c.Get("request_id")
 				traceID, _ := c.Get("trace_id")
 
-				logger.Error("Panic recovered",
+				ctx := c.Request.Context()
+				logger.ErrorContext(ctx, "Panic recovered",
 					"error", err,
 					"stack", stack,
 					"request_id", requestID,

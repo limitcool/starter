@@ -22,8 +22,7 @@ func NewAPIController(apiService *services.APIService, menuAPIService *services.
 		menuAPIService: menuAPIService,
 	}
 
-	// 将控制器添加到全局变量
-	Controllers.APIController = controller
+	// 不再使用全局变量
 
 	return controller
 }

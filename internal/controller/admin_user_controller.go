@@ -18,8 +18,7 @@ func NewAdminUserController(userService services.AdminUserServiceInterface) *Adm
 		userService: userService,
 	}
 
-	// 将控制器添加到全局变量
-	Controllers.AdminUserController = controller
+	// 不再使用全局变量
 
 	return controller
 }

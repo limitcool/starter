@@ -1,6 +1,8 @@
 package router
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/pkg/logger"
@@ -8,7 +10,8 @@ import (
 
 // registerSimpleRoutes 注册简单模式的路由
 func registerSimpleRoutes(r *gin.RouterGroup, params RouterParams) {
-	logger.Info("注册简单模式路由")
+	ctx := context.Background()
+	logger.InfoContext(ctx, "注册简单模式路由")
 
 	// 公共路由
 	public := r.Group("")
@@ -25,7 +28,14 @@ func registerSimpleRoutes(r *gin.RouterGroup, params RouterParams) {
 	authenticated := r.Group("", middleware.JWTAuth(params.Config))
 
 	// 管理员路由 - 使用简化的管理员检查中间件
-	admin := authenticated.Group("/admin", middleware.SimpleAdminCheck(params.UserRepo))
+	// 检查UserRepo是否为空
+	var admin *gin.RouterGroup
+	if params.UserRepo != nil {
+		admin = authenticated.Group("/admin", middleware.SimpleAdminCheck(params.UserRepo))
+	} else {
+		logger.WarnContext(ctx, "用户仓库为空，无法添加管理员检查中间件，使用默认路由")
+		admin = authenticated.Group("/admin")
+	}
 	{
 		// 用户管理
 		// 注意：这里的用户管理功能需要实现

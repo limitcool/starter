@@ -17,8 +17,7 @@ func NewAdminController(adminService *services.AdminService) *AdminController {
 		adminService: adminService,
 	}
 
-	// 将控制器添加到全局变量
-	Controllers.AdminController = controller
+	// 不再使用全局变量
 
 	return controller
 }

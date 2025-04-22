@@ -31,8 +31,7 @@ func NewUserController(params ControllerParams) *UserController {
 		},
 	})
 
-	// 将控制器添加到全局变量
-	Controllers.UserController = controller
+	// 不再使用全局变量
 
 	return controller
 }

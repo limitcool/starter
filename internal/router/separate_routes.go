@@ -1,6 +1,8 @@
 package router
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/pkg/logger"
@@ -8,7 +10,8 @@ import (
 
 // registerSeparateRoutes 注册分离模式的路由
 func registerSeparateRoutes(r *gin.RouterGroup, params RouterParams) {
-	logger.Info("注册分离模式路由")
+	ctx := context.Background()
+	logger.InfoContext(ctx, "注册分离模式路由")
 
 	// 用户路由
 	userRoutes(r, params)
