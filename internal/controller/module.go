@@ -16,14 +16,20 @@ var Module = fx.Options(
 	fx.Provide(NewAPIController),
 	fx.Provide(NewAdminController),
 
-	// 根据用户模式决定是否提供角色和菜单相关的控制器
-	fx.Invoke(RegisterControllers),
+	// 使用工厂函数提供根据用户模式创建的控制器
+	fx.Provide(ProvideRoleController),
+	fx.Provide(ProvideMenuController),
+	fx.Provide(ProvidePermissionController),
+	fx.Provide(NewOperationLogController),
 
 	// 提供所有gRPC控制器
 	fx.Provide(NewAdminGRPCController),
 
 	// 注册gRPC控制器
 	fx.Invoke(RegisterAdminGRPCController),
+
+	// 注册生命周期钩子
+	fx.Invoke(RegisterControllerLifecycle),
 )
 
 // ControllerParams 控制器参数
@@ -34,15 +40,20 @@ type ControllerParams struct {
 	LC     fx.Lifecycle
 	Logger *logger.Logger `optional:"true"`
 
-	// 服务
-	UserService         *services.UserService
-	AdminUserService    *services.AdminUserService
-	RoleService         *services.RoleService
-	MenuService         *services.MenuService
+	// 服务接口
+	UserService         services.UserServiceInterface
+	AdminUserService    services.AdminUserServiceInterface
+	RoleService         services.RoleServiceInterface
+	MenuService         services.MenuServiceInterface
 	MenuAPIService      *services.MenuAPIService
-	PermissionService   *services.PermissionService
+	PermissionService   services.PermissionServiceInterface
 	OperationLogService *services.OperationLogService
 	FileService         *services.FileService
 	APIService          *services.APIService
 	AdminService        *services.AdminService
+
+	// 控制器接口
+	RoleController       RoleControllerInterface
+	MenuController       MenuControllerInterface
+	PermissionController PermissionControllerInterface
 }

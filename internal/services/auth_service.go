@@ -107,6 +107,11 @@ func (s *AuthService) GenerateAccessTokenWithContext(ctx context.Context, userID
 	return accessToken, nil
 }
 
+// ParseRefreshToken 解析刷新令牌
+func (s *AuthService) ParseRefreshToken(refreshToken string) (*jwtpkg.CustomClaims, error) {
+	return s.ValidateRefreshTokenWithContext(context.Background(), refreshToken)
+}
+
 // ValidateRefreshToken 验证刷新令牌
 func (s *AuthService) ValidateRefreshToken(refreshToken string) (*jwtpkg.CustomClaims, error) {
 	return s.ValidateRefreshTokenWithContext(context.Background(), refreshToken)

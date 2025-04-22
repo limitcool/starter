@@ -10,10 +10,10 @@ import (
 )
 
 type AdminUserController struct {
-	userService *services.AdminUserService
+	userService services.AdminUserServiceInterface
 }
 
-func NewAdminUserController(userService *services.AdminUserService) *AdminUserController {
+func NewAdminUserController(userService services.AdminUserServiceInterface) *AdminUserController {
 	controller := &AdminUserController{
 		userService: userService,
 	}

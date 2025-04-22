@@ -38,8 +38,8 @@ func NewUserController(params ControllerParams) *UserController {
 }
 
 type UserController struct {
-	adminUserService *services.AdminUserService
-	userService      *services.UserService
+	adminUserService services.AdminUserServiceInterface
+	userService      services.UserServiceInterface
 }
 
 // UserLogin 普通用户登录

@@ -96,31 +96,48 @@ func (s *MenuService) GetMenuByID(ctx context.Context, id uint) (*model.Menu, er
 	return menu, nil
 }
 
-// GetAllMenus 获取所有菜单
-func (s *MenuService) GetAllMenus(ctx context.Context) ([]*model.Menu, error) {
+// GetMenus 获取所有菜单
+func (s *MenuService) GetMenus(ctx context.Context) ([]model.Menu, error) {
 	menus, err := s.menuRepo.GetAll(ctx)
 	if err != nil {
 		return nil, errorx.WrapError(err, "获取所有菜单失败")
 	}
-	return menus, nil
+
+	// 转换类型
+	result := make([]model.Menu, 0, len(menus))
+	for _, menu := range menus {
+		result = append(result, *menu)
+	}
+
+	return result, nil
 }
 
 // GetMenusByRoleID 获取角色菜单
-func (s *MenuService) GetMenusByRoleID(ctx context.Context, roleID uint) ([]*model.Menu, error) {
+func (s *MenuService) GetMenusByRoleID(ctx context.Context, roleID uint) ([]model.Menu, error) {
 	menus, err := s.menuRepo.GetByRoleID(ctx, roleID)
 	if err != nil {
 		return nil, errorx.WrapError(err, "获取角色菜单失败")
 	}
-	return menus, nil
+
+	// 转换类型
+	result := make([]model.Menu, 0, len(menus))
+	for _, menu := range menus {
+		result = append(result, *menu)
+	}
+
+	return result, nil
 }
 
 // GetUserMenus 获取用户菜单
-func (s *MenuService) GetUserMenus(ctx context.Context, userID uint) ([]*model.Menu, error) {
-	menus, err := s.menuRepo.GetByUserID(ctx, userID)
+func (s *MenuService) GetUserMenus(ctx context.Context, userID int64) ([]*model.MenuTree, error) {
+	// 获取用户菜单
+	menus, err := s.menuRepo.GetByUserID(ctx, uint(userID))
 	if err != nil {
 		return nil, errorx.WrapError(err, "获取用户菜单失败")
 	}
-	return menus, nil
+
+	// 构建菜单树
+	return s.menuRepo.BuildMenuTree(ctx, menus), nil
 }
 
 // AssignMenuToRole 为角色分配菜单

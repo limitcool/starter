@@ -9,19 +9,20 @@ import (
 
 // Module 服务模块
 var Module = fx.Options(
-	// 提供所有服务
+	// 提供通用服务
 	fx.Provide(NewAuthService),
-	fx.Provide(NewUserService),
-	fx.Provide(NewAdminUserService),
-	fx.Provide(NewRoleService),
-	fx.Provide(NewMenuService),
 	fx.Provide(NewMenuAPIService),
-	fx.Provide(NewPermissionService),
 	fx.Provide(NewOperationLogService),
 	fx.Provide(NewFileService),
 	fx.Provide(NewAPIService),
 	fx.Provide(NewAdminService),
-	// 不再提供旧的类型
+
+	// 提供根据用户模式创建的服务
+	fx.Provide(ProvideUserService),
+	fx.Provide(ProvideAdminUserService),
+	fx.Provide(ProvideRoleService),
+	fx.Provide(ProvideMenuService),
+	fx.Provide(ProvidePermissionService),
 )
 
 // ServiceParams 服务参数

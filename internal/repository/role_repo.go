@@ -229,6 +229,79 @@ func (r *RoleRepo) AssignMenusToRole(ctx context.Context, roleID uint, menuIDs [
 	return nil
 }
 
+// GetRoleCodesByUserID 获取用户角色编码列表
+func (r *RoleRepo) GetRoleCodesByUserID(ctx context.Context, userID int64) ([]string, error) {
+	// 查询用户角色关联
+	var userRoles []model.UserRole
+	err := r.DB.WithContext(ctx).Where("user_id = ?", userID).Find(&userRoles).Error
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取用户角色关联失败: userID=%d", userID))
+	}
+
+	if len(userRoles) == 0 {
+		return []string{"user"}, nil // 默认角色
+	}
+
+	// 提取角色ID
+	var roleIDs []uint
+	for _, ur := range userRoles {
+		roleIDs = append(roleIDs, ur.RoleID)
+	}
+
+	// 查询角色
+	var roles []model.Role
+	err = r.DB.WithContext(ctx).Where("id IN ?", roleIDs).Find(&roles).Error
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: roleIDs=%v", roleIDs))
+	}
+
+	// 提取角色编码
+	var roleCodes []string
+	for _, role := range roles {
+		roleCodes = append(roleCodes, role.Code)
+	}
+
+	return roleCodes, nil
+}
+
+// GetRoleCodesByAdminUserID 获取管理员用户角色编码列表
+func (r *RoleRepo) GetRoleCodesByAdminUserID(ctx context.Context, adminUserID int64) ([]string, error) {
+	// 查询管理员用户角色关联
+	var adminUserRoles []struct {
+		AdminUserID int64 `gorm:"column:admin_user_id"`
+		RoleID      uint  `gorm:"column:role_id"`
+	}
+	err := r.DB.WithContext(ctx).Table("admin_user_role").Where("admin_user_id = ?", adminUserID).Find(&adminUserRoles).Error
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取管理员用户角色关联失败: adminUserID=%d", adminUserID))
+	}
+
+	if len(adminUserRoles) == 0 {
+		return []string{"admin"}, nil // 默认管理员角色
+	}
+
+	// 提取角色ID
+	var roleIDs []uint
+	for _, ur := range adminUserRoles {
+		roleIDs = append(roleIDs, ur.RoleID)
+	}
+
+	// 查询角色
+	var roles []model.Role
+	err = r.DB.WithContext(ctx).Where("id IN ?", roleIDs).Find(&roles).Error
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: roleIDs=%v", roleIDs))
+	}
+
+	// 提取角色编码
+	var roleCodes []string
+	for _, role := range roles {
+		roleCodes = append(roleCodes, role.Code)
+	}
+
+	return roleCodes, nil
+}
+
 // GetRolesByMenuID 获取拥有指定菜单的所有角色
 func (r *RoleRepo) GetRolesByMenuID(ctx context.Context, menuID uint) ([]*model.Role, error) {
 	// 查询菜单关联的角色ID

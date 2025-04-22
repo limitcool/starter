@@ -17,11 +17,15 @@ type RegisterControllersParams struct {
 	Lifecycle fx.Lifecycle
 	Config    *configs.Config
 
-	// 服务
-	RoleService         *services.RoleService
-	MenuService         *services.MenuService
-	PermissionService   *services.PermissionService
+	// 服务接口
+	RoleService         services.RoleServiceInterface
+	MenuService         services.MenuServiceInterface
+	PermissionService   services.PermissionServiceInterface
 	OperationLogService *services.OperationLogService
+
+	// 用户服务
+	UserService      services.UserServiceInterface
+	AdminUserService services.AdminUserServiceInterface
 }
 
 // RegisterControllers 根据用户模式注册控制器
@@ -29,13 +33,33 @@ func RegisterControllers(params RegisterControllersParams) {
 	// 获取用户模式
 	userMode := enum.GetUserMode(params.Config.Admin.UserMode)
 
-	// 如果是简单模式，不注册角色和菜单相关的控制器
+	// 根据用户模式注册不同的控制器
 	if userMode == enum.UserModeSimple {
-		logger.Info("简单模式：不注册角色和菜单相关的控制器")
-		return
+		registerSimpleModeControllers(params)
+	} else {
+		registerSeparateModeControllers(params)
 	}
+}
 
-	// 分离模式，注册所有控制器
+// registerSimpleModeControllers 注册简单模式下的控制器
+func registerSimpleModeControllers(params RegisterControllersParams) {
+	logger.Info("简单模式：注册简单模式控制器")
+
+	// 注册生命周期钩子
+	params.Lifecycle.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			logger.Info("简单模式控制器已注册")
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			logger.Info("简单模式控制器已停止")
+			return nil
+		},
+	})
+}
+
+// registerSeparateModeControllers 注册分离模式下的控制器
+func registerSeparateModeControllers(params RegisterControllersParams) {
 	logger.Info("分离模式：注册所有控制器")
 
 	// 创建角色控制器

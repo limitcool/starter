@@ -1,16 +1,15 @@
 package controller
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/spf13/cast"
 )
 
-func NewRoleController(roleService *services.RoleService, menuService *services.MenuService) *RoleController {
+func NewRoleController(roleService services.RoleServiceInterface, menuService services.MenuServiceInterface) *RoleController {
 	return &RoleController{
 		roleService: roleService,
 		menuService: menuService,
@@ -18,8 +17,8 @@ func NewRoleController(roleService *services.RoleService, menuService *services.
 }
 
 type RoleController struct {
-	roleService *services.RoleService
-	menuService *services.MenuService
+	roleService services.RoleServiceInterface
+	menuService services.MenuServiceInterface
 }
 
 // 创建角色
@@ -41,7 +40,7 @@ func (rc *RoleController) CreateRole(c *gin.Context) {
 
 // 更新角色
 func (rc *RoleController) UpdateRole(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return
@@ -64,7 +63,7 @@ func (rc *RoleController) UpdateRole(c *gin.Context) {
 
 // 删除角色
 func (rc *RoleController) DeleteRole(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return
@@ -80,7 +79,7 @@ func (rc *RoleController) DeleteRole(c *gin.Context) {
 
 // 获取角色详情
 func (rc *RoleController) GetRole(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return

@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/spf13/cast"
 )
 
 // 错误定义结构
@@ -43,13 +44,13 @@ func parseTableRow(line string) (*ErrorDef, error) {
 	}
 
 	// 解析错误码
-	code, err := strconv.Atoi(parts[1])
+	code, err := cast.ToIntE(parts[1])
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse error code: %s", parts[1])
 	}
 
 	// 解析HTTP状态码
-	httpStatus, err := strconv.Atoi(parts[4])
+	httpStatus, err := cast.ToIntE(parts[4])
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse HTTP status code: %s", parts[4])
 	}
@@ -86,7 +87,7 @@ func parseMarkdownFile(filePath string) ([]ErrorGroup, error) {
 			baseCodeStr := matches[2]
 			rangeStr := fmt.Sprintf("%s-%s", matches[2], matches[3])
 
-			baseCode, _ := strconv.Atoi(baseCodeStr)
+			baseCode := cast.ToInt(baseCodeStr)
 
 			// 保存当前组并创建新组
 			if currentGroup != nil && len(currentGroup.Errors) > 0 {
@@ -116,7 +117,7 @@ func parseMarkdownFile(filePath string) ([]ErrorGroup, error) {
 						baseCodeStr := matches[2]
 						rangeStr := fmt.Sprintf("%s-%s", matches[2], matches[3])
 
-						baseCode, _ := strconv.Atoi(baseCodeStr)
+						baseCode := cast.ToInt(baseCodeStr)
 
 						// 保存当前组并创建新组
 						if currentGroup != nil && len(currentGroup.Errors) > 0 {

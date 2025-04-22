@@ -1,13 +1,12 @@
 package controller
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	v1 "github.com/limitcool/starter/internal/api/v1"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/spf13/cast"
 )
 
 func NewOperationLogController(opLogService *services.OperationLogService) *OperationLogController {
@@ -49,7 +48,7 @@ func (olc *OperationLogController) GetOperationLogs(c *gin.Context) {
 
 // DeleteOperationLog 删除操作日志
 func (olc *OperationLogController) DeleteOperationLog(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return

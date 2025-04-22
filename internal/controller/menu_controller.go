@@ -1,24 +1,23 @@
 package controller
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/spf13/cast"
 )
 
 // 创建菜单
-func NewMenuController(menuService *services.MenuService) *MenuController {
+func NewMenuController(menuService services.MenuServiceInterface) *MenuController {
 	return &MenuController{
 		menuService: menuService,
 	}
 }
 
 type MenuController struct {
-	menuService *services.MenuService
+	menuService services.MenuServiceInterface
 }
 
 func (mc *MenuController) CreateMenu(c *gin.Context) {
@@ -39,7 +38,7 @@ func (mc *MenuController) CreateMenu(c *gin.Context) {
 
 // 更新菜单
 func (mc *MenuController) UpdateMenu(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return
@@ -62,7 +61,7 @@ func (mc *MenuController) UpdateMenu(c *gin.Context) {
 
 // 删除菜单
 func (mc *MenuController) DeleteMenu(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return
@@ -78,7 +77,7 @@ func (mc *MenuController) DeleteMenu(c *gin.Context) {
 
 // 获取菜单详情
 func (mc *MenuController) GetMenu(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return
@@ -115,7 +114,7 @@ func (mc *MenuController) GetUserMenus(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	menus, err := mc.menuService.GetUserMenus(c.Request.Context(), uint(userID.(float64)))
+	menus, err := mc.menuService.GetUserMenus(c.Request.Context(), cast.ToInt64(userID))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -134,7 +133,7 @@ func (mc *MenuController) GetUserMenuPerms(c *gin.Context) {
 	}
 
 	// 使用控制器中的服务实例
-	perms, err := mc.menuService.GetMenuPermsByUserID(c.Request.Context(), uint(userID.(float64)))
+	perms, err := mc.menuService.GetMenuPermsByUserID(c.Request.Context(), cast.ToUint(userID))
 	if err != nil {
 		response.Error(c, err)
 		return

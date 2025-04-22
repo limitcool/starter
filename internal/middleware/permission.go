@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"strconv"
+	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -10,11 +10,12 @@ import (
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/spf13/cast"
 )
 
 // CasbinMiddleware 基于路径和方法的权限控制中间件
 // 用于检查用户是否有权限访问特定的API路径和方法
-func CasbinMiddleware(permissionService *services.PermissionService, config *configs.Config) gin.HandlerFunc {
+func CasbinMiddleware(permissionService services.PermissionServiceInterface, config *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
 		if !config.Casbin.Enabled {
@@ -32,7 +33,7 @@ func CasbinMiddleware(permissionService *services.PermissionService, config *con
 		}
 
 		// 将用户ID转换为字符串
-		userID := strconv.FormatUint(uint64(userIDInterface.(float64)), 10)
+		userID := cast.ToString(userIDInterface)
 
 		// 请求的路径
 		obj := c.Request.URL.Path
@@ -77,7 +78,7 @@ func CasbinMiddleware(permissionService *services.PermissionService, config *con
 // PermissionCodeMiddleware 基于权限编码的权限控制中间件
 // 用于检查用户是否有权限访问特定的权限编码
 // 权限编码通过请求头 X-Required-Permission 指定
-func PermissionCodeMiddleware(permissionService *services.PermissionService, config *configs.Config) gin.HandlerFunc {
+func PermissionCodeMiddleware(permissionService services.PermissionServiceInterface, config *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
 		if !config.Casbin.Enabled {
@@ -102,7 +103,7 @@ func PermissionCodeMiddleware(permissionService *services.PermissionService, con
 			return
 		}
 
-		userID := strconv.FormatUint(uint64(userIDInterface.(float64)), 10)
+		userID := cast.ToString(userIDInterface)
 
 		// 获取用户角色
 		roles, err := permissionService.GetUserRoles(c.Request.Context(), userID)
@@ -150,7 +151,7 @@ func PermissionCodeMiddleware(permissionService *services.PermissionService, con
 // RequirePermission 创建一个需要特定权限的中间件
 // 用于检查用户是否有权限访问特定的权限编码
 // 与 PermissionCodeMiddleware 不同的是，权限编码在创建中间件时指定
-func RequirePermission(permCode string, permissionService *services.PermissionService, config *configs.Config) gin.HandlerFunc {
+func RequirePermission(permCode string, permissionService services.PermissionServiceInterface, config *configs.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 检查权限系统是否启用
 		if !config.Casbin.Enabled {
@@ -168,7 +169,7 @@ func RequirePermission(permCode string, permissionService *services.PermissionSe
 		}
 
 		// 获取用户角色
-		roles, err := permissionService.GetUserRoles(c.Request.Context(), strconv.FormatUint(userID, 10))
+		roles, err := permissionService.GetUserRoles(c.Request.Context(), fmt.Sprintf("%d", userID))
 		if err != nil {
 			ctx := c.Request.Context()
 			logger.ErrorContext(ctx, "获取用户角色失败", "error", err)

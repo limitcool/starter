@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -20,36 +19,6 @@ type contextKey string
 const (
 	TokenKey contextKey = "token"
 )
-
-// GetUserID 从上下文中获取用户ID
-func GetUserID(c *gin.Context) uint64 {
-	userID, exists := c.Get("user_id")
-	if !exists {
-		return 0
-	}
-
-	// 尝试转换为uint64
-	switch v := userID.(type) {
-	case float64:
-		return uint64(v)
-	case int:
-		return uint64(v)
-	case int64:
-		return uint64(v)
-	case uint:
-		return uint64(v)
-	case uint64:
-		return v
-	case string:
-		id, err := strconv.ParseUint(v, 10, 64)
-		if err != nil {
-			return 0
-		}
-		return id
-	default:
-		return 0
-	}
-}
 
 // JWTAuth JWT认证中间件
 func JWTAuth(config *configs.Config) gin.HandlerFunc {

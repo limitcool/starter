@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"strconv"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
@@ -10,20 +10,21 @@ import (
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/spf13/cast"
 )
 
-func NewPermissionController(permissionService *services.PermissionService) *PermissionController {
+func NewPermissionController(permissionService services.PermissionServiceInterface) *PermissionController {
 	return &PermissionController{
 		permissionService: permissionService,
 	}
 }
 
 type PermissionController struct {
-	permissionService *services.PermissionService
+	permissionService services.PermissionServiceInterface
 }
 
 // GetPermissionService 获取权限服务
-func (pc *PermissionController) GetPermissionService() *services.PermissionService {
+func (pc *PermissionController) GetPermissionService() services.PermissionServiceInterface {
 	return pc.permissionService
 }
 
@@ -65,7 +66,7 @@ func (pc *PermissionController) GetPermissions(c *gin.Context) {
 
 // GetPermission 获取权限详情
 func (pc *PermissionController) GetPermission(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return
@@ -98,7 +99,7 @@ func (pc *PermissionController) CreatePermission(c *gin.Context) {
 
 // UpdatePermission 更新权限
 func (pc *PermissionController) UpdatePermission(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return
@@ -110,7 +111,9 @@ func (pc *PermissionController) UpdatePermission(c *gin.Context) {
 		return
 	}
 
-	if err := pc.permissionService.UpdatePermission(c.Request.Context(), id, &permission); err != nil {
+	// 设置ID
+	permission.ID = uint(id)
+	if err := pc.permissionService.UpdatePermission(c.Request.Context(), &permission); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -120,14 +123,14 @@ func (pc *PermissionController) UpdatePermission(c *gin.Context) {
 
 // DeletePermission 删除权限
 func (pc *PermissionController) DeletePermission(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return
 	}
 
 	// 删除权限
-	if err := pc.permissionService.DeletePermission(c.Request.Context(), id); err != nil {
+	if err := pc.permissionService.DeletePermission(c.Request.Context(), uint(id)); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -164,7 +167,7 @@ func (pc *PermissionController) GetUserMenus(c *gin.Context) {
 	}
 
 	// 获取用户菜单
-	menus, err := pc.permissionService.GetUserMenus(c.Request.Context(), strconv.FormatUint(userID, 10))
+	menus, err := pc.permissionService.GetUserMenus(c.Request.Context(), int64(userID))
 	if err != nil {
 		logger.Error("获取用户菜单失败", "error", err)
 		response.Error(c, err)
@@ -184,7 +187,7 @@ func (pc *PermissionController) GetUserRoles(c *gin.Context) {
 	}
 
 	// 获取用户角色
-	roles, err := pc.permissionService.GetUserRoles(c.Request.Context(), strconv.FormatUint(userID, 10))
+	roles, err := pc.permissionService.GetUserRoles(c.Request.Context(), fmt.Sprintf("%d", userID))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -196,7 +199,7 @@ func (pc *PermissionController) GetUserRoles(c *gin.Context) {
 // AssignRolesToUser 为用户分配角色
 func (pc *PermissionController) AssignRolesToUser(c *gin.Context) {
 	// 获取用户ID
-	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	userID, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return
@@ -213,7 +216,7 @@ func (pc *PermissionController) AssignRolesToUser(c *gin.Context) {
 	}
 
 	// 分配角色
-	if err := pc.permissionService.AssignRolesToUser(c.Request.Context(), strconv.FormatUint(userID, 10), req.RoleIDs); err != nil {
+	if err := pc.permissionService.AssignRolesToUser(c.Request.Context(), fmt.Sprintf("%d", userID), req.RoleIDs); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -224,7 +227,7 @@ func (pc *PermissionController) AssignRolesToUser(c *gin.Context) {
 // AssignPermissionsToRole 为角色分配权限
 func (pc *PermissionController) AssignPermissionsToRole(c *gin.Context) {
 	// 获取角色ID
-	roleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	roleID, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return
@@ -252,7 +255,7 @@ func (pc *PermissionController) AssignPermissionsToRole(c *gin.Context) {
 // GetRolePermissions 获取角色的权限列表
 func (pc *PermissionController) GetRolePermissions(c *gin.Context) {
 	// 获取角色ID
-	roleID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	roleID, err := cast.ToUint64E(c.Param("id"))
 	if err != nil {
 		response.Error(c, errorx.ErrInvalidParams)
 		return

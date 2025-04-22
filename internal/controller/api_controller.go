@@ -1,13 +1,12 @@
 package controller
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/services"
+	"github.com/spf13/cast"
 )
 
 // APIController API控制器
@@ -42,7 +41,7 @@ func (c *APIController) GetAPIs(ctx *gin.Context) {
 
 // GetAPI 获取API详情
 func (c *APIController) GetAPI(ctx *gin.Context) {
-	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(ctx.Param("id"))
 	if err != nil {
 		response.Error(ctx, errorx.ErrInvalidParams)
 		return
@@ -75,7 +74,7 @@ func (c *APIController) CreateAPI(ctx *gin.Context) {
 
 // UpdateAPI 更新API
 func (c *APIController) UpdateAPI(ctx *gin.Context) {
-	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(ctx.Param("id"))
 	if err != nil {
 		response.Error(ctx, errorx.ErrInvalidParams)
 		return
@@ -98,7 +97,7 @@ func (c *APIController) UpdateAPI(ctx *gin.Context) {
 
 // DeleteAPI 删除API
 func (c *APIController) DeleteAPI(ctx *gin.Context) {
-	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	id, err := cast.ToUint64E(ctx.Param("id"))
 	if err != nil {
 		response.Error(ctx, errorx.ErrInvalidParams)
 		return
@@ -114,7 +113,7 @@ func (c *APIController) DeleteAPI(ctx *gin.Context) {
 
 // AssignAPIsToMenu 为菜单分配API
 func (c *APIController) AssignAPIsToMenu(ctx *gin.Context) {
-	menuID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	menuID, err := cast.ToUint64E(ctx.Param("id"))
 	if err != nil {
 		response.Error(ctx, errorx.ErrInvalidParams)
 		return
@@ -139,7 +138,7 @@ func (c *APIController) AssignAPIsToMenu(ctx *gin.Context) {
 
 // GetMenuAPIs 获取菜单关联的API
 func (c *APIController) GetMenuAPIs(ctx *gin.Context) {
-	menuID, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	menuID, err := cast.ToUint64E(ctx.Param("id"))
 	if err != nil {
 		response.Error(ctx, errorx.ErrInvalidParams)
 		return

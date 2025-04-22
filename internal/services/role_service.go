@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"errors"
-	"strconv"
 
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
@@ -11,6 +10,7 @@ import (
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/repository"
+	"github.com/spf13/cast"
 	"go.uber.org/fx"
 )
 
@@ -181,7 +181,7 @@ func (s *RoleService) AssignRolesToUser(ctx context.Context, userID int64, roleI
 
 	// 更新Casbin中的用户角色
 	if s.casbinService != nil {
-		userIDStr := strconv.FormatUint(uint64(userID), 10)
+		userIDStr := cast.ToString(userID)
 
 		// 获取用户当前角色
 		roles, err := s.casbinService.GetRolesForUser(ctx, userIDStr)
@@ -242,6 +242,19 @@ func (s *RoleService) GetRoleMenuIDs(ctx context.Context, roleID uint) ([]uint, 
 	}
 
 	return s.roleRepo.GetMenuIDsByRoleID(ctx, roleID)
+}
+
+// AssignMenusToRole 为角色分配菜单
+func (s *RoleService) AssignMenusToRole(ctx context.Context, roleID uint, menuIDs []uint) error {
+	// 获取用户模式
+	userMode := enum.GetUserMode(s.config.Admin.UserMode)
+
+	// 如果是简单模式，直接返回nil
+	if userMode == enum.UserModeSimple {
+		return nil
+	}
+
+	return s.roleRepo.AssignMenusToRole(ctx, roleID, menuIDs)
 }
 
 // 为角色设置权限策略

@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"path/filepath"
-	"strconv"
 
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
@@ -11,6 +10,7 @@ import (
 	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/repository"
+	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
 )
@@ -114,6 +114,11 @@ func (s *PermissionService) GetPermissions(ctx context.Context) ([]model.Permiss
 	return s.permissionRepo.GetAll(ctx)
 }
 
+// GetPermissionByID 获取权限详情
+func (s *PermissionService) GetPermissionByID(ctx context.Context, id uint) (*model.Permission, error) {
+	return s.permissionRepo.GetByID(ctx, id)
+}
+
 // GetPermission 获取权限详情
 func (s *PermissionService) GetPermission(ctx context.Context, id uint64) (*model.Permission, error) {
 	return s.permissionRepo.GetByID(ctx, uint(id))
@@ -125,14 +130,13 @@ func (s *PermissionService) CreatePermission(ctx context.Context, permission *mo
 }
 
 // UpdatePermission 更新权限
-func (s *PermissionService) UpdatePermission(ctx context.Context, id uint64, permission *model.Permission) error {
-	permission.ID = uint(id)
+func (s *PermissionService) UpdatePermission(ctx context.Context, permission *model.Permission) error {
 	return s.permissionRepo.Update(ctx, permission)
 }
 
 // DeletePermission 删除权限
-func (s *PermissionService) DeletePermission(ctx context.Context, id uint64) error {
-	return s.permissionRepo.Delete(ctx, uint(id))
+func (s *PermissionService) DeletePermission(ctx context.Context, id uint) error {
+	return s.permissionRepo.Delete(ctx, id)
 }
 
 // AssignPermissionToRole 为角色分配权限
@@ -249,7 +253,7 @@ func (s *PermissionService) AssignRolesToUser(ctx context.Context, userID string
 	}
 
 	// 将 userID 转换为 int64 用于数据库操作
-	userIDInt, err := strconv.ParseInt(userID, 10, 64)
+	userIDInt, err := cast.ToInt64E(userID)
 	if err != nil {
 		return err
 	}
@@ -346,13 +350,16 @@ func (s *PermissionService) GetUserRoles(ctx context.Context, userID string) ([]
 }
 
 // GetUserMenus 获取用户菜单
-func (s *PermissionService) GetUserMenus(ctx context.Context, userID string) ([]*model.MenuTree, error) {
+func (s *PermissionService) GetUserMenus(ctx context.Context, userID int64) ([]*model.MenuTree, error) {
+	// 将int64转换为string
+	userIDStr := cast.ToString(userID)
+
 	// 获取用户角色
-	roles, err := s.GetUserRoles(ctx, userID)
+	roles, err := s.GetUserRoles(ctx, userIDStr)
 	if err != nil {
 		return nil, err
 	}
 
 	// 使用 MenuService 的方法获取用户菜单树
-	return s.menuService.GetUserMenuTree(ctx, userID, roles)
+	return s.menuService.GetUserMenuTree(ctx, userIDStr, roles)
 }
