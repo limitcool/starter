@@ -10,6 +10,7 @@ import (
 
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -458,8 +459,22 @@ func (r *GenericRepo[T]) Exists(ctx context.Context, condition string, args ...a
 }
 
 // Raw 原生查询
+// 警告：此方法允许执行原生SQL查询，如果使用不当存在SQL注入风险
+// 安全使用指南：
+// 1. 始终使用参数化查询（占位符）传递用户输入或变量
+// 2. 正确示例：repo.Raw(ctx, "SELECT * FROM users WHERE id > ?", userInput)
+// 3. 错误示例：repo.Raw(ctx, "SELECT * FROM users WHERE id > " + userInput) // 极危险！
+// 4. 仅在无法使用GORM提供的方法时使用此方法
 func (r *GenericRepo[T]) Raw(ctx context.Context, sql string, values ...any) ([]map[string]any, error) {
-	// 执行原生查询
+	// 检查SQL是否为空
+	if sql == "" {
+		return nil, errorx.NewAppError(errorx.ErrorInvalidParamsCode, "SQL语句不能为空", http.StatusBadRequest)
+	}
+
+	// 记录原生SQL查询日志
+	logger.InfoContext(ctx, "执行原生SQL查询", "table", r.TableName, "sql", sql)
+
+	// 执行原生查询，使用参数化查询防止SQL注入
 	var results []map[string]any
 	if err := r.DB.WithContext(ctx).Raw(sql, values...).Scan(&results).Error; err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("原生查询%s失败", r.TableName))

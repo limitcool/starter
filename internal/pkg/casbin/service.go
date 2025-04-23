@@ -8,6 +8,7 @@ import (
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -77,7 +78,7 @@ func (s *DefaultService) Initialize() error {
 func (s *DefaultService) InitializeWithContext(ctx context.Context) error {
 	if s.db == nil {
 		logger.ErrorContext(ctx, "数据库连接未初始化")
-		return fmt.Errorf("数据库连接未初始化")
+		return errorx.Errorf(errorx.ErrInternal, "数据库连接未初始化")
 	}
 
 	// 如果权限系统未启用，直接返回
@@ -92,7 +93,7 @@ func (s *DefaultService) InitializeWithContext(ctx context.Context) error {
 	adapter, err := gormadapter.NewAdapterByDB(s.db)
 	if err != nil {
 		logger.ErrorContext(ctx, "创建Casbin适配器失败", "error", err)
-		return fmt.Errorf("创建Casbin适配器失败: %w", err)
+		return errorx.WrapError(err, "创建Casbin适配器失败")
 	}
 
 	// 获取模型文件路径
@@ -107,14 +108,14 @@ func (s *DefaultService) InitializeWithContext(ctx context.Context) error {
 	e, err := casbin.NewEnforcer(modelPath, adapter)
 	if err != nil {
 		logger.ErrorContext(ctx, "创建Casbin Enforcer失败", "error", err)
-		return fmt.Errorf("创建Casbin Enforcer失败: %w", err)
+		return errorx.WrapError(err, "创建Casbin Enforcer失败")
 	}
 
 	// 加载策略
 	logger.DebugContext(ctx, "加载Casbin策略")
 	if err := e.LoadPolicy(); err != nil {
 		logger.ErrorContext(ctx, "加载Casbin策略失败", "error", err)
-		return fmt.Errorf("加载Casbin策略失败: %w", err)
+		return errorx.WrapError(err, "加载Casbin策略失败")
 	}
 
 	// 启用自动保存
@@ -141,13 +142,13 @@ func (s *DefaultService) CheckPermission(ctx context.Context, sub, obj, act stri
 	defer s.mutex.RUnlock()
 
 	if s.enforcer == nil {
-		return false, fmt.Errorf("Casbin enforcer 未初始化")
+		return false, errorx.Errorf(errorx.ErrCasbinService, "Casbin enforcer 未初始化")
 	}
 
 	logger.DebugContext(ctx, "检查权限", "subject", sub, "object", obj, "action", act)
 	result, err := s.enforcer.Enforce(sub, obj, act)
 	if err != nil {
-		return false, fmt.Errorf("权限检查失败: %w", err)
+		return false, errorx.WrapError(err, "权限检查失败")
 	}
 
 	return result, nil
@@ -159,7 +160,7 @@ func (s *DefaultService) AddRoleForUser(ctx context.Context, userID string, role
 	defer s.mutex.Unlock()
 
 	if s.enforcer == nil {
-		return false, fmt.Errorf("Casbin enforcer 未初始化")
+		return false, errorx.Errorf(errorx.ErrCasbinService, "Casbin enforcer 未初始化")
 	}
 
 	logger.DebugContext(ctx, "为用户添加角色", "user", userID, "role", role)

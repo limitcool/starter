@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/url"
@@ -91,7 +92,7 @@ type gormLogWriter struct{}
 func (w *gormLogWriter) Printf(format string, args ...any) {
 	// 将GORM日志输出到结构化日志
 	msg := fmt.Sprintf(format, args...)
-	logger.Info("GORM", "message", msg)
+	logger.InfoContext(context.Background(), "GORM", "message", msg)
 }
 
 // getGormLogLevel 根据配置获取GORM日志级别
@@ -127,10 +128,10 @@ func newDbConn(c *configs.Config) *gorm.DB {
 		// sqlDB, err = sql.Open("sqlite3", dsn) // 注意：SQLite 的驱动名称是 "sqlite3"
 
 	default:
-		logger.Fatal("Unsupported database driver", "driver", c.Driver)
+		logger.FatalContext(context.Background(), "Unsupported database driver", "driver", c.Driver)
 	}
 	if err != nil {
-		logger.Fatal("Failed to open database connection",
+		logger.FatalContext(context.Background(), "Failed to open database connection",
 			"driver", c.Driver,
 			"database", c.Database.DBName,
 			"error", err)
@@ -142,21 +143,21 @@ func newDbConn(c *configs.Config) *gorm.DB {
 		sqlDB.SetConnMaxLifetime(c.Database.ConnMaxLifeTime)
 	} else {
 		if c.Database.DBName == "" {
-			logger.Warn("Database name is empty, using default", "driver", c.Driver)
+			logger.WarnContext(context.Background(), "Database name is empty, using default", "driver", c.Driver)
 			c.Database.DBName = "default"
 		}
 	}
 
 	db, err := gorm.Open(getGormDriver(c), gormConfig(c))
 	if err != nil {
-		logger.Fatal("Database connection failed",
+		logger.FatalContext(context.Background(), "Database connection failed",
 			"database", c.Database.DBName,
 			"error", err)
 	}
 	db.Set("gorm:table_options", "CHARSET=utf8mb4")
 	err = db.AutoMigrate()
 	if err != nil {
-		logger.Fatal("AutoMigrate failed", "error", err)
+		logger.FatalContext(context.Background(), "AutoMigrate failed", "error", err)
 	}
 	return db
 }
@@ -170,7 +171,7 @@ func getGormDriver(c *configs.Config) gorm.Dialector {
 	case configs.DriverSqlite:
 		return sqlite.Open(getDSN(c))
 	default:
-		logger.Fatal("Unsupported database driver", "driver", c.Driver)
+		logger.FatalContext(context.Background(), "Unsupported database driver", "driver", c.Driver)
 		return nil
 	}
 }

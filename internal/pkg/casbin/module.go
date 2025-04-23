@@ -3,7 +3,6 @@ package casbin
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
@@ -85,19 +84,9 @@ m = g(r.sub, p.sub) && r.obj == p.obj && r.act == p.act
 		return nil, fmt.Errorf("failed to create Casbin enforcer: %w", err)
 	}
 
-	// 启用自8动加载
-	if cfg.Casbin.AutoLoad {
-		// 注意：Casbin v2 不支持 StartAutoLoadPolicy 方法
-		// 这里可以使用定时器或其他方式实现自动加载
-		go func() {
-			for {
-				time.Sleep(time.Duration(cfg.Casbin.AutoLoadInterval) * time.Second)
-				err := enforcer.LoadPolicy()
-				if err != nil {
-					logger.ErrorContext(context.Background(), "Failed to auto load policy", "error", err)
-				}
-			}
-		}()
+	// 加载策略
+	if err := enforcer.LoadPolicy(); err != nil {
+		return nil, fmt.Errorf("failed to load Casbin policy: %w", err)
 	}
 
 	// 注册生命周期钩子

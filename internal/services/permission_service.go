@@ -22,11 +22,11 @@ type PermissionService struct {
 	menuRepo       *repository.MenuRepo
 	casbinService  casbin.Service
 	config         *configs.Config
-	menuService    *MenuService
+	menuService    MenuServiceInterface
 }
 
 // NewPermissionService 创建权限服务
-func NewPermissionService(params ServiceParams, casbinService casbin.Service) *PermissionService {
+func NewPermissionService(params ServiceParams, casbinService casbin.Service, menuService MenuServiceInterface) *PermissionService {
 	// 使用参数中的仓库和配置
 	permissionRepo := params.PermissionRepo
 	roleRepo := params.RoleRepo
@@ -44,15 +44,8 @@ func NewPermissionService(params ServiceParams, casbinService casbin.Service) *P
 			menuRepo:       menuRepo,
 			casbinService:  nil, // 简单模式不使用Casbin
 			config:         config,
+			menuService:    menuService,
 		}
-
-		// 初始化 MenuService
-		ps.menuService = NewMenuService(ServiceParams{
-			MenuRepo: menuRepo,
-			RoleRepo: roleRepo,
-			Config:   config,
-			LC:       params.LC,
-		}, nil)
 
 		return ps
 	}
@@ -64,6 +57,7 @@ func NewPermissionService(params ServiceParams, casbinService casbin.Service) *P
 		menuRepo:       menuRepo,
 		casbinService:  casbinService,
 		config:         config,
+		menuService:    menuService,
 	}
 
 	// 注册生命周期钩子
@@ -77,14 +71,6 @@ func NewPermissionService(params ServiceParams, casbinService casbin.Service) *P
 			return nil
 		},
 	})
-
-	// 初始化 MenuService
-	ps.menuService = NewMenuService(ServiceParams{
-		MenuRepo: menuRepo,
-		RoleRepo: roleRepo,
-		Config:   config,
-		LC:       params.LC,
-	}, casbinService)
 
 	return ps
 }

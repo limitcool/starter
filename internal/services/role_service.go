@@ -2,12 +2,12 @@ package services
 
 import (
 	"context"
-	"errors"
 
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/enum"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/repository"
 	"github.com/spf13/cast"
@@ -99,28 +99,28 @@ func (s *RoleService) DeleteRole(ctx context.Context, id uint) error {
 	// 检查角色是否已分配给用户
 	isAssigned, err := s.roleRepo.IsAssignedToUser(ctx, id)
 	if err != nil {
-		return err
+		return errorx.WrapError(err, "检查角色是否已分配给用户失败")
 	}
 	if isAssigned {
-		return errors.New("该角色已分配给用户，不能删除")
+		return errorx.Errorf(errorx.ErrForbidden, "该角色已分配给用户，不能删除")
 	}
 
 	// 删除角色菜单关联
 	if err := s.roleRepo.DeleteRoleMenus(ctx, id); err != nil {
-		return err
+		return errorx.WrapError(err, "删除角色菜单关联失败")
 	}
 
 	// 查询角色信息
 	role, err := s.roleRepo.GetByID(ctx, id)
 	if err != nil {
-		return err
+		return errorx.WrapError(err, "查询角色信息失败")
 	}
 
 	// 删除Casbin中的角色策略
 	if s.casbinService != nil {
 		_, err = s.casbinService.DeleteRole(ctx, role.Code)
 		if err != nil {
-			return err
+			return errorx.WrapError(err, "删除Casbin角色策略失败")
 		}
 	}
 
@@ -176,7 +176,7 @@ func (s *RoleService) AssignRolesToUser(ctx context.Context, userID int64, roleI
 
 	// 使用 roleRepo 的 AssignRolesToUser 方法
 	if err := s.roleRepo.AssignRolesToUser(ctx, userID, roleIDs); err != nil {
-		return err
+		return errorx.WrapError(err, "为用户分配角色失败")
 	}
 
 	// 更新Casbin中的用户角色
@@ -186,14 +186,14 @@ func (s *RoleService) AssignRolesToUser(ctx context.Context, userID int64, roleI
 		// 获取用户当前角色
 		roles, err := s.casbinService.GetRolesForUser(ctx, userIDStr)
 		if err != nil {
-			return err
+			return errorx.WrapError(err, "获取用户角色失败")
 		}
 
 		// 移除所有角色
 		for _, role := range roles {
 			_, err = s.casbinService.DeleteRoleForUser(ctx, userIDStr, role)
 			if err != nil {
-				return err
+				return errorx.WrapError(err, "操作失败")
 			}
 		}
 
@@ -203,13 +203,13 @@ func (s *RoleService) AssignRolesToUser(ctx context.Context, userID int64, roleI
 				// 查询角色编码
 				roleObj, err := s.roleRepo.GetByID(ctx, roleID)
 				if err != nil {
-					return err
+					return errorx.WrapError(err, "查询角色信息失败")
 				}
 
 				// 添加用户角色关联
 				_, err = s.casbinService.AddRoleForUser(ctx, userIDStr, roleObj.Code)
 				if err != nil {
-					return err
+					return errorx.WrapError(err, "添加用户角色关联失败")
 				}
 			}
 		}
@@ -268,7 +268,10 @@ func (s *RoleService) SetRolePermission(ctx context.Context, roleCode string, ob
 	}
 
 	_, err := s.casbinService.AddPermissionForRole(ctx, roleCode, obj, act)
-	return err
+	if err != nil {
+		return errorx.WrapError(err, "设置角色权限失败")
+	}
+	return nil
 }
 
 // 删除角色的权限策略
@@ -282,5 +285,8 @@ func (s *RoleService) DeleteRolePermission(ctx context.Context, roleCode string,
 	}
 
 	_, err := s.casbinService.DeletePermissionForRole(ctx, roleCode, obj, act)
-	return err
+	if err != nil {
+		return errorx.WrapError(err, "删除角色权限失败")
+	}
+	return nil
 }

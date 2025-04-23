@@ -86,7 +86,9 @@ func runServer(cmd *cobra.Command, args []string) {
 		filestore.Module,
 		casbin.Module,
 		repository.Module,
-		services.Module,
+		// 使用 ServiceOrderGroup 替代 services.Module
+		// 这样可以确保服务按照正确的顺序初始化
+		services.ServiceOrderGroup,
 		api.Module,
 		router.Module,
 		server.Module,

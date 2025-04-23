@@ -56,13 +56,13 @@ func ProvideMenuService(params ServiceParams, casbinService casbin.Service) Menu
 }
 
 // ProvidePermissionService 根据用户模式提供权限服务
-func ProvidePermissionService(params ServiceParams, casbinService casbin.Service) PermissionServiceInterface {
+func ProvidePermissionService(params ServiceParams, casbinService casbin.Service, menuService MenuServiceInterface) PermissionServiceInterface {
 	// 获取用户模式
 	userMode := enum.GetUserMode(params.Config.Admin.UserMode)
 	logger.Info("初始化权限服务", "user_mode", userMode)
 
 	// 使用现有的PermissionService，它已经根据用户模式提供了不同的实现
-	return NewPermissionService(params, casbinService)
+	return NewPermissionService(params, casbinService, menuService)
 }
 
 // RegisterServices 注册所有服务

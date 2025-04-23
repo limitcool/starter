@@ -174,7 +174,16 @@ func (s *FileService) DeleteFile(ctx context.Context, id string, currentUserID i
 	return nil
 }
 
-// 获取文件内容
+// GetFileContent 获取文件内容
+// 注意：调用者必须负责关闭返回的io.ReadCloser，建议使用defer fileStream.Close()
+// 示例：
+//
+//	fileStream, contentType, err := fileService.GetFileContent(ctx, id, userID, userType)
+//	if err != nil {
+//		// 处理错误
+//	}
+//	defer fileStream.Close() // 重要：确保文件流被关闭
+//	// 使用fileStream...
 func (s *FileService) GetFileContent(ctx context.Context, id string, currentUserID int64, currentUserType enum.UserType) (io.ReadCloser, string, error) {
 	// 先验证权限
 	file, err := s.GetFile(ctx, id, currentUserID, currentUserType)

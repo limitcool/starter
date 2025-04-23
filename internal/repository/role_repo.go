@@ -31,13 +31,13 @@ func NewRoleRepo(params RepoParams) *RoleRepo {
 	params.LC.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			if params.Logger != nil {
-				logger.Info("RoleRepo initialized")
+				logger.InfoContext(ctx, "RoleRepo initialized")
 			}
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			if params.Logger != nil {
-				logger.Info("RoleRepo stopped")
+				logger.InfoContext(ctx, "RoleRepo stopped")
 			}
 			return nil
 		},
@@ -106,32 +106,36 @@ func (r *RoleRepo) DeleteRoleMenus(ctx context.Context, roleID uint) error {
 }
 
 // GetMenuIDsByRoleID 获取角色菜单ID列表
+// 使用直接查询避免N+1查询问题
 func (r *RoleRepo) GetMenuIDsByRoleID(ctx context.Context, roleID uint) ([]uint, error) {
-	var roleMenus []model.RoleMenu
-	err := r.DB.WithContext(ctx).Where("role_id = ?", roleID).Find(&roleMenus).Error
+	// 直接查询菜单ID，避免中间对象转换
+	var menuIDs []uint
+	err := r.DB.WithContext(ctx).
+		Model(&model.RoleMenu{}).
+		Select("menu_id").
+		Where("role_id = ?", roleID).
+		Pluck("menu_id", &menuIDs).Error
+
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("获取角色菜单ID列表失败: roleID=%d", roleID))
-	}
-
-	var menuIDs []uint
-	for _, rm := range roleMenus {
-		menuIDs = append(menuIDs, rm.MenuID)
 	}
 
 	return menuIDs, nil
 }
 
 // GetRoleIDsByUserID 获取用户角色ID列表
+// 使用直接查询避免N+1查询问题
 func (r *RoleRepo) GetRoleIDsByUserID(ctx context.Context, userID uint) ([]uint, error) {
-	var userRoles []model.UserRole
-	err := r.DB.WithContext(ctx).Where("user_id = ?", userID).Find(&userRoles).Error
+	// 直接查询角色ID，避免中间对象转换
+	var roleIDs []uint
+	err := r.DB.WithContext(ctx).
+		Model(&model.UserRole{}).
+		Select("role_id").
+		Where("user_id = ?", userID).
+		Pluck("role_id", &roleIDs).Error
+
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("获取用户角色ID列表失败: userID=%d", userID))
-	}
-
-	var roleIDs []uint
-	for _, ur := range userRoles {
-		roleIDs = append(roleIDs, ur.RoleID)
 	}
 
 	return roleIDs, nil
@@ -230,102 +234,67 @@ func (r *RoleRepo) AssignMenusToRole(ctx context.Context, roleID uint, menuIDs [
 }
 
 // GetRoleCodesByUserID 获取用户角色编码列表
+// 使用JOIN查询避免N+1查询问题
 func (r *RoleRepo) GetRoleCodesByUserID(ctx context.Context, userID int64) ([]string, error) {
-	// 查询用户角色关联
-	var userRoles []model.UserRole
-	err := r.DB.WithContext(ctx).Where("user_id = ?", userID).Find(&userRoles).Error
-	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("获取用户角色关联失败: userID=%d", userID))
-	}
-
-	if len(userRoles) == 0 {
-		return []string{"user"}, nil // 默认角色
-	}
-
-	// 提取角色ID
-	var roleIDs []uint
-	for _, ur := range userRoles {
-		roleIDs = append(roleIDs, ur.RoleID)
-	}
-
-	// 查询角色
-	var roles []model.Role
-	err = r.DB.WithContext(ctx).Where("id IN ?", roleIDs).Find(&roles).Error
-	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: roleIDs=%v", roleIDs))
-	}
-
-	// 提取角色编码
+	// 使用JOIN查询直接获取角色编码
 	var roleCodes []string
-	for _, role := range roles {
-		roleCodes = append(roleCodes, role.Code)
+	err := r.DB.WithContext(ctx).
+		Model(&model.Role{}).
+		Select("sys_role.code").
+		Joins("JOIN sys_user_role ON sys_user_role.role_id = sys_role.id").
+		Where("sys_user_role.user_id = ?", userID).
+		Pluck("code", &roleCodes).Error
+
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取用户角色编码失败: userID=%d", userID))
+	}
+
+	// 如果没有角色，返回默认角色
+	if len(roleCodes) == 0 {
+		return []string{"user"}, nil // 默认角色
 	}
 
 	return roleCodes, nil
 }
 
 // GetRoleCodesByAdminUserID 获取管理员用户角色编码列表
+// 使用JOIN查询避免N+1查询问题
 func (r *RoleRepo) GetRoleCodesByAdminUserID(ctx context.Context, adminUserID int64) ([]string, error) {
-	// 查询管理员用户角色关联
-	var adminUserRoles []struct {
-		AdminUserID int64 `gorm:"column:admin_user_id"`
-		RoleID      uint  `gorm:"column:role_id"`
-	}
-	err := r.DB.WithContext(ctx).Table("admin_user_role").Where("admin_user_id = ?", adminUserID).Find(&adminUserRoles).Error
-	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("获取管理员用户角色关联失败: adminUserID=%d", adminUserID))
-	}
-
-	if len(adminUserRoles) == 0 {
-		return []string{"admin"}, nil // 默认管理员角色
-	}
-
-	// 提取角色ID
-	var roleIDs []uint
-	for _, ur := range adminUserRoles {
-		roleIDs = append(roleIDs, ur.RoleID)
-	}
-
-	// 查询角色
-	var roles []model.Role
-	err = r.DB.WithContext(ctx).Where("id IN ?", roleIDs).Find(&roles).Error
-	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: roleIDs=%v", roleIDs))
-	}
-
-	// 提取角色编码
+	// 使用JOIN查询直接获取角色编码
 	var roleCodes []string
-	for _, role := range roles {
-		roleCodes = append(roleCodes, role.Code)
+	err := r.DB.WithContext(ctx).
+		Model(&model.Role{}).
+		Select("sys_role.code").
+		Joins("JOIN admin_user_role ON admin_user_role.role_id = sys_role.id").
+		Where("admin_user_role.admin_user_id = ?", adminUserID).
+		Pluck("code", &roleCodes).Error
+
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取管理员用户角色编码失败: adminUserID=%d", adminUserID))
+	}
+
+	// 如果没有角色，返回默认角色
+	if len(roleCodes) == 0 {
+		return []string{"admin"}, nil // 默认管理员角色
 	}
 
 	return roleCodes, nil
 }
 
 // GetRolesByMenuID 获取拥有指定菜单的所有角色
+// 使用JOIN查询避免N+1查询问题
 func (r *RoleRepo) GetRolesByMenuID(ctx context.Context, menuID uint) ([]*model.Role, error) {
-	// 查询菜单关联的角色ID
-	var roleMenus []model.RoleMenu
-	err := r.DB.WithContext(ctx).Where("menu_id = ?", menuID).Find(&roleMenus).Error
+	// 使用JOIN查询直接获取角色
+	var roles []*model.Role
+	err := r.DB.WithContext(ctx).
+		Model(&model.Role{}).
+		Joins("JOIN sys_role_menu ON sys_role_menu.role_id = sys_role.id").
+		Where("sys_role_menu.menu_id = ?", menuID).
+		Find(&roles).Error
+
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("查询菜单关联的角色失败: menuID=%d", menuID))
 	}
 
-	// 提取角色ID
-	var roleIDs []uint
-	for _, rm := range roleMenus {
-		roleIDs = append(roleIDs, rm.RoleID)
-	}
-
-	if len(roleIDs) == 0 {
-		return []*model.Role{}, nil
-	}
-
-	// 查询角色
-	var roles []*model.Role
-	err = r.DB.WithContext(ctx).Where("id IN ?", roleIDs).Find(&roles).Error
-	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色失败: roleIDs=%v", roleIDs))
-	}
 	return roles, nil
 }

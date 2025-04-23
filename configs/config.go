@@ -120,13 +120,11 @@ type CacheConfig struct {
 
 // Casbin 权限系统配置
 type Casbin struct {
-	Enabled          bool   // 是否启用权限系统
-	DefaultAllow     bool   // 默认是否允许访问（权限系统关闭时使用）
-	ModelPath        string // Casbin模型文件路径
-	PolicyTable      string // 策略表名
-	AutoLoad         bool   // 是否自动加载策略
-	AutoLoadInterval int    // 自动加载策略间隔（秒）
-	LogEnabled       bool   // 是否启用日志
+	Enabled      bool   // 是否启用权限系统
+	DefaultAllow bool   // 默认是否允许访问（权限系统关闭时使用）
+	ModelPath    string // Casbin模型文件路径
+	PolicyTable  string // 策略表名
+	LogEnabled   bool   // 是否启用日志
 }
 
 // Storage 文件存储配置

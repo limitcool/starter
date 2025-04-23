@@ -261,7 +261,7 @@ func (s *MenuAPIService) SyncMenuAPIPermissions(ctx context.Context) error {
 		// 获取菜单关联的所有API
 		apis, err := s.apiRepo.GetByMenuID(ctx, menu.ID)
 		if err != nil {
-			logger.Warn("获取菜单API失败", "menu_id", menu.ID, "error", err)
+			logger.WarnContext(ctx, "获取菜单API失败", "menu_id", menu.ID, "error", err)
 			continue
 		}
 

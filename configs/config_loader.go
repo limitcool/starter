@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -93,11 +94,11 @@ func LoadConfig(configPath string) *Config {
 		},
 		Log: logconfig.DefaultLogConfig(),
 		Casbin: Casbin{
-			Enabled:          true,
-			DefaultAllow:     false,
-			ModelPath:        "configs/rbac_model.conf",
-			PolicyTable:      "casbin_rule",
-			AutoLoadInterval: 30,
+			Enabled:      true,
+			DefaultAllow: false,
+			ModelPath:    "configs/rbac_model.conf",
+			PolicyTable:  "casbin_rule",
+			LogEnabled:   true,
 		},
 		Storage: Storage{
 			Enabled: true,
@@ -183,13 +184,14 @@ func LoadConfig(configPath string) *Config {
 // PrintConfig 打印配置信息
 func PrintConfig(config *Config) {
 	// 使用我们的统一logger
-	logger.Info("应用配置", "name", config.App.Name, "port", config.App.Port)
-	logger.Info("数据库配置", "enabled", config.Database.Enabled, "driver", config.Driver, "host", config.Database.Host, "port", config.Database.Port)
-	logger.Info("MongoDB配置", "enabled", config.Mongo.Enabled)
-	logger.Info("Redis配置", "instances", len(config.Redis.Instances), "default_enabled", config.Redis.Instances["default"].Enabled)
-	logger.Info("Casbin配置", "enabled", config.Casbin.Enabled, "default_allow", config.Casbin.DefaultAllow)
-	logger.Info("存储配置", "enabled", config.Storage.Enabled, "type", config.Storage.Type)
-	logger.Info("国际化配置", "enabled", config.I18n.Enabled, "default", config.I18n.DefaultLanguage)
+	ctx := context.Background()
+	logger.InfoContext(ctx, "应用配置", "app_name", config.App.Name, "app_port", config.App.Port)
+	logger.InfoContext(ctx, "数据库配置", "db_enabled", config.Database.Enabled, "db_driver", config.Driver, "db_host", config.Database.Host, "db_port", config.Database.Port)
+	logger.InfoContext(ctx, "MongoDB配置", "mongo_enabled", config.Mongo.Enabled)
+	logger.InfoContext(ctx, "Redis配置", "redis_instances", len(config.Redis.Instances), "redis_default_enabled", config.Redis.Instances["default"].Enabled)
+	logger.InfoContext(ctx, "Casbin配置", "casbin_enabled", config.Casbin.Enabled, "casbin_default_allow", config.Casbin.DefaultAllow)
+	logger.InfoContext(ctx, "存储配置", "storage_enabled", config.Storage.Enabled, "storage_type", config.Storage.Type)
+	logger.InfoContext(ctx, "国际化配置", "i18n_enabled", config.I18n.Enabled, "i18n_default", config.I18n.DefaultLanguage)
 }
 
 // SaveConfig 保存配置到文件
@@ -220,7 +222,8 @@ func SaveConfig(config *Config, path string) error {
 		return fmt.Errorf("写入配置文件失败: %w", err)
 	}
 
-	logger.Info("配置保存成功", "path", path)
+	ctx := context.Background()
+	logger.InfoContext(ctx, "配置保存成功", "config_path", path)
 	return nil
 }
 

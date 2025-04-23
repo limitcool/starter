@@ -61,6 +61,8 @@ type MenuServiceInterface interface {
 	AssignMenuToRole(ctx context.Context, roleID uint, menuIDs []uint) error
 	// 权限相关方法
 	GetMenuPermsByUserID(ctx context.Context, userID uint) ([]string, error)
+	// 获取用户菜单树
+	GetUserMenuTree(ctx context.Context, userID string, roles []model.Role) ([]*model.MenuTree, error)
 }
 
 // PermissionServiceInterface 权限服务接口

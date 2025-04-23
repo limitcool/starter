@@ -91,12 +91,11 @@ log:
   stack_trace: true
 
 casbin:
-  model_path: "configs/casbin_model.conf"
-  policy_adapter: "file" # file, mysql, postgres, sqlite
-  policy_path: "configs/casbin_policy.csv"
+  enabled: true
+  default_allow: false
+  model_path: "configs/rbac_model.conf"
+  policy_table: "casbin_rule"
   log_enabled: true
-  auto_load: true
-  auto_load_interval: 60 # seconds
 
 storage:
   enabled: true
