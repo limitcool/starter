@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"context"
 	"strings"
 
 	"github.com/limitcool/starter/internal/model"
@@ -23,7 +24,7 @@ func RegisterUpdateAPIPathsMigrations(migrator *Migrator) {
 
 			// 如果没有找到API，直接返回
 			if len(apis) == 0 {
-				logger.Info("没有找到需要更新的API路径")
+				logger.InfoContext(context.Background(), "没有找到需要更新的API路径")
 				return nil
 			}
 
@@ -31,7 +32,7 @@ func RegisterUpdateAPIPathsMigrations(migrator *Migrator) {
 			for _, api := range apis {
 				// 替换路径中的 /api/v1/admin/ 为 /api/v1/admin-api/
 				newPath := strings.Replace(api.Path, "/api/v1/admin/", "/api/v1/admin-api/", 1)
-				
+
 				// 更新API路径
 				if err := tx.Model(&model.API{}).Where("id = ?", api.ID).Update("path", newPath).Error; err != nil {
 					return err
@@ -40,12 +41,12 @@ func RegisterUpdateAPIPathsMigrations(migrator *Migrator) {
 				// 更新权限记录中的code
 				oldCode := api.Path + ":" + api.Method
 				newCode := newPath + ":" + api.Method
-				
+
 				if err := tx.Model(&model.Permission{}).Where("code = ?", oldCode).Update("code", newCode).Error; err != nil {
 					return err
 				}
 
-				logger.Info("更新API路径", "old_path", api.Path, "new_path", newPath)
+				logger.InfoContext(context.Background(), "更新API路径", "old_path", api.Path, "new_path", newPath)
 			}
 
 			// 更新Casbin规则中的路径
@@ -57,13 +58,13 @@ func RegisterUpdateAPIPathsMigrations(migrator *Migrator) {
 			for _, rule := range rules {
 				// 替换路径中的 /api/v1/admin/ 为 /api/v1/admin-api/
 				newV1 := strings.Replace(rule.V1, "/api/v1/admin/", "/api/v1/admin-api/", 1)
-				
+
 				// 更新规则
 				if err := tx.Model(&CasbinRule{}).Where("id = ?", rule.ID).Update("v1", newV1).Error; err != nil {
 					return err
 				}
 
-				logger.Info("更新Casbin规则", "old_v1", rule.V1, "new_v1", newV1)
+				logger.InfoContext(context.Background(), "更新Casbin规则", "old_v1", rule.V1, "new_v1", newV1)
 			}
 
 			return nil
@@ -77,7 +78,7 @@ func RegisterUpdateAPIPathsMigrations(migrator *Migrator) {
 
 			// 如果没有找到API，直接返回
 			if len(apis) == 0 {
-				logger.Info("没有找到需要回滚的API路径")
+				logger.InfoContext(context.Background(), "没有找到需要回滚的API路径")
 				return nil
 			}
 
@@ -86,7 +87,7 @@ func RegisterUpdateAPIPathsMigrations(migrator *Migrator) {
 				// 替换路径中的 /api/v1/admin-api/ 为 /api/v1/admin/
 				oldPath := api.Path
 				newPath := strings.Replace(api.Path, "/api/v1/admin-api/", "/api/v1/admin/", 1)
-				
+
 				// 更新API路径
 				if err := tx.Model(&model.API{}).Where("id = ?", api.ID).Update("path", newPath).Error; err != nil {
 					return err
@@ -95,7 +96,7 @@ func RegisterUpdateAPIPathsMigrations(migrator *Migrator) {
 				// 更新权限记录中的code
 				oldCode := oldPath + ":" + api.Method
 				newCode := newPath + ":" + api.Method
-				
+
 				if err := tx.Model(&model.Permission{}).Where("code = ?", oldCode).Update("code", newCode).Error; err != nil {
 					return err
 				}
@@ -112,7 +113,7 @@ func RegisterUpdateAPIPathsMigrations(migrator *Migrator) {
 			for _, rule := range rules {
 				// 替换路径中的 /api/v1/admin-api/ 为 /api/v1/admin/
 				newV1 := strings.Replace(rule.V1, "/api/v1/admin-api/", "/api/v1/admin/", 1)
-				
+
 				// 更新规则
 				if err := tx.Model(&CasbinRule{}).Where("id = ?", rule.ID).Update("v1", newV1).Error; err != nil {
 					return err

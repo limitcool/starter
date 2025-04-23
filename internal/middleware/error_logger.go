@@ -66,6 +66,9 @@ func RequestLogger() gin.HandlerFunc {
 		// 处理请求
 		c.Next()
 
+		// 获取请求上下文
+		ctx := c.Request.Context()
+
 		// 计算延迟
 		latency := time.Since(start)
 
@@ -91,7 +94,6 @@ func RequestLogger() gin.HandlerFunc {
 		}
 
 		// 根据状态码选择日志级别
-		ctx := c.Request.Context()
 		if status >= 500 {
 			logger.ErrorContext(ctx, "Server error", fields...)
 		} else if status >= 400 {

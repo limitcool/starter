@@ -10,7 +10,6 @@ import (
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/services"
-	"github.com/spf13/cast"
 )
 
 // CasbinMiddleware 基于路径和方法的权限控制中间件
@@ -25,15 +24,17 @@ func CasbinMiddleware(permissionService services.PermissionServiceInterface, con
 		}
 
 		// 从上下文中获取用户ID
-		userIDInterface, exists := c.Get("userID")
-		if !exists {
-			response.Error(c, errorx.ErrUserAuthFailed)
+		userID := GetUserID(c)
+		if userID == 0 {
+			ctx := c.Request.Context()
+			logger.WarnContext(ctx, "未登录用户尝试访问受保护资源")
+			response.Error(c, errorx.ErrUserNoLogin)
 			c.Abort()
 			return
 		}
 
 		// 将用户ID转换为字符串
-		userID := cast.ToString(userIDInterface)
+		userIDStr := fmt.Sprintf("%d", userID)
 
 		// 请求的路径
 		obj := c.Request.URL.Path
@@ -41,10 +42,10 @@ func CasbinMiddleware(permissionService services.PermissionServiceInterface, con
 		act := c.Request.Method
 
 		ctx := c.Request.Context()
-		logger.DebugContext(ctx, "检查权限", "userID", userID, "object", obj, "action", act)
+		logger.DebugContext(ctx, "检查权限", "user_id", userID, "object", obj, "action", act)
 
 		// 检查权限
-		pass, err := permissionService.CheckPermission(ctx, userID, obj, act)
+		pass, err := permissionService.CheckPermission(ctx, userIDStr, obj, act)
 		if err != nil {
 			logger.ErrorContext(ctx, "权限检查错误", "error", err)
 			response.Error(c, errorx.ErrCasbinService)
@@ -54,14 +55,14 @@ func CasbinMiddleware(permissionService services.PermissionServiceInterface, con
 
 		if !pass {
 			// 尝试获取用户角色
-			roles, err := permissionService.GetUserRoles(c.Request.Context(), userID)
+			roles, err := permissionService.GetUserRoles(c.Request.Context(), userIDStr)
 			if err == nil {
 				var roleNames []string
 				for _, role := range roles {
 					roleNames = append(roleNames, role.Name)
 				}
 				ctx := c.Request.Context()
-				logger.DebugContext(ctx, "权限检查失败", "userID", userID, "roles", strings.Join(roleNames, ","))
+				logger.DebugContext(ctx, "权限检查失败", "user_id", userID, "roles", strings.Join(roleNames, ","))
 			}
 
 			response.Error(c, errorx.ErrAccessDenied)
@@ -70,7 +71,7 @@ func CasbinMiddleware(permissionService services.PermissionServiceInterface, con
 		}
 
 		ctx = c.Request.Context()
-		logger.DebugContext(ctx, "权限检查通过", "userID", userID)
+		logger.DebugContext(ctx, "权限检查通过", "user_id", userID)
 		c.Next()
 	}
 }
@@ -96,17 +97,19 @@ func PermissionCodeMiddleware(permissionService services.PermissionServiceInterf
 		}
 
 		// 从上下文中获取用户ID
-		userIDInterface, exists := c.Get("userID")
-		if !exists {
-			response.Error(c, errorx.ErrUserAuthFailed)
+		userID := GetUserID(c)
+		if userID == 0 {
+			ctx := c.Request.Context()
+			logger.WarnContext(ctx, "未登录用户尝试访问受保护资源")
+			response.Error(c, errorx.ErrUserNoLogin)
 			c.Abort()
 			return
 		}
 
-		userID := cast.ToString(userIDInterface)
+		userIDStr := fmt.Sprintf("%d", userID)
 
 		// 获取用户角色
-		roles, err := permissionService.GetUserRoles(c.Request.Context(), userID)
+		roles, err := permissionService.GetUserRoles(c.Request.Context(), userIDStr)
 		if err != nil {
 			ctx := c.Request.Context()
 			logger.ErrorContext(ctx, "获取用户角色失败", "error", err)
@@ -203,7 +206,7 @@ func RequirePermission(permCode string, permissionService services.PermissionSer
 
 		if !hasPermission {
 			ctx := c.Request.Context()
-			logger.WarnContext(ctx, "权限检查失败", "userID", userID, "permCode", permCode)
+			logger.WarnContext(ctx, "权限检查失败", "user_id", userID, "permCode", permCode)
 			response.Error(c, errorx.ErrAccessDenied)
 			c.Abort()
 			return

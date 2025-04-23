@@ -12,10 +12,13 @@ import (
 // 确保用户不是管理员
 func SimpleUserCheck(userRepo *repository.UserRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 获取请求上下文
+		ctx := c.Request.Context()
+
 		// 从上下文获取用户ID
 		userID, exists := c.Get("user_id")
 		if !exists {
-			logger.ErrorContext(c.Request.Context(), "用户ID不存在")
+			logger.WarnContext(ctx, "用户ID不存在")
 			response.Error(c, errorx.ErrUserNoLogin)
 			c.Abort()
 			return
@@ -24,16 +27,16 @@ func SimpleUserCheck(userRepo *repository.UserRepo) gin.HandlerFunc {
 		// 转换用户ID
 		userIDInt64, ok := userID.(float64)
 		if !ok {
-			logger.ErrorContext(c.Request.Context(), "用户ID类型错误")
+			logger.ErrorContext(ctx, "用户ID类型错误", "user_id", userID)
 			response.Error(c, errorx.ErrUserAuthFailed)
 			c.Abort()
 			return
 		}
 
 		// 获取用户
-		_, err := userRepo.GetByID(c.Request.Context(), int64(userIDInt64))
+		_, err := userRepo.GetByID(ctx, int64(userIDInt64))
 		if err != nil {
-			logger.ErrorContext(c.Request.Context(), "获取用户失败", "error", err)
+			logger.ErrorContext(ctx, "获取用户失败", "error", err, "user_id", userIDInt64)
 			response.Error(c, errorx.ErrUserNotFound)
 			c.Abort()
 			return
@@ -43,7 +46,7 @@ func SimpleUserCheck(userRepo *repository.UserRepo) gin.HandlerFunc {
 		// 注释掉下面的代码，如果不需要严格区分
 		/*
 			if user.IsAdmin {
-				logger.ErrorContext(c.Request.Context(), "管理员不能访问普通用户接口", "user_id", userIDInt64)
+				logger.WarnContext(ctx, "管理员不能访问普通用户接口", "user_id", userIDInt64)
 				response.Error(c, errorx.ErrAccessDenied)
 				c.Abort()
 				return

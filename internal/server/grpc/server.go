@@ -33,7 +33,7 @@ var grpcListener net.Listener
 func NewGRPCServer(params ServerParams) *grpc.Server {
 	// 如果gRPC服务未启用，返回nil
 	if !params.Config.GRPC.Enabled {
-		logger.Info("gRPC server is disabled")
+		logger.InfoContext(context.Background(), "gRPC server is disabled")
 		return nil
 	}
 
@@ -58,7 +58,7 @@ func NewGRPCServer(params ServerParams) *grpc.Server {
 	var err error
 	grpcListener, err = net.Listen("tcp", fmt.Sprintf(":%d", params.Config.GRPC.Port))
 	if err != nil {
-		logger.Error("Failed to listen", "error", err)
+		logger.ErrorContext(context.Background(), "Failed to listen", "error", err)
 		return nil
 	}
 
@@ -77,26 +77,26 @@ func NewGRPCServer(params ServerParams) *grpc.Server {
 	// 注册生命周期钩子
 	params.LC.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("==================================================")
-			logger.Info("gRPC服务器已启动", 
+			logger.InfoContext(ctx, "==================================================")
+			logger.InfoContext(ctx, "gRPC服务器已启动",
 				"address", fmt.Sprintf("localhost:%d", params.Config.GRPC.Port),
 				"reflection", params.Config.GRPC.Reflection,
 				"health_check", params.Config.GRPC.HealthCheck)
-			
+
 			// 打印gRPC服务信息
 			printGRPCServices(server)
-			
+
 			go func() {
 				if err := server.Serve(grpcListener); err != nil {
-					logger.Error("gRPC server error", "error", err)
+					logger.ErrorContext(context.Background(), "gRPC server error", "error", err)
 				}
 			}()
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			logger.Info("Stopping gRPC server")
+			logger.InfoContext(ctx, "Stopping gRPC server")
 			server.GracefulStop()
-			logger.Info("gRPC server stopped")
+			logger.InfoContext(ctx, "gRPC server stopped")
 			return nil
 		},
 	})
@@ -117,44 +117,45 @@ func printGRPCServices(server *grpc.Server) {
 	}
 
 	// 打印服务信息
-	logger.Info("gRPC服务列表:")
-	
+	ctx := context.Background()
+	logger.InfoContext(ctx, "gRPC服务列表:")
+
 	for name, info := range serviceInfo {
 		// 跳过reflection服务
 		if strings.HasPrefix(name, "grpc.reflection") {
 			continue
 		}
-		
-		logger.Info("服务名称", "name", name)
+
+		logger.InfoContext(ctx, "服务名称", "name", name)
 		for _, method := range info.Methods {
-			logger.Info("  - 方法", "name", method.Name)
+			logger.InfoContext(ctx, "  - 方法", "name", method.Name)
 		}
 	}
-	
-	logger.Info("==================================================")
+
+	logger.InfoContext(ctx, "==================================================")
 }
 
 // LoggingInterceptor 日志中间件
 func LoggingInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		start := time.Now()
-		
+
 		// 记录请求
-		logger.InfoContext(ctx, "gRPC request started", 
+		logger.InfoContext(ctx, "gRPC request started",
 			"method", info.FullMethod,
 			"request", req,
 		)
-		
+
 		// 处理请求
 		resp, err := handler(ctx, req)
-		
+
 		// 记录响应
 		logger.InfoContext(ctx, "gRPC request completed",
 			"method", info.FullMethod,
 			"duration", time.Since(start),
 			"error", err,
 		)
-		
+
 		return resp, err
 	}
 }
@@ -179,10 +180,10 @@ func ContextInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		// 生成请求ID
 		requestID := fmt.Sprintf("grpc-req-%d", time.Now().UnixNano())
-		
+
 		// 添加请求ID到上下文
 		ctx = context.WithValue(ctx, "request_id", requestID)
-		
+
 		// 处理请求
 		return handler(ctx, req)
 	}
