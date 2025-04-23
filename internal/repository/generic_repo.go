@@ -155,7 +155,8 @@ func (r *GenericRepo[T]) UpdateFields(ctx context.Context, id any, fields map[st
 // FindByField 根据字段查询实体
 func (r *GenericRepo[T]) FindByField(ctx context.Context, field string, value any) (*T, error) {
 	var entity T
-	err := r.DB.WithContext(ctx).Where(fmt.Sprintf("%s = ?", field), value).First(&entity).Error
+	// 使用 map 构建查询条件，避免 SQL 注入
+	err := r.DB.WithContext(ctx).Where(map[string]any{field: value}).First(&entity).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		// 创建一个错误对象
@@ -173,7 +174,8 @@ func (r *GenericRepo[T]) FindByField(ctx context.Context, field string, value an
 // FindAllByField 根据字段查询多个实体
 func (r *GenericRepo[T]) FindAllByField(ctx context.Context, field string, value any) ([]T, error) {
 	var entities []T
-	err := r.DB.WithContext(ctx).Where(fmt.Sprintf("%s = ?", field), value).Find(&entities).Error
+	// 使用 map 构建查询条件，避免 SQL 注入
+	err := r.DB.WithContext(ctx).Where(map[string]any{field: value}).Find(&entities).Error
 
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("查询%s列表失败: %s=%v", r.TableName, field, value))
@@ -285,7 +287,12 @@ func (r *GenericRepo[T]) Transaction(ctx context.Context, fn func(tx *gorm.DB) e
 // FindWithLike 使用LIKE查询实体
 func (r *GenericRepo[T]) FindWithLike(ctx context.Context, field string, value string) ([]T, error) {
 	var entities []T
-	err := r.DB.WithContext(ctx).Where(fmt.Sprintf("%s LIKE ?", field), "%"+value+"%").Find(&entities).Error
+	// 使用条件表达式和参数化查询，避免 SQL 注入
+	// 注意：对于 LIKE 查询，我们使用条件表达式和参数化查询，而不是 map
+	// 因为 map 不支持 LIKE 操作符
+	condition := map[string]any{}
+	condition[field] = gorm.Expr("LIKE ?", "%"+value+"%")
+	err := r.DB.WithContext(ctx).Where(condition).Find(&entities).Error
 
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("模糊查询%s失败: %s=%s", r.TableName, field, value))
@@ -301,7 +308,10 @@ func (r *GenericRepo[T]) FindWithIn(ctx context.Context, field string, values []
 	}
 
 	var entities []T
-	err := r.DB.WithContext(ctx).Where(fmt.Sprintf("%s IN ?", field), values).Find(&entities).Error
+	// 使用条件表达式和参数化查询，避免 SQL 注入
+	condition := map[string]any{}
+	condition[field] = values
+	err := r.DB.WithContext(ctx).Where(condition).Find(&entities).Error
 
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("使用IN查询%s失败: %s", r.TableName, field))
@@ -313,7 +323,10 @@ func (r *GenericRepo[T]) FindWithIn(ctx context.Context, field string, values []
 // FindWithBetween 使用BETWEEN查询实体
 func (r *GenericRepo[T]) FindWithBetween(ctx context.Context, field string, min, max any) ([]T, error) {
 	var entities []T
-	err := r.DB.WithContext(ctx).Where(fmt.Sprintf("%s BETWEEN ? AND ?", field), min, max).Find(&entities).Error
+	// 使用条件表达式和参数化查询，避免 SQL 注入
+	condition := map[string]any{}
+	condition[field] = gorm.Expr("BETWEEN ? AND ?", min, max)
+	err := r.DB.WithContext(ctx).Where(condition).Find(&entities).Error
 
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("使用BETWEEN查询%s失败: %s", r.TableName, field))
