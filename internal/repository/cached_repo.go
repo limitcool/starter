@@ -22,7 +22,7 @@ type CachedRepo[T Entity] struct {
 }
 
 // NewCachedRepo 创建缓存仓库
-func NewCachedRepo[T Entity](repo Repository[T], cache cache.Cache, prefix string, expiration time.Duration) *CachedRepo[T] {
+func NewCachedRepo[T Entity](repo Repository[T], cache cache.Cache, prefix string, expiration time.Duration) Repository[T] {
 	return &CachedRepo[T]{
 		repo:       repo,
 		cache:      cache,
@@ -290,11 +290,8 @@ func (r *CachedRepo[T]) Exists(ctx context.Context, condition string, args ...an
 	return r.repo.Exists(ctx, condition, args...)
 }
 
-// Raw 原生查询
-func (r *CachedRepo[T]) Raw(ctx context.Context, sql string, values ...any) ([]map[string]any, error) {
-	// 直接调用底层仓库，不缓存
-	return r.repo.Raw(ctx, sql, values...)
-}
+// 注意：Raw方法已被移除，因为它存在潜在的SQL注入风险
+// 请使用更安全的方法如FindByField等进行查询
 
 // Transaction 在事务中执行函数
 func (r *CachedRepo[T]) Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
@@ -311,6 +308,14 @@ func (r *CachedRepo[T]) WithTx(tx *gorm.DB) Repository[T] {
 		prefix:     r.prefix,
 		expiration: r.expiration,
 	}
+}
+
+// SetErrorCode 设置NotFound错误的错误码
+// 实现Repository接口
+func (r *CachedRepo[T]) SetErrorCode(code int) Repository[T] {
+	// 将错误码设置传递给底层仓库
+	r.repo.SetErrorCode(code)
+	return r
 }
 
 // cacheEntity 缓存实体

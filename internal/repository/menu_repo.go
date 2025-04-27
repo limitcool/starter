@@ -13,7 +13,7 @@ import (
 // MenuRepo 菜单仓库
 type MenuRepo struct {
 	DB          *gorm.DB
-	genericRepo *GenericRepo[model.Menu] // 泛型仓库
+	genericRepo Repository[model.Menu] // 使用接口而非具体实现
 }
 
 // MenuQueryBuilder 菜单查询构建器
@@ -149,8 +149,8 @@ func (r *MenuRepo) GetMenusByIDs(ctx context.Context, menuIDs []uint, preloads .
 
 // NewMenuRepo 创建菜单仓库
 func NewMenuRepo(db *gorm.DB) *MenuRepo {
-	genericRepo := NewGenericRepo[model.Menu](db)
-	genericRepo.SetErrorCode(errorx.ErrorNotFoundCode) // 设置错误码
+	// 创建通用仓库并设置错误码
+	genericRepo := NewGenericRepo[model.Menu](db).SetErrorCode(errorx.ErrorNotFoundCode)
 
 	return &MenuRepo{
 		DB:          db,
@@ -160,7 +160,7 @@ func NewMenuRepo(db *gorm.DB) *MenuRepo {
 
 // GetByID 根据ID获取菜单
 func (r *MenuRepo) GetByID(ctx context.Context, id uint) (*model.Menu, error) {
-	// 使用泛型仓库
+	// 使用仓库接口
 	return r.genericRepo.GetByID(ctx, id)
 }
 
@@ -208,7 +208,7 @@ func (r *MenuRepo) GetAll(ctx context.Context) ([]*model.Menu, error) {
 
 // Create 创建菜单
 func (r *MenuRepo) Create(ctx context.Context, menu *model.Menu) error {
-	// 使用泛型仓库
+	// 使用仓库接口
 	return r.genericRepo.Create(ctx, menu)
 }
 
@@ -258,7 +258,7 @@ func (r *MenuRepo) GetButtonByID(ctx context.Context, id uint) (*model.MenuButto
 
 // Update 更新菜单
 func (r *MenuRepo) Update(ctx context.Context, menu *model.Menu) error {
-	// 使用泛型仓库
+	// 使用仓库接口
 	return r.genericRepo.Update(ctx, menu)
 }
 

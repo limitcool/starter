@@ -14,13 +14,13 @@ import (
 // AdminUserRepo 管理员用户仓库
 type AdminUserRepo struct {
 	DB          *gorm.DB
-	genericRepo *GenericRepo[model.AdminUser] // 泛型仓库
+	genericRepo Repository[model.AdminUser] // 使用接口而非具体实现
 }
 
 // NewAdminUserRepo 创建管理员用户仓库
 func NewAdminUserRepo(params RepoParams) *AdminUserRepo {
-	genericRepo := NewGenericRepo[model.AdminUser](params.DB)
-	genericRepo.SetErrorCode(errorx.ErrorUserNotFoundCode) // 设置错误码
+	// 创建通用仓库并设置错误码
+	genericRepo := NewGenericRepo[model.AdminUser](params.DB).SetErrorCode(errorx.ErrorUserNotFoundCode)
 
 	repo := &AdminUserRepo{
 		DB:          params.DB,
@@ -48,7 +48,7 @@ func NewAdminUserRepo(params RepoParams) *AdminUserRepo {
 
 // GetByID 根据ID获取管理员用户
 func (r *AdminUserRepo) GetByID(ctx context.Context, id int64) (*model.AdminUser, error) {
-	// 使用泛型仓库获取用户
+	// 使用仓库接口获取用户
 	user, err := r.genericRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (r *AdminUserRepo) GetByID(ctx context.Context, id int64) (*model.AdminUser
 
 // GetByUsername 根据用户名获取管理员用户
 func (r *AdminUserRepo) GetByUsername(ctx context.Context, username string) (*model.AdminUser, error) {
-	// 使用泛型仓库获取用户
+	// 使用仓库接口获取用户
 	user, err := r.genericRepo.FindByField(ctx, "username", username)
 	if err != nil {
 		return nil, err
@@ -90,25 +90,25 @@ func (r *AdminUserRepo) GetByUsername(ctx context.Context, username string) (*mo
 
 // Create 创建管理员用户
 func (r *AdminUserRepo) Create(ctx context.Context, user *model.AdminUser) error {
-	// 使用泛型仓库
+	// 使用仓库接口
 	return r.genericRepo.Create(ctx, user)
 }
 
 // Update 更新管理员用户
 func (r *AdminUserRepo) Update(ctx context.Context, user *model.AdminUser) error {
-	// 使用泛型仓库
+	// 使用仓库接口
 	return r.genericRepo.Update(ctx, user)
 }
 
 // UpdateFields 更新管理员用户字段
 func (r *AdminUserRepo) UpdateFields(ctx context.Context, id int64, fields map[string]any) error {
-	// 使用泛型仓库
+	// 使用仓库接口
 	return r.genericRepo.UpdateFields(ctx, id, fields)
 }
 
 // Delete 删除管理员用户
 func (r *AdminUserRepo) Delete(ctx context.Context, id int64) error {
-	// 使用泛型仓库
+	// 使用仓库接口
 	return r.genericRepo.Delete(ctx, id)
 }
 
@@ -160,16 +160,16 @@ func (r *AdminUserRepo) List(ctx context.Context, query *model.AdminUserQuery) (
 		r.DB = r.DB.Order(query.OrderBy + " " + direction)
 	}
 
-	// 使用泛型仓库的分页查询
+	// 使用仓库接口的分页查询
 	return r.genericRepo.GetPage(ctx, int(query.Page), int(query.PageSize), condition, args...)
 }
 
 // UpdateAvatar 更新管理员用户头像
 func (r *AdminUserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID uint) error {
-	// 使用泛型仓库的事务支持
+	// 使用仓库接口的事务支持
 	return r.genericRepo.Transaction(ctx, func(tx *gorm.DB) error {
-		// 创建事务中的泛型仓库
-		txRepo := r.genericRepo.WithTx(tx).(*GenericRepo[model.AdminUser])
+		// 创建事务中的仓库
+		txRepo := r.genericRepo.WithTx(tx)
 
 		// 查找用户
 		user, err := txRepo.GetByID(ctx, userID)

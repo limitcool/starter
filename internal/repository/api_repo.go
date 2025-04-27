@@ -13,13 +13,13 @@ import (
 // APIRepo API仓库
 type APIRepo struct {
 	DB          *gorm.DB
-	genericRepo *GenericRepo[model.API] // 泛型仓库
+	genericRepo Repository[model.API] // 使用接口而非具体实现
 }
 
 // NewAPIRepo 创建API仓库
 func NewAPIRepo(db *gorm.DB) *APIRepo {
-	genericRepo := NewGenericRepo[model.API](db)
-	genericRepo.SetErrorCode(errorx.ErrorNotFoundCode) // 设置错误码
+	// 创建通用仓库并设置错误码
+	genericRepo := NewGenericRepo[model.API](db).SetErrorCode(errorx.ErrorNotFoundCode)
 
 	return &APIRepo{
 		DB:          db,
@@ -89,8 +89,8 @@ func (r *APIRepo) GetByMenuID(ctx context.Context, menuID uint) ([]*model.API, e
 
 // WithTx 使用事务
 func (r *APIRepo) WithTx(tx *gorm.DB) *APIRepo {
-	genericRepo := NewGenericRepo[model.API](tx)
-	genericRepo.SetErrorCode(errorx.ErrorNotFoundCode)
+	// 创建通用仓库并设置错误码
+	genericRepo := NewGenericRepo[model.API](tx).SetErrorCode(errorx.ErrorNotFoundCode)
 
 	return &APIRepo{
 		DB:          tx,

@@ -17,13 +17,13 @@ import (
 // 提供用户相关的数据库操作
 type UserRepo struct {
 	DB          *gorm.DB
-	GenericRepo *GenericRepo[model.User] // 泛型仓库
+	GenericRepo Repository[model.User] // 使用接口而非具体实现
 }
 
 // NewUserRepo 创建用户仓库
 func NewUserRepo(params RepoParams) *UserRepo {
-	genericRepo := NewGenericRepo[model.User](params.DB)
-	genericRepo.SetErrorCode(errorx.ErrorUserNotFoundCode) // 设置错误码
+	// 创建通用仓库并设置错误码
+	genericRepo := NewGenericRepo[model.User](params.DB).SetErrorCode(errorx.ErrorUserNotFoundCode)
 
 	repo := &UserRepo{
 		DB:          params.DB,
@@ -51,7 +51,7 @@ func NewUserRepo(params RepoParams) *UserRepo {
 
 // GetByID 根据ID获取用户
 func (r *UserRepo) GetByID(ctx context.Context, id int64) (*model.User, error) {
-	// 使用泛型仓库
+	// 使用仓库接口
 	user, err := r.GenericRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func (r *UserRepo) GetByID(ctx context.Context, id int64) (*model.User, error) {
 
 // GetByUsername 根据用户名获取用户
 func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*model.User, error) {
-	// 使用泛型仓库的高级查询
+	// 使用仓库接口的高级查询
 	user, err := r.GenericRepo.FindByField(ctx, "username", username)
 	if err != nil {
 		return nil, err
@@ -75,25 +75,25 @@ func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*model.U
 
 // Create 创建用户
 func (r *UserRepo) Create(ctx context.Context, user *model.User) error {
-	// 使用泛型仓库
+	// 使用仓库接口
 	return r.GenericRepo.Create(ctx, user)
 }
 
 // Update 更新用户
 func (r *UserRepo) Update(ctx context.Context, user *model.User) error {
-	// 使用泛型仓库
+	// 使用仓库接口
 	return r.GenericRepo.Update(ctx, user)
 }
 
 // UpdateFields 更新用户字段
 func (r *UserRepo) UpdateFields(ctx context.Context, id int64, fields map[string]any) error {
-	// 使用泛型仓库
+	// 使用仓库接口
 	return r.GenericRepo.UpdateFields(ctx, id, fields)
 }
 
 // Delete 删除用户
 func (r *UserRepo) Delete(ctx context.Context, id int64) error {
-	// 使用泛型仓库
+	// 使用仓库接口
 	return r.GenericRepo.Delete(ctx, id)
 }
 
@@ -143,8 +143,8 @@ func (r *UserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID uint) 
 
 // WithTx 使用事务
 func (r *UserRepo) WithTx(tx *gorm.DB) *UserRepo {
-	genericRepo := NewGenericRepo[model.User](tx)
-	genericRepo.SetErrorCode(errorx.ErrorUserNotFoundCode)
+	// 创建通用仓库并设置错误码
+	genericRepo := NewGenericRepo[model.User](tx).SetErrorCode(errorx.ErrorUserNotFoundCode)
 
 	// 创建新的仓库实例，使用事务
 	return &UserRepo{
