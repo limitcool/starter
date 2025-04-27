@@ -12,7 +12,7 @@ import (
 // PermissionRepo 权限仓库
 type PermissionRepo struct {
 	DB          *gorm.DB
-	genericRepo Repository[model.Permission] // 使用接口而非具体实现
+	GenericRepo Repository[model.Permission] // 使用接口而非具体实现
 }
 
 // NewPermissionRepo 创建权限仓库
@@ -22,14 +22,14 @@ func NewPermissionRepo(db *gorm.DB) *PermissionRepo {
 
 	return &PermissionRepo{
 		DB:          db,
-		genericRepo: genericRepo,
+		GenericRepo: genericRepo,
 	}
 }
 
 // GetByID 根据ID获取权限
 func (r *PermissionRepo) GetByID(ctx context.Context, id uint) (*model.Permission, error) {
 	// 使用仓库接口
-	return r.genericRepo.GetByID(ctx, id)
+	return r.GenericRepo.GetByID(ctx, id)
 }
 
 // GetAll 获取所有权限
@@ -45,19 +45,19 @@ func (r *PermissionRepo) GetAll(ctx context.Context) ([]model.Permission, error)
 // Create 创建权限
 func (r *PermissionRepo) Create(ctx context.Context, permission *model.Permission) error {
 	// 使用仓库接口
-	return r.genericRepo.Create(ctx, permission)
+	return r.GenericRepo.Create(ctx, permission)
 }
 
 // Update 更新权限
 func (r *PermissionRepo) Update(ctx context.Context, permission *model.Permission) error {
 	// 使用仓库接口
-	return r.genericRepo.Update(ctx, permission)
+	return r.GenericRepo.Update(ctx, permission)
 }
 
 // Delete 删除权限
 func (r *PermissionRepo) Delete(ctx context.Context, id uint) error {
 	// 使用仓库接口
-	return r.genericRepo.Delete(ctx, id)
+	return r.GenericRepo.Delete(ctx, id)
 }
 
 // GetByRoleID 获取角色的权限列表

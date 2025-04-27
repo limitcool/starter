@@ -14,7 +14,7 @@ import (
 // RoleRepo 角色仓库
 type RoleRepo struct {
 	DB          *gorm.DB
-	genericRepo Repository[model.Role] // 使用接口而非具体实现
+	GenericRepo Repository[model.Role] // 使用接口而非具体实现
 }
 
 // NewRoleRepo 创建角色仓库
@@ -24,7 +24,7 @@ func NewRoleRepo(params RepoParams) *RoleRepo {
 
 	repo := &RoleRepo{
 		DB:          params.DB,
-		genericRepo: genericRepo,
+		GenericRepo: genericRepo,
 	}
 
 	// 注册生命周期钩子
@@ -49,13 +49,13 @@ func NewRoleRepo(params RepoParams) *RoleRepo {
 // GetByID 根据ID获取角色
 func (r *RoleRepo) GetByID(ctx context.Context, id uint) (*model.Role, error) {
 	// 使用仓库接口
-	return r.genericRepo.GetByID(ctx, id)
+	return r.GenericRepo.GetByID(ctx, id)
 }
 
 // GetByCode 根据编码获取角色
 func (r *RoleRepo) GetByCode(ctx context.Context, code string) (*model.Role, error) {
 	// 使用仓库接口的高级查询
-	return r.genericRepo.FindByField(ctx, "code", code)
+	return r.GenericRepo.FindByField(ctx, "code", code)
 }
 
 // GetAll 获取所有角色
@@ -71,19 +71,19 @@ func (r *RoleRepo) GetAll(ctx context.Context) ([]model.Role, error) {
 // Create 创建角色
 func (r *RoleRepo) Create(ctx context.Context, role *model.Role) error {
 	// 使用仓库接口
-	return r.genericRepo.Create(ctx, role)
+	return r.GenericRepo.Create(ctx, role)
 }
 
 // Update 更新角色
 func (r *RoleRepo) Update(ctx context.Context, role *model.Role) error {
 	// 使用仓库接口
-	return r.genericRepo.Update(ctx, role)
+	return r.GenericRepo.Update(ctx, role)
 }
 
 // Delete 删除角色
 func (r *RoleRepo) Delete(ctx context.Context, id uint) error {
 	// 使用仓库接口
-	return r.genericRepo.Delete(ctx, id)
+	return r.GenericRepo.Delete(ctx, id)
 }
 
 // IsAssignedToUser 检查角色是否已分配给用户

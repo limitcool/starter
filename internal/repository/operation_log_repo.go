@@ -59,7 +59,7 @@ func (q *OperationLogQuery) Normalize() {
 // OperationLogRepo 操作日志仓库
 type OperationLogRepo struct {
 	DB          *gorm.DB
-	genericRepo Repository[model.OperationLog] // 使用接口而非具体实现
+	GenericRepo Repository[model.OperationLog] // 使用接口而非具体实现
 }
 
 // NewOperationLogRepo 创建操作日志仓库
@@ -69,14 +69,14 @@ func NewOperationLogRepo(db *gorm.DB) *OperationLogRepo {
 
 	return &OperationLogRepo{
 		DB:          db,
-		genericRepo: genericRepo,
+		GenericRepo: genericRepo,
 	}
 }
 
 // Create 创建操作日志
 func (r *OperationLogRepo) Create(ctx context.Context, log *model.OperationLog) error {
 	// 使用仓库接口
-	return r.genericRepo.Create(ctx, log)
+	return r.GenericRepo.Create(ctx, log)
 }
 
 // CreateSysUserLog 创建系统用户操作日志
@@ -255,7 +255,7 @@ func (r *OperationLogRepo) GetLogs(ctx context.Context, query *OperationLogQuery
 // Delete 删除操作日志
 func (r *OperationLogRepo) Delete(ctx context.Context, id uint) error {
 	// 使用仓库接口
-	return r.genericRepo.Delete(ctx, id)
+	return r.GenericRepo.Delete(ctx, id)
 }
 
 // BatchDelete 批量删除操作日志
@@ -267,5 +267,5 @@ func (r *OperationLogRepo) BatchDelete(ctx context.Context, ids []uint) error {
 	}
 
 	// 使用仓库接口
-	return r.genericRepo.BatchDelete(ctx, anyIDs)
+	return r.GenericRepo.BatchDelete(ctx, anyIDs)
 }

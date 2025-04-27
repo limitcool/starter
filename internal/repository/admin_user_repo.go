@@ -14,7 +14,7 @@ import (
 // AdminUserRepo 管理员用户仓库
 type AdminUserRepo struct {
 	DB          *gorm.DB
-	genericRepo Repository[model.AdminUser] // 使用接口而非具体实现
+	GenericRepo Repository[model.AdminUser] // 使用接口而非具体实现
 }
 
 // NewAdminUserRepo 创建管理员用户仓库
@@ -24,7 +24,7 @@ func NewAdminUserRepo(params RepoParams) *AdminUserRepo {
 
 	repo := &AdminUserRepo{
 		DB:          params.DB,
-		genericRepo: genericRepo,
+		GenericRepo: genericRepo,
 	}
 
 	// 注册生命周期钩子
@@ -49,7 +49,7 @@ func NewAdminUserRepo(params RepoParams) *AdminUserRepo {
 // GetByID 根据ID获取管理员用户
 func (r *AdminUserRepo) GetByID(ctx context.Context, id int64) (*model.AdminUser, error) {
 	// 使用仓库接口获取用户
-	user, err := r.genericRepo.GetByID(ctx, id)
+	user, err := r.GenericRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (r *AdminUserRepo) GetByID(ctx context.Context, id int64) (*model.AdminUser
 // GetByUsername 根据用户名获取管理员用户
 func (r *AdminUserRepo) GetByUsername(ctx context.Context, username string) (*model.AdminUser, error) {
 	// 使用仓库接口获取用户
-	user, err := r.genericRepo.FindByField(ctx, "username", username)
+	user, err := r.GenericRepo.FindByField(ctx, "username", username)
 	if err != nil {
 		return nil, err
 	}
@@ -91,25 +91,25 @@ func (r *AdminUserRepo) GetByUsername(ctx context.Context, username string) (*mo
 // Create 创建管理员用户
 func (r *AdminUserRepo) Create(ctx context.Context, user *model.AdminUser) error {
 	// 使用仓库接口
-	return r.genericRepo.Create(ctx, user)
+	return r.GenericRepo.Create(ctx, user)
 }
 
 // Update 更新管理员用户
 func (r *AdminUserRepo) Update(ctx context.Context, user *model.AdminUser) error {
 	// 使用仓库接口
-	return r.genericRepo.Update(ctx, user)
+	return r.GenericRepo.Update(ctx, user)
 }
 
 // UpdateFields 更新管理员用户字段
 func (r *AdminUserRepo) UpdateFields(ctx context.Context, id int64, fields map[string]any) error {
 	// 使用仓库接口
-	return r.genericRepo.UpdateFields(ctx, id, fields)
+	return r.GenericRepo.UpdateFields(ctx, id, fields)
 }
 
 // Delete 删除管理员用户
 func (r *AdminUserRepo) Delete(ctx context.Context, id int64) error {
 	// 使用仓库接口
-	return r.genericRepo.Delete(ctx, id)
+	return r.GenericRepo.Delete(ctx, id)
 }
 
 // List 获取管理员用户列表
@@ -161,15 +161,15 @@ func (r *AdminUserRepo) List(ctx context.Context, query *model.AdminUserQuery) (
 	}
 
 	// 使用仓库接口的分页查询
-	return r.genericRepo.GetPage(ctx, int(query.Page), int(query.PageSize), condition, args...)
+	return r.GenericRepo.GetPage(ctx, int(query.Page), int(query.PageSize), condition, args...)
 }
 
 // UpdateAvatar 更新管理员用户头像
 func (r *AdminUserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID uint) error {
 	// 使用仓库接口的事务支持
-	return r.genericRepo.Transaction(ctx, func(tx *gorm.DB) error {
+	return r.GenericRepo.Transaction(ctx, func(tx *gorm.DB) error {
 		// 创建事务中的仓库
-		txRepo := r.genericRepo.WithTx(tx)
+		txRepo := r.GenericRepo.WithTx(tx)
 
 		// 查找用户
 		user, err := txRepo.GetByID(ctx, userID)

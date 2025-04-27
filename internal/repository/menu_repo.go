@@ -13,7 +13,7 @@ import (
 // MenuRepo 菜单仓库
 type MenuRepo struct {
 	DB          *gorm.DB
-	genericRepo Repository[model.Menu] // 使用接口而非具体实现
+	GenericRepo Repository[model.Menu] // 使用接口而非具体实现
 }
 
 // MenuQueryBuilder 菜单查询构建器
@@ -81,29 +81,7 @@ func (qb *MenuQueryBuilder) Count(ctx context.Context) (int64, error) {
 	return count, err
 }
 
-// WithTransaction 使用事务执行函数
-func (r *MenuRepo) WithTransaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
-	// 开始事务
-	tx := r.DB.WithContext(ctx).Begin()
-	defer func() {
-		if rec := recover(); rec != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// 执行函数
-	if err := fn(tx); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return errorx.WrapError(err, "提交事务失败")
-	}
-
-	return nil
-}
+// 注意：WithTransaction方法已移除，请使用GenericRepo的Transaction方法
 
 // GetMenuIDsByRoleID 获取角色关联的菜单ID
 func (r *MenuRepo) GetMenuIDsByRoleID(ctx context.Context, roleID uint) ([]uint, error) {
@@ -154,14 +132,14 @@ func NewMenuRepo(db *gorm.DB) *MenuRepo {
 
 	return &MenuRepo{
 		DB:          db,
-		genericRepo: genericRepo,
+		GenericRepo: genericRepo,
 	}
 }
 
 // GetByID 根据ID获取菜单
 func (r *MenuRepo) GetByID(ctx context.Context, id uint) (*model.Menu, error) {
 	// 使用仓库接口
-	return r.genericRepo.GetByID(ctx, id)
+	return r.GenericRepo.GetByID(ctx, id)
 }
 
 // GetByIDWithRelations 根据ID获取菜单及其关联数据
@@ -209,7 +187,7 @@ func (r *MenuRepo) GetAll(ctx context.Context) ([]*model.Menu, error) {
 // Create 创建菜单
 func (r *MenuRepo) Create(ctx context.Context, menu *model.Menu) error {
 	// 使用仓库接口
-	return r.genericRepo.Create(ctx, menu)
+	return r.GenericRepo.Create(ctx, menu)
 }
 
 // CreateButton 创建菜单按钮
@@ -259,7 +237,7 @@ func (r *MenuRepo) GetButtonByID(ctx context.Context, id uint) (*model.MenuButto
 // Update 更新菜单
 func (r *MenuRepo) Update(ctx context.Context, menu *model.Menu) error {
 	// 使用仓库接口
-	return r.genericRepo.Update(ctx, menu)
+	return r.GenericRepo.Update(ctx, menu)
 }
 
 // Delete 删除菜单
@@ -357,7 +335,8 @@ func (r *MenuRepo) GetPermsByRoleIDs(ctx context.Context, roleIDs []uint) ([]str
 
 // AssociateAPI 关联菜单和API
 func (r *MenuRepo) AssociateAPI(ctx context.Context, menuID uint, apiIDs []uint) error {
-	return r.WithTransaction(ctx, func(tx *gorm.DB) error {
+	// 使用GenericRepo的Transaction方法
+	return r.GenericRepo.Transaction(ctx, func(tx *gorm.DB) error {
 		// 获取菜单
 		var menu model.Menu
 		if err := tx.WithContext(ctx).First(&menu, menuID).Error; err != nil {
@@ -392,7 +371,8 @@ func (r *MenuRepo) AssociateAPI(ctx context.Context, menuID uint, apiIDs []uint)
 
 // AssignMenuToRole 为角色分配菜单
 func (r *MenuRepo) AssignMenuToRole(ctx context.Context, roleID uint, menuIDs []uint) error {
-	return r.WithTransaction(ctx, func(tx *gorm.DB) error {
+	// 使用GenericRepo的Transaction方法
+	return r.GenericRepo.Transaction(ctx, func(tx *gorm.DB) error {
 		// 删除原有的角色菜单关联
 		if err := tx.WithContext(ctx).Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error; err != nil {
 			return errorx.WrapError(err, "删除角色菜单关联失败")
