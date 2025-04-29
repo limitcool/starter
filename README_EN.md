@@ -1,9 +1,11 @@
-# Starter
+# Starter (Lite Version)
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/limitcool/starter.svg)](https://pkg.go.dev/github.com/limitcool/starter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/limitcool/starter)](https://goreportcard.com/report/github.com/limitcool/starter)
 
 English | [中文](README.md)
+
+> This is the lightweight version of the Starter framework, designed with a single-user mode, suitable for rapid development and simple application scenarios. If you need more enterprise-level features, please check the `enterprise` branch.
 
 ## Features
 - Provides a Gin framework project template

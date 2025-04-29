@@ -1,9 +1,11 @@
-# Starter
+# Starter (Lite Version)
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/limitcool/starter.svg)](https://pkg.go.dev/github.com/limitcool/starter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/limitcool/starter)](https://goreportcard.com/report/github.com/limitcool/starter)
 
 [English](README_EN.md) | 中文
+
+> 这是 Starter 框架的轻量级版本，采用单用户模式设计，适合快速开发和简单应用场景。如果您需要更多企业级功能，请查看 `enterprise` 分支。
 
 ## 特征
 - 提供 gin 框架项目模版

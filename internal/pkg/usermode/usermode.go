@@ -16,7 +16,8 @@ type Service struct {
 
 // NewService 创建用户模式服务
 func NewService(config *configs.Config) *Service {
-	mode := enum.GetUserMode(config.Admin.UserMode)
+	// 在lite版本中，始终使用简单模式
+	mode := enum.UserModeSimple
 	logger.Info("初始化用户模式服务", "user_mode", mode)
 	return &Service{
 		config: config,

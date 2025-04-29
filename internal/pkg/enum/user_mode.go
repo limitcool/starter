@@ -23,14 +23,6 @@ func (m UserMode) String() string {
 
 // GetUserMode 根据字符串获取用户模式
 func GetUserMode(mode string) UserMode {
-	switch mode {
-	case string(UserModeSeparate):
-		return UserModeSeparate
-	case string(UserModeSimple):
-		return UserModeSimple
-	case "unified", "simple_unified": // 兼容旧版本
-		return UserModeSimple
-	default:
-		return UserModeSeparate // 默认使用分离模式
-	}
+	// 在lite版本中，始终返回简单模式
+	return UserModeSimple
 }

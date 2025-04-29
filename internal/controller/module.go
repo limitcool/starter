@@ -9,18 +9,12 @@ import (
 
 // Module 控制器模块
 var Module = fx.Options(
-	// 提供所有HTTP控制器
+	// 提供所有HTTP控制器 - 在lite版本中，只提供基本控制器
 	fx.Provide(NewUserController),
 	fx.Provide(NewAdminUserController),
 	fx.Provide(NewFileController),
 	fx.Provide(NewAPIController),
 	fx.Provide(NewAdminController),
-
-	// 使用工厂函数提供根据用户模式创建的控制器
-	fx.Provide(ProvideRoleController),
-	fx.Provide(ProvideMenuController),
-	fx.Provide(ProvidePermissionController),
-	fx.Provide(NewOperationLogController),
 
 	// 提供所有gRPC控制器
 	fx.Provide(NewAdminGRPCController),

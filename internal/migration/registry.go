@@ -16,35 +16,11 @@ func init() {
 	// 基础表迁移
 	RegisterMigration("001_create_file_table", createFileTable, dropFileTable)
 
-	// 用户表迁移
-	RegisterMigration("002_create_sys_users_table", createSysUsersTable, dropSysUsersTable)
-	RegisterMigration("003_create_users_table", createUsersTable, dropUsersTable)
+	// 用户表迁移 - 只保留普通用户表
+	RegisterMigration("002_create_users_table", createUsersTable, dropUsersTable)
 
-	// 角色表迁移
-	RegisterMigration("004_create_roles_tables", createRolesTables, dropRolesTables)
-	RegisterMigration("005_init_roles", initRoles, dropRoles)
-
-	// API和菜单表迁移
-	RegisterMigration("006_create_api_table", createAPITable, dropAPITable)
-	RegisterMigration("007_create_menus_table", createMenusTable, dropMenusTable)
-	RegisterMigration("008_create_menu_button_table", createMenuButtonTable, dropMenuButtonTable)
-	RegisterMigration("009_create_menu_api_table", createMenuAPITable, dropMenuAPITable)
-
-	// 权限表迁移
-	RegisterMigration("010_create_permissions_tables", createPermissionsTables, dropPermissionsTables)
-	RegisterMigration("011_create_casbin_rule_table", createCasbinRuleTable, dropCasbinRuleTable)
-
-	// 操作日志表迁移
-	RegisterMigration("012_create_operation_logs_table", createOperationLogsTable, dropOperationLogsTable)
-
-	// 初始数据迁移
-	RegisterMigration("013_init_basic_menus", initBasicMenus, dropBasicMenus)
-	RegisterMigration("014_init_admin_user",
-		// 包装函数，使其符合 func(*gorm.DB) error 签名
-		func(tx *gorm.DB) error {
-			return initAdminUser(tx, nil)
-		},
-		dropAdminUser)
+	// 初始化管理员用户
+	RegisterMigration("003_init_admin_user", initSimpleAdminUser, dropSimpleAdminUser)
 }
 
 // 文件表迁移
@@ -357,19 +333,15 @@ func dropBasicMenus(tx *gorm.DB) error {
 	return tx.Where("id IN (?)", []int{1, 2, 3, 4, 5, 6, 7}).Delete(&model.Menu{}).Error
 }
 
-func initAdminUser(tx *gorm.DB, config ...*configs.Config) error {
+// 初始化管理员用户 - 简化为普通用户表中的管理员
+func initSimpleAdminUser(tx *gorm.DB) error {
 	// 获取配置
-	var cfg *configs.Config
-	if len(config) > 0 && config[0] != nil {
-		cfg = config[0]
-	} else {
-		cfg = &configs.Config{
-			Admin: configs.Admin{
-				Username: "admin",
-				Password: "123456",
-				Nickname: "超级管理员",
-			},
-		}
+	cfg := &configs.Config{
+		Admin: configs.Admin{
+			Username: "admin",
+			Password: "123456",
+			Nickname: "超级管理员",
+		},
 	}
 
 	// 如果配置文件中没有设置管理员信息，使用默认值
@@ -389,7 +361,7 @@ func initAdminUser(tx *gorm.DB, config ...*configs.Config) error {
 
 	// 检查是否已有管理员用户
 	var count int64
-	if err := tx.Model(&model.AdminUser{}).Where("username = ?", username).Count(&count).Error; err != nil {
+	if err := tx.Model(&model.User{}).Where("username = ? AND is_admin = ?", username, true).Count(&count).Error; err != nil {
 		return err
 	}
 
@@ -398,55 +370,27 @@ func initAdminUser(tx *gorm.DB, config ...*configs.Config) error {
 		return nil
 	}
 
-	// 获取管理员角色
-	var adminRole model.Role
-	if err := tx.Where("code = ?", "admin").First(&adminRole).Error; err != nil {
-		return err
-	}
-
 	// 创建管理员用户
 	hashedPassword, err := crypto.HashPassword(password)
 	if err != nil {
 		return err
 	}
 
-	// 使用雪花ID
-	adminUser := model.AdminUser{
+	// 创建管理员用户（在普通用户表中，使用is_admin字段标识）
+	adminUser := model.User{
 		Username: username,
 		Password: hashedPassword,
 		Nickname: nickname,
 		Email:    "admin@example.com",
 		Enabled:  true,
+		IsAdmin:  true, // 标记为管理员
 	}
 
-	if err := tx.Create(&adminUser).Error; err != nil {
-		return err
-	}
-
-	// 关联角色
-	userRole := struct {
-		AdminUserID int64 `gorm:"column:admin_user_id"`
-		RoleID      int64 `gorm:"column:role_id"`
-	}{
-		AdminUserID: adminUser.ID,
-		RoleID:      int64(adminRole.ID),
-	}
-
-	return tx.Table("admin_user_role").Create(&userRole).Error
+	return tx.Create(&adminUser).Error
 }
 
-func dropAdminUser(tx *gorm.DB) error {
-	// 获取管理员用户
-	var adminUser model.AdminUser
-	if err := tx.Where("username = ?", "admin").First(&adminUser).Error; err != nil {
-		return nil // 如果不存在，直接返回
-	}
-
-	// 删除用户角色关联
-	if err := tx.Table("admin_user_role").Where("admin_user_id = ?", adminUser.ID).Delete(nil).Error; err != nil {
-		return err
-	}
-
-	// 删除用户
-	return tx.Delete(&adminUser).Error
+// 删除管理员用户
+func dropSimpleAdminUser(tx *gorm.DB) error {
+	// 删除管理员用户
+	return tx.Where("username = ? AND is_admin = ?", "admin", true).Delete(&model.User{}).Error
 }
