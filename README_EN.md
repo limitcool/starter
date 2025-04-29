@@ -8,18 +8,13 @@ English | [中文](README.md)
 > This is the lightweight version of the Starter framework, designed with a single-user mode, suitable for rapid development and simple application scenarios. If you need more enterprise-level features, please check the `enterprise` branch.
 
 ## Features
-- Provides a Gin framework project template
-- Supports both HTTP and gRPC dual-protocol services
-  - Can enable/disable gRPC service via configuration
-  - Unified API definition and implementation
-  - Supports gRPC health check and reflection services
+- Provides a lightweight Gin framework project template
 - Uses Uber fx framework for dependency injection, creating clearer code structure
-- Adopts standard MVC architecture, following the principle of separation of concerns
+- Adopts simplified architecture design, focused on rapid development
 - Integrates GORM for ORM mapping and database operations
   - Supports PostgreSQL (using pgx driver)
   - Supports MySQL
   - Supports SQLite
-  - Provides rich query option utility functions
 - Integrates Viper for configuration management
 - Provides common Gin middleware and tools
   - CORS middleware: Handles API cross-domain requests, implements CORS support
@@ -27,48 +22,38 @@ English | [中文](README.md)
 - Internationalization (i18n) support
   - Automatically selects language based on Accept-Language header
   - Multi-language support for error messages
-  - Built-in English (en-US) and Chinese (zh-CN) translations
-  - Easily extensible to support more languages
 - Uses Cobra command-line framework, providing a clear subcommand structure
 - Supports separation of database migration and server startup, improving startup speed
-- Complete database migration system, supporting version control and rollback
-- Built-in user, role, permission, and menu management system
+- Simplified user management system, using a single user table with IsAdmin field to distinguish administrators
 - Optimized error handling system, supporting error codes and multilingual error messages
 
 ## Architecture Design
 
-The project adopts a standard MVC architecture, combined with the Uber fx dependency injection framework, implementing a clear layered structure:
+The project adopts a simplified architecture design, combined with the Uber fx dependency injection framework, implementing a clear code structure:
 
-### 1. Layered Architecture
+### 1. Simplified Layered Architecture
 
 - **Model Layer**: Defines data models and database table structures
-- **Repository Layer**: Responsible for data access, the only layer that directly interacts with the database
-- **Service Layer**: Implements business logic, depends on the Repository layer
-- **Controller Layer**: Handles HTTP requests and responses, depends on the Service layer
-- **Router Layer**: Defines API routes, depends on the Controller layer
+- **Handler Layer**: Handles HTTP requests and responses, directly interacts with the database
+- **Router Layer**: Defines API routes, depends on the Handler layer
 
 ### 2. Dependency Injection
 
-The project uses the Uber fx framework to implement dependency injection, with each layer injecting its dependencies through constructors:
+The project uses the Uber fx framework to implement dependency injection, with dependencies injected through constructors:
 
 ```go
-// Repository layer
+// Model layer
 func NewUserRepo(db *gorm.DB) *UserRepo {
     // ...
 }
 
-// Service layer
-func NewUserService(userRepo *repository.UserRepo) *UserService {
-    // ...
-}
-
-// Controller layer
-func NewUserController(userService *services.UserService) *UserController {
+// Handler layer
+func NewUserHandler(db *gorm.DB, config *configs.Config) *UserHandler {
     // ...
 }
 
 // Router layer
-func NewRouter(userController *controller.UserController) *gin.Engine {
+func NewRouter(userHandler *handler.UserHandler) *gin.Engine {
     // ...
 }
 ```
@@ -100,7 +85,7 @@ func NewComponent(lc fx.Lifecycle) *Component {
 
 ```bash
 go install github.com/go-eagle/eagle/cmd/eagle@latest
-eagle new <project name> -r https://github.com/limitcool/starter -b main
+eagle new <project name> -r https://github.com/limitcool/starter -b lite
 ```
 
 ## Usage
@@ -164,7 +149,7 @@ Database migration commands are used to initialize or update the database struct
 
 ## Database Migration System
 
-This project implements a complete database migration system for managing the creation, update, and rollback of database table structures.
+The Lite version implements a concise database migration system for managing the creation and update of database table structures.
 
 ### Migration System Features
 
@@ -183,56 +168,46 @@ migrator.Register(&MigrationEntry{
     Version: "202504080001",        // Version number format: YearMonthDaySerialNumber
     Name:    "create_users_table",  // Migration name
     Up: func(tx *gorm.DB) error {   // Up migration function
-        return tx.AutoMigrate(&model.SysUser{})
+        return tx.AutoMigrate(&model.User{})
     },
     Down: func(tx *gorm.DB) error { // Down migration function
-        return tx.Migrator().DropTable("sys_user")
+        return tx.Migrator().DropTable("users")
     },
 })
 ```
 
 ### Predefined Migrations
 
-The system has predefined basic migration items:
+The Lite version has predefined basic migration items:
 
-1. User table (`sys_user`)
-2. Role-related tables (`sys_role`, `sys_user_role`, `sys_role_menu`)
-3. Permission-related tables (`sys_permission`, `sys_role_permission`)
-4. Menu table (`sys_menu`)
+1. User table (`users`)
+2. File table (`files`)
 
 ### Adding New Migrations
 
-To add new migrations in the `internal/migration/migrations.go` file:
+To add new migrations, in the `internal/migration/migrations.go` file:
 
 1. Create a new registration function or add to an existing function
 2. Ensure that version numbers follow timestamp order
-3. Register in the `RegisterAllMigrations` function
+3. Use the `RegisterMigration` function to register
 
 ```go
 // Example: Adding new business table migration
-func RegisterBusinessMigrations(migrator *Migrator) {
-    migrator.Register(&MigrationEntry{
-        Version: "202504080010",
-        Name:    "create_products_table",
-        Up: func(tx *gorm.DB) error {
-            return tx.AutoMigrate(&model.Product{})
-        },
-        Down: func(tx *gorm.DB) error {
-            return tx.Migrator().DropTable("products")
-        },
-    })
-}
-
-// Add in RegisterAllMigrations
-func RegisterAllMigrations(migrator *Migrator) {
-    // Existing migrations...
-    RegisterBusinessMigrations(migrator)
-}
+RegisterMigration("create_products_table",
+    // Up migration function
+    func(tx *gorm.DB) error {
+        return tx.AutoMigrate(&model.Product{})
+    },
+    // Down migration function
+    func(tx *gorm.DB) error {
+        return tx.Migrator().DropTable("products")
+    },
+)
 ```
 
 ### Migration Record Table
 
-The system tracks the execution status of migrations through the `sys_migrations` table, containing the following fields:
+The system tracks the execution status of migrations through the `migrations` table, containing the following fields:
 
 - `id`: Auto-increment primary key
 - `version`: Migration version number (unique index)
@@ -632,300 +607,289 @@ GRPC:
 
 ## Permission System
 
-The project integrates the Casbin RBAC permission system and dynamic menu system, implementing the following functions:
+The Lite version adopts a simplified permission system, based on the user's `is_admin` field for permission control:
 
-1. RBAC (Role-Based Access Control) permission model
-   - User -> Role -> Permission
-   - Supports resource-level and operation-level permission control
+### Permission Control Middleware
 
-2. Dynamic menu system
-   - Dynamically generates menus based on user roles
-   - Menu items are associated with permissions
-   - Supports multi-level menu tree structure
+The project provides three types of permission control middleware:
 
-3. Permission verification middleware
-   - CasbinMiddleware: Path and HTTP method-based permission control
-   - PermissionMiddleware: Menu permission identifier-based permission control
+1. **AdminCheck**: Checks if the user is an administrator
+   - Based on the `is_admin` field in JWT for quick checking
+   - Suitable for admin-exclusive interfaces
 
-4. Data table structure
-   - sys_user - User table
-   - sys_role - Role table
-   - sys_menu - Menu table
-   - sys_role_menu - Role-menu association table
-   - sys_user_role - User-role association table
-   - casbin_rule - Casbin rule table (automatically created)
+2. **UserCheck**: Checks if the user is logged in
+   - Only verifies that the user is logged in, does not check user type
+   - Suitable for interfaces that require login but do not restrict user type
 
-5. API interfaces
-   - Menu management: Create, update, delete, query
-   - Role management: Create, update, delete, query
-   - Role menu assignment
-   - Role permission assignment
-   - User role assignment
+3. **RegularUserCheck**: Checks if the user is a regular user
+   - Ensures the user is not an administrator
+   - Suitable for interfaces that only allow regular users to access
 
 ### Usage
 
-1. Role and menu association:
-   ```
-   POST /api/v1/admin-api/roles/menu
-   {
-     "role_id": 1,
-     "menu_ids": [1, 2, 3]
-   }
-   ```
-
-2. Role and permission association:
-   ```
-   POST /api/v1/admin-api/roles/permission
-   {
-     "role_code": "admin",
-     "object": "/api/v1/admin-api/users",
-     "action": "GET"
-   }
-   ```
-
-3. Get user menus:
-   ```
-   GET /api/v1/user/menus
-   ```
-
-4. Get user permissions:
-   ```
-   GET /api/v1/user/perms
-   ```
-
-## Generic Repository System
-
-The project leverages Go 1.18+ generics to implement a complete generic repository system, significantly reducing code duplication and improving development efficiency.
-
-### Generic Repository Interface
-
-The generic repository interface defines methods that all repository implementations must provide:
+Using middleware in route definitions:
 
 ```go
-// Repository interface
-type Repository[T Entity] interface {
-    // Basic CRUD operations
-    Create(ctx context.Context, entity *T) error
-    GetByID(ctx context.Context, id any) (*T, error)
-    Update(ctx context.Context, entity *T) error
-    Delete(ctx context.Context, id any) error
-    List(ctx context.Context, page, pageSize int) ([]T, int64, error)
-    Count(ctx context.Context) (int64, error)
-    UpdateFields(ctx context.Context, id any, fields map[string]any) error
+// Admin interfaces
+adminGroup := router.Group("/api/v1/admin")
+adminGroup.Use(middleware.AdminCheck())
+{
+    adminGroup.GET("/users", handler.ListUsers)
+    // Other admin interfaces...
+}
 
-    // Batch operations
-    BatchCreate(ctx context.Context, entities []T) error
-    BatchDelete(ctx context.Context, ids []any) error
+// Regular user interfaces
+userGroup := router.Group("/api/v1/user")
+userGroup.Use(middleware.UserCheck())
+{
+    userGroup.GET("/profile", handler.GetUserProfile)
+    // Other user interfaces...
+}
 
-    // Query methods
-    FindByField(ctx context.Context, field string, value any) (*T, error)
-    FindAllByField(ctx context.Context, field string, value any) ([]T, error)
-    FindByCondition(ctx context.Context, condition string, args ...any) ([]T, error)
-    FindOneByCondition(ctx context.Context, condition string, args ...any) (*T, error)
-    GetPage(ctx context.Context, page, pageSize int, condition string, args ...any) ([]T, int64, error)
-
-    // Advanced queries
-    FindWithLike(ctx context.Context, field string, value string) ([]T, error)
-    FindWithIn(ctx context.Context, field string, values []any) ([]T, error)
-    FindWithBetween(ctx context.Context, field string, min, max any) ([]T, error)
-    CountWithCondition(ctx context.Context, condition string, args ...any) (int64, error)
-    AggregateField(ctx context.Context, aggregate Aggregate, field string, condition string, args ...any) (float64, error)
-    GroupBy(ctx context.Context, groupFields []string, selectFields []string, condition string, args ...any) ([]map[string]any, error)
-    Join(ctx context.Context, joinType string, table string, on string, selectFields []string, condition string, args ...any) ([]map[string]any, error)
-    Exists(ctx context.Context, condition string, args ...any) (bool, error)
-    Raw(ctx context.Context, sql string, values ...any) ([]map[string]any, error)
-
-    // Transaction related
-    Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error
-    WithTx(tx *gorm.DB) Repository[T]
+// Regular-user-only interfaces
+regularUserGroup := router.Group("/api/v1/regular")
+regularUserGroup.Use(middleware.RegularUserCheck())
+{
+    regularUserGroup.POST("/feedback", handler.SubmitFeedback)
+    // Other regular-user-only interfaces...
 }
 ```
 
-### Generic Repository Implementations
+## Database Operations
 
-The project provides two generic repository implementations:
+The Lite version adopts a simplified database operation approach, providing database operation methods directly in the Model layer:
 
-1. **GenericRepo**: Basic generic repository implementation that interacts directly with the database
-2. **CachedRepo**: Cached generic repository implementation that wraps the basic repository and adds caching functionality
+### Model Layer Design
 
-#### Creating Generic Repositories
+In the Lite version, the Model layer directly provides database operation methods, simplifying the code structure:
 
 ```go
-// Create a basic generic repository
+// User model
+type User struct {
+    ID        uint      `gorm:"primarykey" json:"id"`
+    Username  string    `gorm:"size:50;not null;uniqueIndex" json:"username"`
+    Password  string    `gorm:"size:100;not null" json:"-"`
+    Nickname  string    `gorm:"size:50" json:"nickname"`
+    Email     string    `gorm:"size:100" json:"email"`
+    Avatar    string    `gorm:"size:255" json:"avatar"`
+    IsAdmin   bool      `gorm:"default:false" json:"is_admin"`
+    CreatedAt time.Time `json:"created_at"`
+    UpdatedAt time.Time `json:"updated_at"`
+}
+
+// UserRepo database operations for users
+type UserRepo struct {
+    DB *gorm.DB
+}
+
+// NewUserRepo creates a user repository
 func NewUserRepo(db *gorm.DB) *UserRepo {
-    // Create generic repository
-    genericRepo := NewGenericRepo[model.User](db)
-    // Set error code
-    genericRepo.SetErrorCode(errorx.ErrorUserNotFoundCode)
-
-    return &UserRepo{
-        DB:          db,
-        GenericRepo: genericRepo,
-    }
+    return &UserRepo{DB: db}
 }
 
-// Create a cached generic repository
-func NewCachedUserRepo(repo Repository[model.User]) (Repository[model.User], error) {
-    return WithCache(repo, "user", "user", 30*time.Minute)
-}
-```
-
-#### Using Generic Repositories
-
-```go
-// Using generic repository in service layer
-func (s *UserService) GetUserByID(ctx context.Context, id int64) (*model.User, error) {
-    // Directly call generic repository method
-    user, err := s.userRepo.GetByID(ctx, id)
-    if err != nil {
+// GetByID gets a user by ID
+func (r *UserRepo) GetByID(ctx context.Context, id uint) (*User, error) {
+    var user User
+    if err := r.DB.First(&user, id).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, errorx.ErrUserNotFound
+        }
         return nil, err
     }
-    return user, nil
+    return &user, nil
 }
 
-// Using advanced query features
-func (s *UserService) SearchUsers(ctx context.Context, keyword string, page, pageSize int) ([]model.User, int64, error) {
-    condition := ""
-    var args []any
-
-    if keyword != "" {
-        condition = "username LIKE ? OR email LIKE ?"
-        args = append(args, "%"+keyword+"%", "%"+keyword+"%")
-    }
-
-    return s.userRepo.GetPage(ctx, page, pageSize, condition, args...)
-}
-```
-
-### Advantages of Generic Repositories
-
-1. **Code Reuse**: All entities share the same repository implementation, significantly reducing duplicate code
-2. **Type Safety**: Leverages Go generics to ensure type safety, catching type errors at compile time
-3. **Rich Functionality**: Provides complete CRUD operations and advanced query capabilities
-4. **Caching Support**: Easily add caching functionality through the decorator pattern, improving performance
-5. **Transaction Support**: Built-in transaction support ensures data consistency
-
-## Database Query Options System
-
-This project implements a complete database query options system to simplify the GORM query building process, improving code reusability and readability.
-
-### Query Option Features
-
-- Designed with functional option pattern
-- Supports chaining multiple query conditions
-- Provides a unified interface approach to handle various query scenarios
-- Easy to extend and customize new query conditions
-
-### Basic Usage
-
-```go
-// Import query options package
-import "your-project/internal/pkg/options"
-
-// Create query instance
-query := options.Apply(
-    DB, // *gorm.DB instance
-    options.WithPage(1, 10),
-    options.WithOrder("created_at", "desc"),
-    options.WithLike("name", keyword),
-)
-
-// Execute query
-var results []YourModel
-query.Find(&results)
-```
-
-### Built-in Query Options
-
-The system provides the following built-in query options:
-
-#### Pagination and Sorting
-- `WithPage(page, pageSize)` - Pagination query, automatically limits maximum page size
-- `WithOrder(field, direction)` - Sorting query, direction supports "asc" or "desc"
-
-#### Association Queries
-- `WithPreload(relation, args...)` - Preload associations
-- `WithJoin(query, args...)` - Join query
-- `WithSelect(query, args...)` - Specify query fields
-- `WithGroup(query)` - Group query
-- `WithHaving(query, args...)` - HAVING condition query
-
-#### Condition Filtering
-- `WithWhere(query, args...)` - WHERE condition
-- `WithOrWhere(query, args...)` - OR WHERE condition
-- `WithLike(field, value)` - LIKE fuzzy query
-- `WithExactMatch(field, value)` - Exact match query
-- `WithTimeRange(field, start, end)` - Time range query
-- `WithKeyword(keyword, fields...)` - Keyword search (multi-field OR condition)
-
-#### Combined Queries
-- `WithBaseQuery(tableName, status, keyword, keywordFields, createBy, startTime, endTime)` - Apply basic query conditions, combining multiple common filter conditions
-
-### Custom Query Options
-
-Custom query options can be easily extended:
-
-```go
-// Custom query option example
-func WithCustomCondition(param string) options.Option {
-    return func(db *gorm.DB) *gorm.DB {
-        if param == "" {
-            return db
+// GetByUsername gets a user by username
+func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*User, error) {
+    var user User
+    if err := r.DB.Where("username = ?", username).First(&user).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, errorx.ErrUserNotFound
         }
-        return db.Where("custom_field = ?", param)
+        return nil, err
+    }
+    return &user, nil
+}
+
+// Create creates a user
+func (r *UserRepo) Create(ctx context.Context, user *User) error {
+    return r.DB.Create(user).Error
+}
+
+// Update updates a user
+func (r *UserRepo) Update(ctx context.Context, user *User) error {
+    return r.DB.Save(user).Error
+}
+
+// Delete deletes a user
+func (r *UserRepo) Delete(ctx context.Context, id uint) error {
+    return r.DB.Delete(&User{}, id).Error
+}
+
+// List gets a list of users
+func (r *UserRepo) List(ctx context.Context, page, pageSize int) ([]User, int64, error) {
+    var users []User
+    var total int64
+
+    r.DB.Model(&User{}).Count(&total)
+
+    offset := (page - 1) * pageSize
+    if err := r.DB.Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+        return nil, 0, err
+    }
+
+    return users, total, nil
+}
+```
+
+### Using in Handler Layer
+
+In the Handler layer, directly use the methods provided by the Model layer:
+
+```go
+// UserHandler user handler
+type UserHandler struct {
+    userRepo *model.UserRepo
+    config   *configs.Config
+}
+
+// NewUserHandler creates a user handler
+func NewUserHandler(userRepo *model.UserRepo, config *configs.Config) *UserHandler {
+    return &UserHandler{
+        userRepo: userRepo,
+        config:   config,
     }
 }
 
-// Using custom query options
-query := options.Apply(
-    DB,
-    options.WithPage(1, 10),
-    WithCustomCondition("value"),
-)
+// GetUser gets user information
+func (h *UserHandler) GetUser(c *gin.Context) {
+    id := cast.ToUint(c.Param("id"))
+
+    user, err := h.userRepo.GetByID(c.Request.Context(), id)
+    if err != nil {
+        response.Error(c, err)
+        return
+    }
+
+    response.Success(c, user)
+}
 ```
 
-### Using with DTOs
+## Error Handling
 
-Query conditions can be flexibly built in combination with DTO objects:
+The Lite version provides a concise yet powerful error handling system, supporting error codes and multilingual error messages.
+
+### Error Handling Features
+
+- Unified error code definition and management
+- Error wrapping, preserving complete error chains
+- Multilingual error message support
+- Distinction between internal errors and user-visible errors
+
+### Error Definition
+
+Errors are defined in the `internal/pkg/errorx` package:
 
 ```go
-// Build query options based on BaseQuery
-func BuildQueryOptions(q *request.BaseQuery, tableName string) []options.Option {
-    var opts []options.Option
+// Error code definitions
+const (
+    // Common error codes
+    ErrorSuccess       = 0    // Success
+    ErrorUnknown       = 1000 // Unknown error
+    ErrorInvalidParams = 1001 // Invalid parameters
+    ErrorNotFound      = 1002 // Resource not found
+    ErrorDatabase      = 1003 // Database error
 
-    // Add basic query conditions
-    opts = append(opts, options.WithBaseQuery(
-        tableName,
-        q.Status,
-        q.Keyword,
-        []string{"name", "description"}, // Keyword search fields
-        q.CreateBy,
-        q.StartTime,
-        q.EndTime,
-    ))
+    // User-related error codes
+    ErrorUserNotFound     = 2000 // User not found
+    ErrorUserAlreadyExist = 2001 // User already exists
+    ErrorUserAuthFailed   = 2002 // User authentication failed
+    ErrorUserNoLogin      = 2003 // User not logged in
+    ErrorAccessDenied     = 2004 // Access denied
+)
 
-    return opts
+// Error custom error type
+type Error struct {
+    Code    int    // Error code
+    Message string // Error message
+    Err     error  // Original error
 }
 
-// Use in service
-func (s *Service) List(query *request.YourQuery) ([]YourModel, int64, error) {
-    opts := BuildQueryOptions(&query.BaseQuery, "your_table")
+// NewError creates a new error
+func NewError(code int, msg string) *Error {
+    return &Error{
+        Code:    code,
+        Message: msg,
+    }
+}
 
-    // Add pagination and sorting
-    opts = append(opts,
-        options.WithPage(query.Page, query.PageSize),
-        options.WithOrder(query.SortField, query.SortOrder),
-    )
+// WithMsg sets the error message
+func (e *Error) WithMsg(msg string) *Error {
+    return &Error{
+        Code:    e.Code,
+        Message: msg,
+        Err:     e.Err,
+    }
+}
 
-    // Apply all query options
-    db := options.Apply(s.DB, opts...)
+// WithError wraps the original error
+func (e *Error) WithError(err error) *Error {
+    return &Error{
+        Code:    e.Code,
+        Message: e.Message,
+        Err:     err,
+    }
+}
+```
 
-    var total int64
-    db.Model(&YourModel{}).Count(&total)
+### Usage Example
 
-    var items []YourModel
-    db.Find(&items)
+```go
+// In Model layer
+func (r *UserRepo) GetByID(ctx context.Context, id uint) (*User, error) {
+    var user User
+    if err := r.DB.First(&user, id).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, errorx.NewError(errorx.ErrorUserNotFound, "User not found")
+        }
+        return nil, errorx.NewError(errorx.ErrorDatabase, "Database error").WithError(err)
+    }
+    return &user, nil
+}
 
-    return items, total, nil
+// In Handler layer
+func (h *UserHandler) GetUser(c *gin.Context) {
+    id := cast.ToUint(c.Param("id"))
+
+    user, err := h.userRepo.GetByID(c.Request.Context(), id)
+    if err != nil {
+        logger.Error("Failed to get user", "error", err, "id", id)
+        response.Error(c, err)
+        return
+    }
+
+    response.Success(c, user)
+}
+```
+
+### Unified Response Format
+
+All API responses use a unified format:
+
+```go
+// Success response
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        // Response data
+    }
+}
+
+// Error response
+{
+    "code": 1001,
+    "message": "Invalid parameters",
+    "data": null
 }
 ```

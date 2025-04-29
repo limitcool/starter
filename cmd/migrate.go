@@ -78,7 +78,7 @@ func runMigration(cmd *cobra.Command, args []string) {
 	}
 
 	// 初始化迁移系统
-	migrator, err := migration.InitializeSimpleMigrator(db, cfg)
+	migrator, err := migration.InitializeMigrator(db, cfg)
 	if err != nil {
 		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
@@ -128,7 +128,7 @@ func runMigrationRollback(cmd *cobra.Command, args []string) {
 	}
 
 	// 初始化迁移系统
-	migrator, err := migration.InitializeSimpleMigrator(db, cfg)
+	migrator, err := migration.InitializeMigrator(db, cfg)
 	if err != nil {
 		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
@@ -164,7 +164,7 @@ func runMigrationStatus(cmd *cobra.Command, args []string) {
 	}
 
 	// 初始化迁移系统
-	migrator, err := migration.InitializeSimpleMigrator(db, cfg)
+	migrator, err := migration.InitializeMigrator(db, cfg)
 	if err != nil {
 		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)
@@ -216,7 +216,7 @@ func runMigrationReset(cmd *cobra.Command, args []string) {
 	}
 
 	// 初始化迁移系统
-	migrator, err := migration.InitializeSimpleMigrator(db, cfg)
+	migrator, err := migration.InitializeMigrator(db, cfg)
 	if err != nil {
 		logger.Error("Failed to initialize migration system", "error", err)
 		os.Exit(1)

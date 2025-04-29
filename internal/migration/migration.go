@@ -297,10 +297,33 @@ func (m *Migrator) Status() ([]map[string]any, error) {
 	return status, nil
 }
 
+// RegisterMigration 注册迁移
+func RegisterMigration(name string, up, down MigrationFunc) {
+	// 生成版本号，使用当前时间戳
+	version := fmt.Sprintf("%s", time.Now().Format("20060102150405"))
+
+	// 创建迁移项
+	entry := &MigrationEntry{
+		Version: version,
+		Name:    name,
+		Up:      up,
+		Down:    down,
+	}
+
+	// 将迁移项添加到全局迁移器中
+	globalMigrator.Register(entry)
+}
+
+// 全局迁移器
+var globalMigrator *Migrator
+
 // InitializeMigrator 初始化迁移器并注册所有迁移
 func InitializeMigrator(db *gorm.DB, config *configs.Config) (*Migrator, error) {
 	migrator := NewMigrator(db, config)
-	RegisterAllMigrations(migrator) // 注册所有迁移
+	globalMigrator = migrator
+
+	// 注册所有迁移
+	RegisterMigrations(migrator)
 
 	err := migrator.Initialize()
 	return migrator, err

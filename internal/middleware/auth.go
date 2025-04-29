@@ -59,9 +59,9 @@ func JWTAuth(config *configs.Config) gin.HandlerFunc {
 			c.Set("user_id", userId)
 			ctx = context.WithValue(ctx, "user_id", userId)
 		}
-		if userType, exists := (*claims)["user_type"]; exists {
-			c.Set("user_type", userType)
-			ctx = context.WithValue(ctx, "user_type", userType)
+		if isAdmin, exists := (*claims)["is_admin"]; exists {
+			c.Set("is_admin", isAdmin)
+			ctx = context.WithValue(ctx, "is_admin", isAdmin)
 		}
 		// 将token存入请求上下文
 		c.Set("token", token)

@@ -93,13 +93,6 @@ func LoadConfig(configPath string) *Config {
 			},
 		},
 		Log: logconfig.DefaultLogConfig(),
-		Casbin: Casbin{
-			Enabled:      true,
-			DefaultAllow: false,
-			ModelPath:    "configs/rbac_model.conf",
-			PolicyTable:  "casbin_rule",
-			LogEnabled:   true,
-		},
 		Storage: Storage{
 			Enabled: true,
 			Type:    types.StorageTypeLocal,
@@ -133,14 +126,6 @@ func LoadConfig(configPath string) *Config {
 			DefaultLanguage:  "zh-CN",
 			SupportLanguages: []string{"zh-CN", "en-US"},
 			ResourcesPath:    "locales",
-		},
-		GRPC: GRPC{
-			Enabled:      false,
-			Port:         9000,
-			Reflection:   true,
-			HealthCheck:  true,
-			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 5 * time.Second,
 		},
 	}
 
@@ -189,7 +174,6 @@ func PrintConfig(config *Config) {
 	logger.InfoContext(ctx, "数据库配置", "db_enabled", config.Database.Enabled, "db_driver", config.Driver, "db_host", config.Database.Host, "db_port", config.Database.Port)
 	logger.InfoContext(ctx, "MongoDB配置", "mongo_enabled", config.Mongo.Enabled)
 	logger.InfoContext(ctx, "Redis配置", "redis_instances", len(config.Redis.Instances), "redis_default_enabled", config.Redis.Instances["default"].Enabled)
-	logger.InfoContext(ctx, "Casbin配置", "casbin_enabled", config.Casbin.Enabled, "casbin_default_allow", config.Casbin.DefaultAllow)
 	logger.InfoContext(ctx, "存储配置", "storage_enabled", config.Storage.Enabled, "storage_type", config.Storage.Type)
 	logger.InfoContext(ctx, "国际化配置", "i18n_enabled", config.I18n.Enabled, "i18n_default", config.I18n.DefaultLanguage)
 }
@@ -237,7 +221,6 @@ func structToMap(config *Config) map[string]any {
 	v.Set("mongo", config.Mongo)
 	v.Set("redis", config.Redis)
 	v.Set("log", config.Log)
-	v.Set("casbin", config.Casbin)
 	v.Set("storage", config.Storage)
 	v.Set("admin", config.Admin)
 	v.Set("i18n", config.I18n)

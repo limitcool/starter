@@ -25,7 +25,7 @@ func main() {
 
 	// 运行单元测试
 	fmt.Println("运行单元测试...")
-	cmd := exec.Command("go", "test", "./internal/pkg/casbin", "./internal/middleware", "./internal/services", "-v")
+	cmd := exec.Command("go", "test", "./internal/pkg/casbin", "./internal/middleware", "-v")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

@@ -90,12 +90,7 @@ log:
   caller: true
   stack_trace: true
 
-casbin:
-  enabled: true
-  default_allow: false
-  model_path: "configs/rbac_model.conf"
-  policy_table: "casbin_rule"
-  log_enabled: true
+
 
 storage:
   enabled: true
@@ -117,16 +112,9 @@ storage:
 admin:
   username: "admin"
   password: "admin123"
-  email: "admin@example.com"
-  user_mode: "separate" # separate(分离模式), simple(简单模式)
+  nickname: "管理员"
 
-grpc:
-  enabled: false
-  port: 9000
-  reflection: true
-  health_check: true
-  read_timeout: 5s
-  write_timeout: 5s
+
 
 i18n:
   default_language: "zh-CN"

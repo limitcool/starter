@@ -4,14 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/internal/controller"
+	"github.com/limitcool/starter/internal/handler"
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"github.com/limitcool/starter/internal/pkg/usermode"
-	"github.com/limitcool/starter/internal/repository"
 	"go.uber.org/fx"
 )
 
@@ -28,28 +25,17 @@ var Module = fx.Options(
 type RouterParams struct {
 	fx.In
 
-	Config         *configs.Config
-	LC             fx.Lifecycle
-	Enforcer       *casbin.Enforcer `optional:"true"`
-	Logger         *logger.Logger   `optional:"true"`
-	UserModeService *usermode.Service
+	Config *configs.Config
+	LC     fx.Lifecycle
+	Logger *logger.Logger `optional:"true"`
 
 	// 路由注册器
 	RouteRegistrar RouteRegistrarInterface
 
-	// 控制器
-	UserController         *controller.UserController
-	AdminUserController    *controller.AdminUserController
-	RoleController         controller.RoleControllerInterface       `optional:"true"`
-	MenuController         controller.MenuControllerInterface       `optional:"true"`
-	PermissionController   controller.PermissionControllerInterface `optional:"true"`
-	OperationLogController *controller.OperationLogController       `optional:"true"`
-	FileController         *controller.FileController
-	APIController          *controller.APIController
-	AdminController        *controller.AdminController
-
-	// 仓库
-	UserRepo *repository.UserRepo `optional:"true"`
+	// 处理器
+	UserHandler  *handler.UserHandler
+	FileHandler  *handler.FileHandler
+	AdminHandler *handler.AdminHandler
 }
 
 // RouterResult 路由结果
@@ -83,16 +69,8 @@ func NewRouter(params RouterParams) RouterResult {
 	// 使用用户模式服务
 	ctx := context.Background()
 
-	// 在分离模式下添加Casbin中间件（如果启用）
-	if params.UserModeService.IsSeparateMode() && params.Config.Casbin.Enabled && params.Enforcer != nil {
-		// 检查PermissionController是否为空
-		if params.PermissionController != nil {
-			r.Use(middleware.CasbinMiddleware(params.PermissionController.GetPermissionService(), params.Config))
-			logger.InfoContext(ctx, "添加Casbin中间件")
-		} else {
-			logger.WarnContext(ctx, "权限控制器为空，无法添加Casbin中间件")
-		}
-	}
+	// 在lite版本中，不使用Casbin中间件
+	logger.InfoContext(ctx, "Lite版本不使用Casbin中间件")
 
 	// 注册路由
 	registerRoutes(r, params)

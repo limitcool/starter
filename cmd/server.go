@@ -8,13 +8,10 @@ import (
 	"github.com/limitcool/starter/internal/datastore/redisdb"
 	"github.com/limitcool/starter/internal/datastore/sqldb"
 	"github.com/limitcool/starter/internal/filestore"
-	"github.com/limitcool/starter/internal/pkg/casbin"
+	"github.com/limitcool/starter/internal/handler"
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"github.com/limitcool/starter/internal/pkg/usermode"
-	"github.com/limitcool/starter/internal/repository"
 	"github.com/limitcool/starter/internal/router"
 	"github.com/limitcool/starter/internal/server"
-	"github.com/limitcool/starter/internal/services"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 )
@@ -78,17 +75,12 @@ func runServer(cmd *cobra.Command, args []string) {
 			LoadConfig,
 		),
 
-		// 添加所有模块
-		// 首先添加用户模式模块，因为其他模块可能依赖它
-		usermode.Module,
+		// 添加所有模块 - 在lite版本中，只添加必要的模块
 		sqldb.Module,
 		redisdb.Module,
 		filestore.Module,
-		casbin.Module,
-		repository.Module,
-		// 使用 ServiceOrderGroup 替代 services.Module
-		// 这样可以确保服务按照正确的顺序初始化
-		services.ServiceOrderGroup,
+		// 使用handler模块替代repository、service和controller模块
+		handler.Module,
 		api.Module,
 		router.Module,
 		server.Module,

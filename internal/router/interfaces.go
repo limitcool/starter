@@ -10,18 +10,10 @@ type RouteRegistrarInterface interface {
 	RegisterRoutes(r *gin.RouterGroup, params RouterParams)
 }
 
-// SimpleRouteRegistrar 简单模式路由注册器
-type SimpleRouteRegistrar struct{}
+// RouteRegistrar 路由注册器
+type RouteRegistrar struct{}
 
-// RegisterRoutes 注册简单模式路由
-func (srr *SimpleRouteRegistrar) RegisterRoutes(r *gin.RouterGroup, params RouterParams) {
-	registerSimpleRoutes(r, params)
-}
-
-// SeparateRouteRegistrar 分离模式路由注册器
-type SeparateRouteRegistrar struct{}
-
-// RegisterRoutes 注册分离模式路由
-func (srr *SeparateRouteRegistrar) RegisterRoutes(r *gin.RouterGroup, params RouterParams) {
-	registerSeparateRoutes(r, params)
+// RegisterRoutes 注册应用路由
+func (rr *RouteRegistrar) RegisterRoutes(r *gin.RouterGroup, params RouterParams) {
+	registerAppRoutes(r, params)
 }

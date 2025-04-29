@@ -6,29 +6,25 @@ import (
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
-	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
 
-// 此文件用于定义具体的迁移实例
-// 您可以在这里添加新的迁移，按照时间顺序排列
-
-// RegisterCoreUserMigrations 注册用户相关迁移
-func RegisterCoreUserMigrations(migrator *Migrator) {
-	// 系统用户表迁移
+// RegisterMigrations 注册数据库迁移
+func RegisterMigrations(migrator *Migrator) {
+	// 添加文件表迁移
 	migrator.Register(&MigrationEntry{
-		Version: "202504080001",
-		Name:    "create_sys_users_table",
+		Version: "202504080000",
+		Name:    "create_file_table",
 		Up: func(tx *gorm.DB) error {
-			return tx.AutoMigrate(&model.SysUser{})
+			return tx.AutoMigrate(&model.File{})
 		},
 		Down: func(tx *gorm.DB) error {
-			return tx.Migrator().DropTable("sys_user")
+			return tx.Migrator().DropTable("file")
 		},
 	})
 
-	// 普通用户表迁移
+	// 添加普通用户表迁移
 	migrator.Register(&MigrationEntry{
 		Version: "202504080007",
 		Name:    "create_users_table",
@@ -39,294 +35,10 @@ func RegisterCoreUserMigrations(migrator *Migrator) {
 			return tx.Migrator().DropTable("user")
 		},
 	})
-}
 
-// RegisterRoleMigrations 注册角色相关迁移
-func RegisterRoleMigrations(migrator *Migrator) {
-	// 角色表迁移
-	migrator.Register(&MigrationEntry{
-		Version: "202504080002",
-		Name:    "create_roles_tables",
-		Up: func(tx *gorm.DB) error {
-			if err := tx.AutoMigrate(&model.Role{}); err != nil {
-				return err
-			}
-			if err := tx.AutoMigrate(&model.UserRole{}); err != nil {
-				return err
-			}
-			if err := tx.AutoMigrate(&model.RoleMenu{}); err != nil {
-				return err
-			}
-			return nil
-		},
-		Down: func(tx *gorm.DB) error {
-			if err := tx.Migrator().DropTable("sys_user_role"); err != nil {
-				return err
-			}
-			if err := tx.Migrator().DropTable("sys_role_menu"); err != nil {
-				return err
-			}
-			return tx.Migrator().DropTable("sys_role")
-		},
-	})
-
-	// 创建基础角色
-	migrator.Register(&MigrationEntry{
-		Version: "202504080003",
-		Name:    "init_roles",
-		Up: func(tx *gorm.DB) error {
-			// 检查是否已有admin角色
-			var count int64
-			if err := tx.Model(&model.Role{}).Where("code = ?", "admin").Count(&count).Error; err != nil {
-				return err
-			}
-
-			// 已存在则不重复创建
-			if count > 0 {
-				logger.Info("管理员角色已存在，跳过创建")
-				return nil
-			}
-
-			// 创建超级管理员角色
-			adminRole := model.Role{
-				Name:        "超级管理员",
-				Code:        "admin",
-				Enabled:     true,
-				Sort:        0,
-				Description: "系统超级管理员",
-			}
-
-			if err := tx.Create(&adminRole).Error; err != nil {
-				return err
-			}
-
-			logger.Info("管理员角色创建成功")
-			return nil
-		},
-		Down: func(tx *gorm.DB) error {
-			return tx.Where("code = ?", "admin").Delete(&model.Role{}).Error
-		},
-	})
-}
-
-// RegisterPermissionMigrations 注册权限相关迁移
-func RegisterPermissionMigrations(migrator *Migrator) {
-	// 权限表迁移
-	migrator.Register(&MigrationEntry{
-		Version: "202504080004",
-		Name:    "create_permissions_tables",
-		Up: func(tx *gorm.DB) error {
-			if err := tx.AutoMigrate(&model.Permission{}); err != nil {
-				return err
-			}
-			if err := tx.AutoMigrate(&model.RolePermission{}); err != nil {
-				return err
-			}
-			return nil
-		},
-		Down: func(tx *gorm.DB) error {
-			if err := tx.Migrator().DropTable("sys_role_permission"); err != nil {
-				return err
-			}
-			return tx.Migrator().DropTable("sys_permission")
-		},
-	})
-
-	// Casbin规则表迁移
+	// 添加初始管理员用户迁移
 	migrator.Register(&MigrationEntry{
 		Version: "202504080010",
-		Name:    "create_casbin_rule_table",
-		Up: func(tx *gorm.DB) error {
-			// 检查表是否存在
-			if tx.Migrator().HasTable("casbin_rule") {
-				logger.Info("casbin_rule表已存在，跳过创建")
-				return nil
-			}
-
-			// 创建Casbin规则表
-			sql := `CREATE TABLE casbin_rule (
-				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-				ptype VARCHAR(100) DEFAULT NULL,
-				v0 VARCHAR(100) DEFAULT NULL,
-				v1 VARCHAR(100) DEFAULT NULL,
-				v2 VARCHAR(100) DEFAULT NULL,
-				v3 VARCHAR(100) DEFAULT NULL,
-				v4 VARCHAR(100) DEFAULT NULL,
-				v5 VARCHAR(100) DEFAULT NULL,
-				PRIMARY KEY (id),
-				UNIQUE KEY idx_casbin_rule (ptype,v0,v1,v2,v3,v4,v5)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
-
-			if err := tx.Exec(sql).Error; err != nil {
-				return fmt.Errorf("创建Casbin规则表失败: %w", err)
-			}
-
-			logger.Info("Casbin规则表创建成功")
-			return nil
-		},
-		Down: func(tx *gorm.DB) error {
-			return tx.Migrator().DropTable("casbin_rule")
-		},
-	})
-}
-
-// RegisterMenuMigrations 注册菜单相关迁移
-func RegisterMenuMigrations(migrator *Migrator) {
-	// 菜单表迁移
-	migrator.Register(&MigrationEntry{
-		Version: "202504080005",
-		Name:    "create_menus_table",
-		Up: func(tx *gorm.DB) error {
-			return tx.AutoMigrate(&model.Menu{})
-		},
-		Down: func(tx *gorm.DB) error {
-			return tx.Migrator().DropTable("sys_menu")
-		},
-	})
-}
-
-// RegisterOperationLogMigrations 注册操作日志相关迁移
-func RegisterOperationLogMigrations(migrator *Migrator) {
-	// 操作日志表迁移
-	migrator.Register(&MigrationEntry{
-		Version: "202504080006",
-		Name:    "create_operation_logs_table",
-		Up: func(tx *gorm.DB) error {
-			return tx.AutoMigrate(&model.OperationLog{})
-		},
-		Down: func(tx *gorm.DB) error {
-			return tx.Migrator().DropTable("sys_operation_log")
-		},
-	})
-}
-
-// RegisterInitialDataMigrations 注册初始数据迁移
-func RegisterInitialDataMigrations(migrator *Migrator) {
-	// 初始化菜单数据
-	migrator.Register(&MigrationEntry{
-		Version: "202504080008",
-		Name:    "init_basic_menus",
-		Up: func(tx *gorm.DB) error {
-			// 检查是否已有菜单
-			var count int64
-			if err := tx.Model(&model.Menu{}).Count(&count).Error; err != nil {
-				return err
-			}
-
-			// 已存在则不重复创建
-			if count > 0 {
-				logger.Info("基础菜单已存在，跳过创建")
-				return nil
-			}
-
-			// 获取管理员角色
-			var adminRole model.Role
-			if err := tx.Where("code = ?", "admin").First(&adminRole).Error; err != nil {
-				logger.Error("获取管理员角色失败，跳过菜单创建", "error", err)
-				return nil
-			}
-
-			// 创建系统管理菜单
-			sysManage := model.Menu{
-				Name:      "系统管理",
-				ParentID:  0,
-				Path:      "/system",
-				Component: "Layout",
-				Type:      0, // 目录
-				Icon:      "system",
-				OrderNum:  1,
-				IsFrame:   false,
-				IsHidden:  false,
-				Enabled:   true,
-				Perms:     "",
-			}
-
-			if err := tx.Create(&sysManage).Error; err != nil {
-				return err
-			}
-
-			// 创建用户管理菜单
-			userManage := model.Menu{
-				Name:      "用户管理",
-				ParentID:  sysManage.ID,
-				Path:      "user",
-				Component: "system/user/index",
-				Type:      1, // 菜单
-				Icon:      "user",
-				OrderNum:  1,
-				IsFrame:   false,
-				IsHidden:  false,
-				Enabled:   true,
-				Perms:     "system:user:list",
-			}
-
-			if err := tx.Create(&userManage).Error; err != nil {
-				return err
-			}
-
-			// 创建角色管理菜单
-			roleManage := model.Menu{
-				Name:      "角色管理",
-				ParentID:  sysManage.ID,
-				Path:      "role",
-				Component: "system/role/index",
-				Type:      1, // 菜单
-				Icon:      "role",
-				OrderNum:  2,
-				IsFrame:   false,
-				IsHidden:  false,
-				Enabled:   true,
-				Perms:     "system:role:list",
-			}
-
-			if err := tx.Create(&roleManage).Error; err != nil {
-				return err
-			}
-
-			// 创建菜单管理菜单
-			menuManage := model.Menu{
-				Name:      "菜单管理",
-				ParentID:  sysManage.ID,
-				Path:      "menu",
-				Component: "system/menu/index",
-				Type:      1, // 菜单
-				Icon:      "menu",
-				OrderNum:  3,
-				IsFrame:   false,
-				IsHidden:  false,
-				Enabled:   true,
-				Perms:     "system:menu:list",
-			}
-
-			if err := tx.Create(&menuManage).Error; err != nil {
-				return err
-			}
-
-			// 为超级管理员分配所有菜单
-			allMenus := []model.Menu{sysManage, userManage, roleManage, menuManage}
-			for _, menu := range allMenus {
-				roleMenu := model.RoleMenu{
-					RoleID: adminRole.ID,
-					MenuID: menu.ID,
-				}
-
-				if err := tx.Create(&roleMenu).Error; err != nil {
-					return err
-				}
-			}
-
-			logger.Info("基础菜单创建成功")
-			return nil
-		},
-		Down: func(tx *gorm.DB) error {
-			// 删除菜单
-			return tx.Exec("DELETE FROM sys_menu").Error
-		},
-	})
-
-	// 初始化管理员账号
-	migrator.Register(&MigrationEntry{
-		Version: "202504080009",
 		Name:    "init_admin_user",
 		Up: func(tx *gorm.DB) error {
 			// 获取配置
@@ -359,66 +71,44 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 
 			// 检查是否已有管理员用户
 			var count int64
-			if err := tx.Model(&model.SysUser{}).Where("username = ?", username).Count(&count).Error; err != nil {
+			if err := tx.Model(&model.User{}).Where("username = ? AND is_admin = ?", username, true).Count(&count).Error; err != nil {
 				return err
 			}
 
-			// 已存在则跳过
+			// 已存在则不重复创建
 			if count > 0 {
 				logger.Info("管理员用户已存在，跳过创建")
 				return nil
 			}
 
-			// 创建超级管理员用户
+			// 创建管理员用户
 			hashedPassword, err := crypto.HashPassword(password)
 			if err != nil {
 				return fmt.Errorf("密码加密失败: %w", err)
 			}
 
-			// 使用GORM模型创建管理员用户，确保触发雪花ID生成
-			sysUser := &model.SysUser{
-				Username:     username,
-				Password:     hashedPassword,
-				Nickname:     nickname,
-				Enabled:      true,
-				Remark:       "系统初始化创建",
-				AvatarFileID: 0,
-				Email:        "",
-				Mobile:       "",
-				LastLogin:    nil, // 使用nil
-				LastIP:       "",
+			// 创建管理员用户（在普通用户表中，使用is_admin字段标识）
+			adminUser := &model.User{
+				Username: username,
+				Password: hashedPassword,
+				Nickname: nickname,
+				Email:    "admin@example.com",
+				Enabled:  true,
+				IsAdmin:  true, // 标记为管理员
 			}
 
 			logger.Info("准备创建管理员用户",
-				"username", sysUser.Username,
-				"nickname", sysUser.Nickname)
+				"username", adminUser.Username,
+				"nickname", adminUser.Nickname)
 
-			if err := tx.Create(sysUser).Error; err != nil {
+			if err := tx.Create(adminUser).Error; err != nil {
 				return fmt.Errorf("创建管理员账号失败: %w", err)
-			}
-
-			// 获取管理员角色ID
-			var role model.Role
-			if err := tx.Where("code = ?", "admin").First(&role).Error; err != nil {
-				logger.Warn("获取管理员角色失败，跳过角色分配", "error", err)
-				return nil
-			}
-
-			// 创建用户角色关联
-			userRole := &model.UserRole{
-				UserID: sysUser.ID,
-				RoleID: role.ID,
-			}
-
-			if err := tx.Create(userRole).Error; err != nil {
-				logger.Warn("分配管理员角色失败", "error", err)
-				return nil
 			}
 
 			logger.Info("管理员用户创建成功",
 				"username", username,
 				"nickname", nickname,
-				"id", sysUser.ID)
+				"id", adminUser.ID)
 			return nil
 		},
 		Down: func(tx *gorm.DB) error {
@@ -428,44 +118,7 @@ func RegisterInitialDataMigrations(migrator *Migrator) {
 				username = migrator.config.Admin.Username
 			}
 
-			return tx.Where("username = ?", username).Delete(&model.SysUser{}).Error
+			return tx.Where("username = ? AND is_admin = ?", username, true).Delete(&model.User{}).Error
 		},
 	})
-}
-
-// RegisterAPIPathMigrations 注册API路径更新迁移
-func RegisterAPIPathMigrations(migrator *Migrator) {
-	// 注册API路径更新迁移
-	RegisterUpdateAPIPathsMigrations(migrator)
-}
-
-// 用户模式迁移在user_mode_migration.go中实现
-
-// RegisterAllMigrations 注册所有迁移
-func RegisterAllMigrations(migrator *Migrator) {
-	// 获取用户模式
-	userMode := enum.UserModeSeparate // 默认使用分离模式
-	if migrator.config != nil {
-		userMode = enum.GetUserMode(migrator.config.Admin.UserMode)
-	}
-
-	// 按顺序注册所有迁移
-	// 核心用户迁移（所有模式都需要）
-	RegisterCoreUserMigrations(migrator)
-
-	// 用户模式迁移（所有模式都需要）
-	RegisterUserModeMigrations(migrator)
-
-	// 分离模式特有的迁移
-	if userMode == enum.UserModeSeparate {
-		RegisterAdminUserMigrations(migrator) // 添加管理员用户迁移
-		RegisterRoleMigrations(migrator)
-		RegisterPermissionMigrations(migrator)
-		RegisterMenuMigrations(migrator)
-		RegisterOperationLogMigrations(migrator)
-		RegisterInitialDataMigrations(migrator) // 添加初始数据迁移
-		RegisterAPIPathMigrations(migrator)     // 添加API路径更新迁移
-	}
-
-	// 添加自定义业务迁移...
 }

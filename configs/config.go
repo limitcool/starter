@@ -26,11 +26,9 @@ type Config struct {
 	Mongo    Mongo
 	Redis    RedisConfig         // Redis配置
 	Log      logconfig.LogConfig // 使用 pkg/logconfig 中的 LogConfig
-	Casbin   Casbin              // 权限系统配置
 	Storage  Storage             // 文件存储配置
 	Admin    Admin               // 管理员配置
 	I18n     I18n                // 国际化配置
-	GRPC     GRPC                // gRPC服务配置
 }
 
 // Config app config
@@ -118,14 +116,7 @@ type CacheConfig struct {
 	LocalCacheSize    int           `yaml:"local_cache_size" json:"local_cache_size"`     // 本地缓存大小
 }
 
-// Casbin 权限系统配置
-type Casbin struct {
-	Enabled      bool   // 是否启用权限系统
-	DefaultAllow bool   // 默认是否允许访问（权限系统关闭时使用）
-	ModelPath    string // Casbin模型文件路径
-	PolicyTable  string // 策略表名
-	LogEnabled   bool   // 是否启用日志
-}
+// 在lite版本中移除Casbin配置
 
 // Storage 文件存储配置
 type Storage struct {
@@ -176,7 +167,6 @@ type Admin struct {
 	Username string // 管理员用户名
 	Password string // 管理员密码
 	Nickname string // 管理员昵称
-	// 注意：在lite版本中，我们使用单一用户表，通过IsAdmin字段区分管理员
 }
 
 // I18n 国际化配置
@@ -187,12 +177,4 @@ type I18n struct {
 	ResourcesPath    string   // 语言资源文件路径
 }
 
-// GRPC gRPC服务配置
-type GRPC struct {
-	Enabled      bool          // 是否启用gRPC服务
-	Port         int           // gRPC服务端口
-	Reflection   bool          // 是否启用反射服务
-	HealthCheck  bool          // 是否启用健康检查
-	ReadTimeout  time.Duration // 读取超时
-	WriteTimeout time.Duration // 写入超时
-}
+// 在lite版本中移除gRPC配置

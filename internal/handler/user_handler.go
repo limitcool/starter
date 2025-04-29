@@ -1,0 +1,365 @@
+package handler
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/api/response"
+	v1 "github.com/limitcool/starter/internal/api/v1"
+	"github.com/limitcool/starter/internal/model"
+	"github.com/limitcool/starter/internal/pkg/crypto"
+	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
+	"github.com/spf13/cast"
+	"go.uber.org/fx"
+	"gorm.io/gorm"
+)
+
+// UserHandler 用户处理器
+type UserHandler struct {
+	db          *gorm.DB
+	config      *configs.Config
+	logger      *logger.Logger
+	authService *AuthService
+}
+
+// NewUserHandler 创建用户处理器
+func NewUserHandler(db *gorm.DB, config *configs.Config, lc fx.Lifecycle) *UserHandler {
+	handler := &UserHandler{
+		db:          db,
+		config:      config,
+		authService: NewAuthService(config),
+	}
+
+	// 注册生命周期钩子
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			logger.InfoContext(ctx, "UserHandler initialized")
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			logger.InfoContext(ctx, "UserHandler stopped")
+			return nil
+		},
+	})
+
+	return handler
+}
+
+// UserLogin 用户登录
+func (h *UserHandler) UserLogin(ctx *gin.Context) {
+	// 获取请求上下文
+	reqCtx := ctx.Request.Context()
+
+	// 记录请求开始
+	logger.InfoContext(reqCtx, "UserLogin 开始处理登录请求",
+		"client_ip", ctx.ClientIP(),
+		"user_agent", ctx.Request.UserAgent())
+
+	var req v1.LoginRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		// 记录参数验证错误
+		logger.WarnContext(reqCtx, "UserLogin 请求参数验证失败",
+			"error", err,
+			"client_ip", ctx.ClientIP())
+		response.Error(ctx, errorx.ErrInvalidParams.WithError(err))
+		return
+	}
+
+	// 获取客户端IP地址
+	clientIP := ctx.ClientIP()
+
+	// 记录尝试登录信息
+	logger.InfoContext(reqCtx, "UserLogin 尝试登录",
+		"username", req.Username,
+		"ip", clientIP)
+
+	// 创建用户仓库
+	userRepo := model.NewUserRepo(h.db)
+
+	// 查询用户
+	user, err := userRepo.GetByUsername(reqCtx, req.Username)
+	if err != nil {
+		if errors.Is(err, errorx.ErrUserNotFound) {
+			// 用户不存在
+			logger.WarnContext(reqCtx, "UserLogin 用户不存在",
+				"username", req.Username,
+				"ip", clientIP)
+			response.Error(ctx, err)
+			return
+		}
+		// 数据库错误
+		logger.ErrorContext(reqCtx, "UserLogin 查询用户失败",
+			"error", err,
+			"username", req.Username,
+			"ip", clientIP)
+		response.Error(ctx, err)
+		return
+	}
+
+	// 检查用户是否启用
+	if !user.Enabled {
+		disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "用户 %s 已被禁用", req.Username)
+		logger.WarnContext(reqCtx, "UserLogin 用户已禁用",
+			"username", req.Username,
+			"ip", clientIP)
+		response.Error(ctx, disabledErr)
+		return
+	}
+
+	// 验证密码
+	if !crypto.CheckPassword(user.Password, req.Password) {
+		passwordErr := errorx.Errorf(errorx.ErrUserPasswordError, "用户 %s 的密码错误", req.Username)
+		logger.WarnContext(reqCtx, "UserLogin 密码错误",
+			"username", req.Username,
+			"ip", clientIP)
+		response.Error(ctx, passwordErr)
+		return
+	}
+
+	// 更新最后登录时间和IP
+	if err := userRepo.UpdateLastLogin(reqCtx, uint(user.ID), clientIP); err != nil {
+		logger.WarnContext(reqCtx, "UserLogin 更新登录信息失败",
+			"error", err,
+			"username", req.Username,
+			"ip", clientIP)
+		// 这里不返回错误，因为登录信息更新失败不应该影响用户登录
+	}
+
+	// 获取用户角色
+	var roles []string
+	if user.IsAdmin {
+		roles = []string{"admin"}
+	} else {
+		roles = []string{"user"}
+	}
+
+	// 生成令牌
+	tokenResponse, err := h.authService.GenerateTokensWithContext(reqCtx, uint(user.ID), user.Username, user.IsAdmin, roles)
+	if err != nil {
+		logger.ErrorContext(reqCtx, "UserLogin 生成令牌失败",
+			"error", err,
+			"username", req.Username,
+			"ip", clientIP)
+		response.Error(ctx, errorx.WrapError(err, "生成令牌失败"))
+		return
+	}
+
+	// 记录登录成功
+	logger.InfoContext(reqCtx, "UserLogin 登录成功",
+		"username", req.Username,
+		"access_token", tokenResponse.AccessToken[:10]+"...", // 只显示令牌前10个字符
+		"ip", clientIP)
+
+	response.Success(ctx, tokenResponse)
+}
+
+// UserRegister 用户注册
+func (h *UserHandler) UserRegister(ctx *gin.Context) {
+	// 获取请求上下文
+	reqCtx := ctx.Request.Context()
+
+	var req v1.UserRegisterRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.WarnContext(reqCtx, "UserRegister 请求参数验证失败",
+			"error", err,
+			"client_ip", ctx.ClientIP())
+		response.Error(ctx, errorx.ErrInvalidParams.WithError(err))
+		return
+	}
+
+	// 获取客户端IP地址
+	clientIP := ctx.ClientIP()
+
+	// 创建用户仓库
+	userRepo := model.NewUserRepo(h.db)
+
+	// 检查用户名是否已存在
+	exists, err := userRepo.IsExist(reqCtx, req.Username)
+	if err != nil {
+		logger.ErrorContext(reqCtx, "UserRegister 检查用户名是否存在失败",
+			"error", err,
+			"username", req.Username,
+			"ip", clientIP)
+		response.Error(ctx, err)
+		return
+	}
+
+	if exists {
+		existsErr := errorx.Errorf(errorx.ErrUserExists, "用户名 %s 已存在", req.Username)
+		logger.WarnContext(reqCtx, "UserRegister 用户名已存在",
+			"username", req.Username,
+			"ip", clientIP)
+		response.Error(ctx, existsErr)
+		return
+	}
+
+	// 哈希密码
+	hashedPassword, err := crypto.HashPassword(req.Password)
+	if err != nil {
+		logger.ErrorContext(reqCtx, "UserRegister 密码加密失败",
+			"error", err,
+			"username", req.Username,
+			"ip", clientIP)
+		response.Error(ctx, errorx.WrapError(err, "密码加密失败"))
+		return
+	}
+
+	// 创建用户
+	user := &model.User{
+		Username:   req.Username,
+		Password:   hashedPassword,
+		Nickname:   req.Nickname,
+		Email:      req.Email,
+		Mobile:     req.Mobile,
+		Enabled:    true,
+		Gender:     req.Gender,
+		Birthday:   &time.Time{},
+		Address:    req.Address,
+		RegisterIP: clientIP,
+		IsAdmin:    false, // 普通用户注册，不是管理员
+	}
+
+	if err := userRepo.Create(reqCtx, user); err != nil {
+		logger.ErrorContext(reqCtx, "UserRegister 创建用户失败",
+			"error", err,
+			"username", req.Username,
+			"ip", clientIP)
+		response.Error(ctx, err)
+		return
+	}
+
+	// 隐藏密码等敏感信息
+	user.Password = ""
+
+	logger.InfoContext(reqCtx, "UserRegister 用户注册成功",
+		"username", req.Username,
+		"ip", clientIP)
+
+	response.Success(ctx, user)
+}
+
+// UserInfo 获取用户信息
+func (h *UserHandler) UserInfo(ctx *gin.Context) {
+	// 获取请求上下文
+	reqCtx := ctx.Request.Context()
+
+	// 从上下文中获取用户ID
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		logger.WarnContext(reqCtx, "UserInfo 未找到用户ID")
+		response.Error(ctx, errorx.ErrUserNoLogin)
+		return
+	}
+
+	// 转换用户ID
+	id := cast.ToInt64(userID)
+
+	// 创建用户仓库
+	userRepo := model.NewUserRepo(h.db)
+
+	// 查询用户信息
+	user, err := userRepo.GetByID(reqCtx, uint(id))
+	if err != nil {
+		if errors.Is(err, errorx.ErrUserNotFound) {
+			logger.WarnContext(reqCtx, "UserInfo 用户不存在",
+				"user_id", id)
+			response.Error(ctx, err)
+			return
+		}
+		logger.ErrorContext(reqCtx, "UserInfo 查询用户失败",
+			"error", err,
+			"user_id", id)
+		response.Error(ctx, err)
+		return
+	}
+
+	// 隐藏敏感信息
+	user.Password = ""
+
+	logger.InfoContext(reqCtx, "UserInfo 获取用户信息成功",
+		"user_id", id)
+
+	response.Success(ctx, user)
+}
+
+// UserChangePassword 修改密码
+func (h *UserHandler) UserChangePassword(ctx *gin.Context) {
+	// 获取请求上下文
+	reqCtx := ctx.Request.Context()
+
+	// 从上下文中获取用户ID
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		logger.WarnContext(reqCtx, "UserChangePassword 未找到用户ID")
+		response.Error(ctx, errorx.ErrUserNoLogin)
+		return
+	}
+
+	// 转换用户ID
+	id := cast.ToInt64(userID)
+
+	// 绑定请求参数
+	var req v1.UserChangePasswordRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logger.WarnContext(reqCtx, "UserChangePassword 请求参数验证失败",
+			"error", err,
+			"user_id", id)
+		response.Error(ctx, errorx.ErrInvalidParams.WithError(err))
+		return
+	}
+
+	// 创建用户仓库
+	userRepo := model.NewUserRepo(h.db)
+
+	// 查询用户
+	user, err := userRepo.GetByID(reqCtx, uint(id))
+	if err != nil {
+		if errors.Is(err, errorx.ErrUserNotFound) {
+			logger.WarnContext(reqCtx, "UserChangePassword 用户不存在",
+				"user_id", id)
+			response.Error(ctx, err)
+			return
+		}
+		logger.ErrorContext(reqCtx, "UserChangePassword 查询用户失败",
+			"error", err,
+			"user_id", id)
+		response.Error(ctx, err)
+		return
+	}
+
+	// 验证旧密码
+	if !crypto.CheckPassword(user.Password, req.OldPassword) {
+		logger.WarnContext(reqCtx, "UserChangePassword 旧密码错误",
+			"user_id", id)
+		response.Error(ctx, errorx.Errorf(errorx.ErrUserPasswordError, "旧密码错误"))
+		return
+	}
+
+	// 哈希新密码
+	hashedPassword, err := crypto.HashPassword(req.NewPassword)
+	if err != nil {
+		logger.ErrorContext(reqCtx, "UserChangePassword 密码加密失败",
+			"error", err,
+			"user_id", id)
+		response.Error(ctx, errorx.WrapError(err, "密码加密失败"))
+		return
+	}
+
+	// 更新密码
+	if err := userRepo.UpdatePassword(reqCtx, uint(id), hashedPassword); err != nil {
+		logger.ErrorContext(reqCtx, "UserChangePassword 更新密码失败",
+			"error", err,
+			"user_id", id)
+		response.Error(ctx, err)
+		return
+	}
+
+	logger.InfoContext(reqCtx, "UserChangePassword 修改密码成功",
+		"user_id", id)
+
+	response.SuccessNoData(ctx, "密码修改成功")
+}

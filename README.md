@@ -8,68 +8,52 @@
 > 这是 Starter 框架的轻量级版本，采用单用户模式设计，适合快速开发和简单应用场景。如果您需要更多企业级功能，请查看 `enterprise` 分支。
 
 ## 特征
-- 提供 gin 框架项目模版
-- 支持 HTTP 和 gRPC 双协议服务
-  - 可通过配置启用/禁用 gRPC 服务
-  - 统一的 API 定义和实现
-  - 支持 gRPC 健康检查和反射服务
-- 使用 Uber fx 框架进行依赖注入，实现更清晰的代码结构
-- 采用标准 MVC 架构，遵循关注点分离原则
+- 提供基于 Gin 框架的轻量级项目模板
+- 使用 Uber fx 框架进行依赖注入，实现清晰的代码结构
+- 采用简化的架构设计，专注于快速开发
 - 集成 GORM 进行 ORM 映射和数据库操作
   - 支持 PostgreSQL (使用 pgx 驱动)
   - 支持 MySQL
   - 支持 SQLite
-  - 提供丰富的查询选项工具函数
 - 集成 Viper 进行配置管理
-- 提供常用 gin 中间件和工具
-  - 跨域中间件:处理 API 跨域请求,实现 CORS 支持
-  - jwt 解析中间件:从请求中解析并验证 JWT Token,用于 API 身份认证
+- 提供常用 Gin 中间件和工具
+  - 跨域中间件：处理 API 跨域请求，实现 CORS 支持
+  - JWT 解析中间件：从请求中解析并验证 JWT Token，用于 API 身份认证
 - 国际化 (i18n) 支持
   - 基于请求 Accept-Language 头自动选择语言
   - 错误消息多语言支持
-  - 内置英语 (en-US) 和中文 (zh-CN) 翻译
-  - 可轻松扩展支持更多语言
 - 使用 Cobra 命令行框架，提供清晰的子命令结构
 - 支持数据库迁移与服务器启动分离，提高启动速度
-- 完善的数据库迁移系统，支持版本控制和回滚
-- 内置用户、角色、权限和菜单管理系统
-- 支持多种用户模式，满足不同规模项目需求
+- 简化的用户管理系统，使用单一用户表和 IsAdmin 字段区分管理员
 - 优化的错误处理系统，支持错误码和多语言错误消息
 
 ## 架构设计
 
-项目采用标准的 MVC 架构，并结合 Uber fx 依赖注入框架，实现了清晰的层次结构：
+项目采用简化的架构设计，并结合 Uber fx 依赖注入框架，实现了清晰的代码结构：
 
-### 1. 分层架构
+### 1. 简化的分层架构
 
 - **Model 层**：定义数据模型和数据库表结构
-- **Repository 层**：负责数据访问，是唯一直接与数据库交互的层
-- **Service 层**：实现业务逻辑，依赖于 Repository 层
-- **Controller 层**：处理 HTTP 请求和响应，依赖于 Service 层
-- **Router 层**：定义 API 路由，依赖于 Controller 层
+- **Handler 层**：处理 HTTP 请求和响应，直接与数据库交互
+- **Router 层**：定义 API 路由，依赖于 Handler 层
 
 ### 2. 依赖注入
 
-项目使用 Uber fx 框架实现依赖注入，每一层都通过构造函数注入其依赖：
+项目使用 Uber fx 框架实现依赖注入，通过构造函数注入依赖：
 
 ```go
-// Repository 层
+// Model 层
 func NewUserRepo(db *gorm.DB) *UserRepo {
     // ...
 }
 
-// Service 层
-func NewUserService(userRepo *repository.UserRepo) *UserService {
-    // ...
-}
-
-// Controller 层
-func NewUserController(userService *services.UserService) *UserController {
+// Handler 层
+func NewUserHandler(db *gorm.DB, config *configs.Config) *UserHandler {
     // ...
 }
 
 // Router 层
-func NewRouter(userController *controller.UserController) *gin.Engine {
+func NewRouter(userHandler *handler.UserHandler) *gin.Engine {
     // ...
 }
 ```
@@ -101,7 +85,7 @@ func NewComponent(lc fx.Lifecycle) *Component {
 
 ```bash
 go install github.com/go-eagle/eagle/cmd/eagle@latest
-eagle new <project name> -r https://github.com/limitcool/starter -b main
+eagle new <project name> -r https://github.com/limitcool/starter -b lite
 ```
 
 ## 使用方法
@@ -163,51 +147,33 @@ eagle new <project name> -r https://github.com/limitcool/starter -b main
 ./<app-name> migrate reset
 ```
 
-## 用户模式设计
+## 用户管理设计
 
-系统支持两种用户模式，可根据项目需求灵活选择：
+Lite 版本采用简化的用户管理设计，专注于快速开发和简单应用场景：
 
-### 1. 分离模式 (Separate Mode)
+### 单一用户表设计
 
-分离模式适用于复杂的中大型应用，提供完整的权限管理功能：
-
-- 使用 `user` 和 `admin_user` 两张表分别存储普通用户和管理员用户
-- 完整的角色和权限管理系统
-- 使用 Casbin 进行灵活的权限控制
-- 支持菜单管理和动态权限分配
-- 支持用户与角色的多对多关联
-
-### 2. 简单模式 (Simple Mode)
-
-简单模式适用于小型应用或原型开发，提供简化的用户管理：
-
-- 只使用 `user` 一张表，通过 `is_admin` 字段区分普通用户和管理员
-- 不使用角色和权限管理，简化数据库结构
-- 不使用 Casbin，减少系统复杂度
+- 只使用 `user` 一张表存储所有用户信息
+- 通过 `is_admin` 字段区分普通用户和管理员用户
+- 简化的数据库结构，减少表之间的关联
 - 使用简化的权限检查中间件，只检查用户是否为管理员
-- 简化的路由结构，不加载角色和菜单相关的路由
 
-### 配置用户模式
+### 配置管理员用户
 
-在配置文件中设置用户模式：
+在配置文件中设置初始管理员用户：
 
 ```yaml
 admin:
   username: "admin"
   password: "admin123"
   nickname: "超级管理员"
-  user_mode: "separate"  # separate(分离模式), simple(简单模式)
 ```
 
-### 模式切换注意事项
-
-- 切换模式前建议备份数据
-- 从分离模式切换到简单模式会导致角色和权限数据不可用
-- 系统会自动迁移数据库结构以适应选择的模式
+系统会在首次启动时自动创建管理员用户。
 
 ## 数据库迁移系统
 
-本项目实现了一个完整的数据库迁移系统，用于管理数据库表结构的创建、更新和回滚。
+Lite 版本实现了一个简洁的数据库迁移系统，用于管理数据库表结构的创建和更新。
 
 ### 迁移系统特点
 
@@ -226,22 +192,20 @@ migrator.Register(&MigrationEntry{
     Version: "202504080001",        // 版本号格式：年月日序号
     Name:    "create_users_table",  // 迁移名称
     Up: func(tx *gorm.DB) error {   // 向上迁移函数
-        return tx.AutoMigrate(&model.SysUser{})
+        return tx.AutoMigrate(&model.User{})
     },
     Down: func(tx *gorm.DB) error { // 向下迁移函数
-        return tx.Migrator().DropTable("sys_user")
+        return tx.Migrator().DropTable("users")
     },
 })
 ```
 
 ### 预定义迁移
 
-系统已预定义了基础的迁移项：
+Lite 版本已预定义了基础的迁移项：
 
-1. 用户表 (`sys_user`)
-2. 角色相关表 (`sys_role`, `sys_user_role`, `sys_role_menu`)
-3. 权限相关表 (`sys_permission`, `sys_role_permission`)
-4. 菜单表 (`sys_menu`)
+1. 用户表 (`users`)
+2. 文件表 (`files`)
 
 ### 添加新迁移
 
@@ -249,33 +213,25 @@ migrator.Register(&MigrationEntry{
 
 1. 创建新的注册函数或在已有函数中添加
 2. 确保版本号遵循时间戳顺序
-3. 在 `RegisterAllMigrations` 函数中注册
+3. 使用 `RegisterMigration` 函数注册
 
 ```go
 // 示例：添加新的业务表迁移
-func RegisterBusinessMigrations(migrator *Migrator) {
-    migrator.Register(&MigrationEntry{
-        Version: "202504080010",
-        Name:    "create_products_table",
-        Up: func(tx *gorm.DB) error {
-            return tx.AutoMigrate(&model.Product{})
-        },
-        Down: func(tx *gorm.DB) error {
-            return tx.Migrator().DropTable("products")
-        },
-    })
-}
-
-// 在RegisterAllMigrations中添加
-func RegisterAllMigrations(migrator *Migrator) {
-    // 已有迁移...
-    RegisterBusinessMigrations(migrator)
-}
+RegisterMigration("create_products_table",
+    // 向上迁移函数
+    func(tx *gorm.DB) error {
+        return tx.AutoMigrate(&model.Product{})
+    },
+    // 向下迁移函数
+    func(tx *gorm.DB) error {
+        return tx.Migrator().DropTable("products")
+    },
+)
 ```
 
 ### 迁移记录表
 
-系统通过 `sys_migrations` 表跟踪迁移的执行状态，包含以下字段：
+系统通过 `migrations` 表跟踪迁移的执行状态，包含以下字段：
 
 - `id`：自增主键
 - `version`：迁移版本号（唯一索引）
@@ -681,300 +637,289 @@ GRPC:
 
 ## 权限系统
 
-项目集成了Casbin RBAC权限系统和动态菜单系统，实现了以下功能：
+Lite 版本采用简化的权限系统，基于用户的 `is_admin` 字段进行权限控制：
 
-1. RBAC (基于角色的访问控制)权限模型
-   - 用户 -> 角色 -> 权限
-   - 支持资源级别和操作级别的权限控制
+### 权限控制中间件
 
-2. 动态菜单系统
-   - 根据用户角色动态生成菜单
-   - 菜单项与权限关联
-   - 支持多级菜单树结构
+项目提供了三种权限控制中间件：
 
-3. 权限验证中间件
-   - CasbinMiddleware：基于路径和HTTP方法的权限控制
-   - PermissionMiddleware：基于菜单权限标识的权限控制
+1. **AdminCheck**：检查用户是否为管理员
+   - 基于 JWT 中的 `is_admin` 字段进行快速检查
+   - 适用于管理员专属接口
 
-4. 数据表结构
-   - sys_user - 用户表
-   - sys_role - 角色表
-   - sys_menu - 菜单表
-   - sys_role_menu - 角色菜单关联表
-   - sys_user_role - 用户角色关联表
-   - casbin_rule - Casbin规则表(自动创建)
+2. **UserCheck**：检查用户是否已登录
+   - 只验证用户是否登录，不检查用户类型
+   - 适用于需要登录但不限制用户类型的接口
 
-5. API接口
-   - 菜单管理：创建、更新、删除、查询
-   - 角色管理：创建、更新、删除、查询
-   - 角色菜单分配
-   - 角色权限分配
-   - 用户角色分配
+3. **RegularUserCheck**：检查用户是否为普通用户
+   - 确保用户不是管理员
+   - 适用于只允许普通用户访问的接口
 
 ### 使用方法
 
-1. 角色与菜单关联:
-   ```
-   POST /api/v1/admin-api/roles/menu
-   {
-     "role_id": 1,
-     "menu_ids": [1, 2, 3]
-   }
-   ```
-
-2. 角色与权限关联:
-   ```
-   POST /api/v1/admin-api/roles/permission
-   {
-     "role_code": "admin",
-     "object": "/api/v1/admin-api/users",
-     "action": "GET"
-   }
-   ```
-
-3. 获取用户菜单:
-   ```
-   GET /api/v1/user/menus
-   ```
-
-4. 获取用户权限:
-   ```
-   GET /api/v1/user/perms
-   ```
-
-## 泛型仓库系统
-
-项目利用 Go 1.18+ 的泛型特性，实现了完整的泛型仓库系统，显著减少了重复代码，提高了开发效率。
-
-### 泛型仓库接口
-
-泛型仓库接口定义了所有仓库实现必须提供的方法：
+在路由定义中使用中间件：
 
 ```go
-// Repository 通用仓库接口
-type Repository[T Entity] interface {
-	// 基本 CRUD 操作
-	Create(ctx context.Context, entity *T) error
-	GetByID(ctx context.Context, id any) (*T, error)
-	Update(ctx context.Context, entity *T) error
-	Delete(ctx context.Context, id any) error
-	List(ctx context.Context, page, pageSize int) ([]T, int64, error)
-	Count(ctx context.Context) (int64, error)
-	UpdateFields(ctx context.Context, id any, fields map[string]any) error
+// 管理员接口
+adminGroup := router.Group("/api/v1/admin")
+adminGroup.Use(middleware.AdminCheck())
+{
+    adminGroup.GET("/users", handler.ListUsers)
+    // 其他管理员接口...
+}
 
-	// 批量操作
-	BatchCreate(ctx context.Context, entities []T) error
-	BatchDelete(ctx context.Context, ids []any) error
+// 普通用户接口
+userGroup := router.Group("/api/v1/user")
+userGroup.Use(middleware.UserCheck())
+{
+    userGroup.GET("/profile", handler.GetUserProfile)
+    // 其他用户接口...
+}
 
-	// 查询方法
-	FindByField(ctx context.Context, field string, value any) (*T, error)
-	FindAllByField(ctx context.Context, field string, value any) ([]T, error)
-	FindByCondition(ctx context.Context, condition string, args ...any) ([]T, error)
-	FindOneByCondition(ctx context.Context, condition string, args ...any) (*T, error)
-	GetPage(ctx context.Context, page, pageSize int, condition string, args ...any) ([]T, int64, error)
-
-	// 高级查询
-	FindWithLike(ctx context.Context, field string, value string) ([]T, error)
-	FindWithIn(ctx context.Context, field string, values []any) ([]T, error)
-	FindWithBetween(ctx context.Context, field string, min, max any) ([]T, error)
-	CountWithCondition(ctx context.Context, condition string, args ...any) (int64, error)
-	AggregateField(ctx context.Context, aggregate Aggregate, field string, condition string, args ...any) (float64, error)
-	GroupBy(ctx context.Context, groupFields []string, selectFields []string, condition string, args ...any) ([]map[string]any, error)
-	Join(ctx context.Context, joinType string, table string, on string, selectFields []string, condition string, args ...any) ([]map[string]any, error)
-	Exists(ctx context.Context, condition string, args ...any) (bool, error)
-	Raw(ctx context.Context, sql string, values ...any) ([]map[string]any, error)
-
-	// 事务相关
-	Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error
-	WithTx(tx *gorm.DB) Repository[T]
+// 仅普通用户接口
+regularUserGroup := router.Group("/api/v1/regular")
+regularUserGroup.Use(middleware.RegularUserCheck())
+{
+    regularUserGroup.POST("/feedback", handler.SubmitFeedback)
+    // 其他仅普通用户接口...
 }
 ```
 
-### 泛型仓库实现
+## 数据库操作
 
-项目提供了两种泛型仓库实现：
+Lite 版本采用简化的数据库操作方式，直接在 Model 层提供数据库操作方法：
 
-1. **GenericRepo**：基本泛型仓库实现，直接与数据库交互
-2. **CachedRepo**：带缓存的泛型仓库实现，封装了基本仓库并添加缓存功能
+### Model 层设计
 
-#### 创建泛型仓库
+在 Lite 版本中，Model 层直接提供数据库操作方法，简化了代码结构：
 
 ```go
-// 创建基本泛型仓库
+// User 用户模型
+type User struct {
+    ID        uint      `gorm:"primarykey" json:"id"`
+    Username  string    `gorm:"size:50;not null;uniqueIndex" json:"username"`
+    Password  string    `gorm:"size:100;not null" json:"-"`
+    Nickname  string    `gorm:"size:50" json:"nickname"`
+    Email     string    `gorm:"size:100" json:"email"`
+    Avatar    string    `gorm:"size:255" json:"avatar"`
+    IsAdmin   bool      `gorm:"default:false" json:"is_admin"`
+    CreatedAt time.Time `json:"created_at"`
+    UpdatedAt time.Time `json:"updated_at"`
+}
+
+// UserRepo 用户数据库操作
+type UserRepo struct {
+    DB *gorm.DB
+}
+
+// NewUserRepo 创建用户仓库
 func NewUserRepo(db *gorm.DB) *UserRepo {
-    // 创建泛型仓库
-    genericRepo := NewGenericRepo[model.User](db)
-    // 设置错误码
-    genericRepo.SetErrorCode(errorx.ErrorUserNotFoundCode)
-
-    return &UserRepo{
-        DB:          db,
-        GenericRepo: genericRepo,
-    }
+    return &UserRepo{DB: db}
 }
 
-// 创建带缓存的泛型仓库
-func NewCachedUserRepo(repo Repository[model.User]) (Repository[model.User], error) {
-    return WithCache(repo, "user", "user", 30*time.Minute)
-}
-```
-
-#### 使用泛型仓库
-
-```go
-// 在服务层使用泛型仓库
-func (s *UserService) GetUserByID(ctx context.Context, id int64) (*model.User, error) {
-    // 直接调用泛型仓库方法
-    user, err := s.userRepo.GetByID(ctx, id)
-    if err != nil {
+// GetByID 根据ID获取用户
+func (r *UserRepo) GetByID(ctx context.Context, id uint) (*User, error) {
+    var user User
+    if err := r.DB.First(&user, id).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, errorx.ErrUserNotFound
+        }
         return nil, err
     }
-    return user, nil
+    return &user, nil
 }
 
-// 使用高级查询功能
-func (s *UserService) SearchUsers(ctx context.Context, keyword string, page, pageSize int) ([]model.User, int64, error) {
-    condition := ""
-    var args []any
-
-    if keyword != "" {
-        condition = "username LIKE ? OR email LIKE ?"
-        args = append(args, "%"+keyword+"%", "%"+keyword+"%")
-    }
-
-    return s.userRepo.GetPage(ctx, page, pageSize, condition, args...)
-}
-```
-
-### 泛型仓库的优势
-
-1. **代码复用**：所有实体共享相同的仓库实现，显著减少重复代码
-2. **类型安全**：利用Go泛型特性确保类型安全，编译期就能发现类型错误
-3. **功能丰富**：提供了完整的CRUD操作和高级查询功能
-4. **缓存支持**：通过装饰器模式轻松添加缓存功能，提高性能
-5. **事务支持**：内置事务支持，确保数据一致性
-
-## 数据库查询选项系统
-
-本项目实现了一个完整的数据库查询选项系统，用于简化GORM查询构建过程，提高代码复用性和可读性。
-
-### 查询选项特点
-
-- 采用函数式选项模式设计
-- 支持链式组合多个查询条件
-- 提供统一的接口方式处理各种查询场景
-- 易于扩展和自定义新的查询条件
-
-### 基本使用方法
-
-```go
-// 导入查询选项包
-import "your-project/internal/pkg/options"
-
-// 创建查询实例
-query := options.Apply(
-    DB, // *gorm.DB实例
-    options.WithPage(1, 10),
-    options.WithOrder("created_at", "desc"),
-    options.WithLike("name", keyword),
-)
-
-// 执行查询
-var results []YourModel
-query.Find(&results)
-```
-
-### 内置查询选项
-
-系统提供了以下内置查询选项：
-
-#### 分页与排序
-- `WithPage(page, pageSize)` - 分页查询，自动限制最大页面大小
-- `WithOrder(field, direction)` - 排序查询，direction支持"asc"或"desc"
-
-#### 关联查询
-- `WithPreload(relation, args...)` - 预加载关联关系
-- `WithJoin(query, args...)` - 连接查询
-- `WithSelect(query, args...)` - 指定查询字段
-- `WithGroup(query)` - 分组查询
-- `WithHaving(query, args...)` - HAVING条件查询
-
-#### 条件过滤
-- `WithWhere(query, args...)` - WHERE条件
-- `WithOrWhere(query, args...)` - OR WHERE条件
-- `WithLike(field, value)` - LIKE模糊查询
-- `WithExactMatch(field, value)` - 精确匹配查询
-- `WithTimeRange(field, start, end)` - 时间范围查询
-- `WithKeyword(keyword, fields...)` - 关键字搜索（多字段OR条件）
-
-#### 组合查询
-- `WithBaseQuery(tableName, status, keyword, keywordFields, createBy, startTime, endTime)` - 应用基础查询条件，组合多个常用过滤条件
-
-### 自定义查询选项
-
-可以轻松扩展自定义的查询选项：
-
-```go
-// 自定义查询选项示例
-func WithCustomCondition(param string) options.Option {
-    return func(db *gorm.DB) *gorm.DB {
-        if param == "" {
-            return db
+// GetByUsername 根据用户名获取用户
+func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*User, error) {
+    var user User
+    if err := r.DB.Where("username = ?", username).First(&user).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, errorx.ErrUserNotFound
         }
-        return db.Where("custom_field = ?", param)
+        return nil, err
+    }
+    return &user, nil
+}
+
+// Create 创建用户
+func (r *UserRepo) Create(ctx context.Context, user *User) error {
+    return r.DB.Create(user).Error
+}
+
+// Update 更新用户
+func (r *UserRepo) Update(ctx context.Context, user *User) error {
+    return r.DB.Save(user).Error
+}
+
+// Delete 删除用户
+func (r *UserRepo) Delete(ctx context.Context, id uint) error {
+    return r.DB.Delete(&User{}, id).Error
+}
+
+// List 获取用户列表
+func (r *UserRepo) List(ctx context.Context, page, pageSize int) ([]User, int64, error) {
+    var users []User
+    var total int64
+
+    r.DB.Model(&User{}).Count(&total)
+
+    offset := (page - 1) * pageSize
+    if err := r.DB.Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+        return nil, 0, err
+    }
+
+    return users, total, nil
+}
+```
+
+### 在 Handler 中使用
+
+在 Handler 层直接使用 Model 层提供的方法：
+
+```go
+// UserHandler 用户处理器
+type UserHandler struct {
+    userRepo *model.UserRepo
+    config   *configs.Config
+}
+
+// NewUserHandler 创建用户处理器
+func NewUserHandler(userRepo *model.UserRepo, config *configs.Config) *UserHandler {
+    return &UserHandler{
+        userRepo: userRepo,
+        config:   config,
     }
 }
 
-// 使用自定义查询选项
-query := options.Apply(
-    DB,
-    options.WithPage(1, 10),
-    WithCustomCondition("value"),
-)
+// GetUser 获取用户信息
+func (h *UserHandler) GetUser(c *gin.Context) {
+    id := cast.ToUint(c.Param("id"))
+
+    user, err := h.userRepo.GetByID(c.Request.Context(), id)
+    if err != nil {
+        response.Error(c, err)
+        return
+    }
+
+    response.Success(c, user)
+}
 ```
 
-### 与DTO结合使用
+## 错误处理
 
-可以结合DTO对象灵活构建查询条件：
+Lite 版本提供了简洁而强大的错误处理系统，支持错误码和多语言错误消息。
+
+### 错误处理特点
+
+- 统一的错误码定义和管理
+- 错误包装，保留完整的错误链
+- 多语言错误消息支持
+- 区分内部错误和用户可见错误
+
+### 错误定义
+
+错误定义在 `internal/pkg/errorx` 包中：
 
 ```go
-// 基于BaseQuery 构建查询条件
-func BuildQueryOptions(q *request.BaseQuery, tableName string) []options.Option {
-    var opts []options.Option
+// 错误码定义
+const (
+    // 通用错误码
+    ErrorSuccess       = 0    // 成功
+    ErrorUnknown       = 1000 // 未知错误
+    ErrorInvalidParams = 1001 // 无效参数
+    ErrorNotFound      = 1002 // 资源不存在
+    ErrorDatabase      = 1003 // 数据库错误
 
-    // 添加基础查询条件
-    opts = append(opts, options.WithBaseQuery(
-        tableName,
-        q.Status,
-        q.Keyword,
-        []string{"name", "description"}, // 关键字搜索字段
-        q.CreateBy,
-        q.StartTime,
-        q.EndTime,
-    ))
+    // 用户相关错误码
+    ErrorUserNotFound     = 2000 // 用户不存在
+    ErrorUserAlreadyExist = 2001 // 用户已存在
+    ErrorUserAuthFailed   = 2002 // 用户认证失败
+    ErrorUserNoLogin      = 2003 // 用户未登录
+    ErrorAccessDenied     = 2004 // 访问被拒绝
+)
 
-    return opts
+// Error 自定义错误类型
+type Error struct {
+    Code    int    // 错误码
+    Message string // 错误消息
+    Err     error  // 原始错误
 }
 
-// 在服务中使用
-func (s *Service) List(query *request.YourQuery) ([]YourModel, int64, error) {
-    opts := BuildQueryOptions(&query.BaseQuery, "your_table")
+// NewError 创建新错误
+func NewError(code int, msg string) *Error {
+    return &Error{
+        Code:    code,
+        Message: msg,
+    }
+}
 
-    // 添加分页和排序
-    opts = append(opts,
-        options.WithPage(query.Page, query.PageSize),
-        options.WithOrder(query.SortField, query.SortOrder),
-    )
+// WithMsg 设置错误消息
+func (e *Error) WithMsg(msg string) *Error {
+    return &Error{
+        Code:    e.Code,
+        Message: msg,
+        Err:     e.Err,
+    }
+}
 
-    // 应用所有查询选项
-    db := options.Apply(s.DB, opts...)
+// WithError 包装原始错误
+func (e *Error) WithError(err error) *Error {
+    return &Error{
+        Code:    e.Code,
+        Message: e.Message,
+        Err:     err,
+    }
+}
+```
 
-    var total int64
-    db.Model(&YourModel{}).Count(&total)
+### 使用示例
 
-    var items []YourModel
-    db.Find(&items)
+```go
+// 在 Model 层
+func (r *UserRepo) GetByID(ctx context.Context, id uint) (*User, error) {
+    var user User
+    if err := r.DB.First(&user, id).Error; err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, errorx.NewError(errorx.ErrorUserNotFound, "用户不存在")
+        }
+        return nil, errorx.NewError(errorx.ErrorDatabase, "数据库错误").WithError(err)
+    }
+    return &user, nil
+}
 
-    return items, total, nil
+// 在 Handler 层
+func (h *UserHandler) GetUser(c *gin.Context) {
+    id := cast.ToUint(c.Param("id"))
+
+    user, err := h.userRepo.GetByID(c.Request.Context(), id)
+    if err != nil {
+        logger.Error("获取用户失败", "error", err, "id", id)
+        response.Error(c, err)
+        return
+    }
+
+    response.Success(c, user)
+}
+```
+
+### 统一响应格式
+
+所有 API 响应使用统一的格式：
+
+```go
+// 成功响应
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        // 响应数据
+    }
+}
+
+// 错误响应
+{
+    "code": 1001,
+    "message": "无效参数",
+    "data": null
 }
 ```

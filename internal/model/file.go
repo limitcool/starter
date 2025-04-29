@@ -1,7 +1,11 @@
 package model
 
 import (
+	"context"
 	"time"
+
+	"github.com/limitcool/starter/internal/pkg/errorx"
+	"gorm.io/gorm"
 )
 
 // 文件类型枚举
@@ -48,10 +52,68 @@ func (File) TableName() string {
 	return "file"
 }
 
-// 以下方法已移动到 repository/file_repo.go
-// Create
-// GetByID
-// Delete
-// Update
-// UpdateUserAvatar
-// UpdateSysUserAvatar
+// FileRepo 文件仓库
+type FileRepo struct {
+	DB *gorm.DB
+}
+
+// NewFileRepo 创建文件仓库
+func NewFileRepo(db *gorm.DB) *FileRepo {
+	return &FileRepo{
+		DB: db,
+	}
+}
+
+// Create 创建文件记录
+func (r *FileRepo) Create(ctx context.Context, file *File) error {
+	return r.DB.WithContext(ctx).Create(file).Error
+}
+
+// GetByID 根据ID获取文件
+func (r *FileRepo) GetByID(ctx context.Context, id uint) (*File, error) {
+	var file File
+	if err := r.DB.WithContext(ctx).First(&file, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errorx.ErrFileNotFound
+		}
+		return nil, errorx.WrapError(err, "查询文件失败")
+	}
+	return &file, nil
+}
+
+// Update 更新文件记录
+func (r *FileRepo) Update(ctx context.Context, file *File) error {
+	return r.DB.WithContext(ctx).Save(file).Error
+}
+
+// Delete 删除文件记录
+func (r *FileRepo) Delete(ctx context.Context, id uint) error {
+	return r.DB.WithContext(ctx).Delete(&File{}, id).Error
+}
+
+// UpdateFileUsage 更新文件用途
+func (r *FileRepo) UpdateFileUsage(ctx context.Context, file *File, usage string) error {
+	file.Usage = usage
+	return r.DB.WithContext(ctx).Save(file).Error
+}
+
+// ListByUser 获取用户的文件列表
+func (r *FileRepo) ListByUser(ctx context.Context, userID int64, page, pageSize int) ([]File, error) {
+	var files []File
+	offset := (page - 1) * pageSize
+	if err := r.DB.WithContext(ctx).Where("uploaded_by = ? AND uploaded_by_type = ?", userID, 2).
+		Offset(offset).Limit(pageSize).Find(&files).Error; err != nil {
+		return nil, errorx.WrapError(err, "查询用户文件列表失败")
+	}
+	return files, nil
+}
+
+// CountByUser 获取用户的文件总数
+func (r *FileRepo) CountByUser(ctx context.Context, userID int64) (int64, error) {
+	var count int64
+	if err := r.DB.WithContext(ctx).Model(&File{}).
+		Where("uploaded_by = ? AND uploaded_by_type = ?", userID, 2).Count(&count).Error; err != nil {
+		return 0, errorx.WrapError(err, "查询用户文件总数失败")
+	}
+	return count, nil
+}

@@ -2,18 +2,17 @@ package jwt
 
 import (
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/limitcool/starter/internal/pkg/enum"
 )
 
 // CustomClaims 自定义JWT Claims结构体
 type CustomClaims struct {
 	jwt.RegisteredClaims
-	UserID    int64         `json:"user_id"`
-	Username  string        `json:"username"`
-	UserType  enum.UserType `json:"user_type"`            // sys_user 或 user
-	TokenType string        `json:"token_type,omitempty"` // access_token 或 refresh_token
-	RoleIDs   []uint        `json:"role_ids,omitempty"`
-	Roles     []string      `json:"roles,omitempty"`
+	UserID    int64    `json:"user_id"`
+	Username  string   `json:"username"`
+	IsAdmin   bool     `json:"is_admin"`             // 是否是管理员
+	TokenType string   `json:"token_type,omitempty"` // access_token 或 refresh_token
+	RoleIDs   []uint   `json:"role_ids,omitempty"`
+	Roles     []string `json:"roles,omitempty"`
 }
 
 // ToMapClaims 将CustomClaims转换为jwt.MapClaims
@@ -21,7 +20,7 @@ func (c *CustomClaims) ToMapClaims() jwt.MapClaims {
 	return jwt.MapClaims{
 		"user_id":    c.UserID,
 		"username":   c.Username,
-		"user_type":  c.UserType,
+		"is_admin":   c.IsAdmin,
 		"token_type": c.TokenType,
 		"roles":      c.Roles,
 		"role_ids":   c.RoleIDs,
@@ -44,13 +43,9 @@ func FromMapClaims(claims jwt.MapClaims) *CustomClaims {
 		customClaims.Username = username
 	}
 
-	// 用户类型
-	if userType, ok := claims["user_type"].(uint8); ok {
-		if uint8(userType) == uint8(enum.UserTypeSysUser) {
-			customClaims.UserType = enum.UserTypeSysUser
-		} else if uint8(userType) == uint8(enum.UserTypeUser) {
-			customClaims.UserType = enum.UserTypeUser
-		}
+	// 是否管理员
+	if isAdmin, ok := claims["is_admin"].(bool); ok {
+		customClaims.IsAdmin = isAdmin
 	}
 
 	// 令牌类型
@@ -61,7 +56,7 @@ func FromMapClaims(claims jwt.MapClaims) *CustomClaims {
 	}
 
 	// 角色代码
-	if rolesInterface, ok := claims["roles"].([]interface{}); ok {
+	if rolesInterface, ok := claims["roles"].([]any); ok {
 		roles := make([]string, len(rolesInterface))
 		for i, v := range rolesInterface {
 			if role, ok := v.(string); ok {
@@ -72,7 +67,7 @@ func FromMapClaims(claims jwt.MapClaims) *CustomClaims {
 	}
 
 	// 角色ID
-	if roleIDsInterface, ok := claims["role_ids"].([]interface{}); ok {
+	if roleIDsInterface, ok := claims["role_ids"].([]any); ok {
 		roleIDs := make([]uint, len(roleIDsInterface))
 		for i, v := range roleIDsInterface {
 			if roleID, ok := v.(float64); ok {

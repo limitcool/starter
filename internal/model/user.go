@@ -1,7 +1,11 @@
 package model
 
 import (
+	"context"
 	"time"
+
+	"github.com/limitcool/starter/internal/pkg/errorx"
+	"gorm.io/gorm"
 )
 
 // User 用户模型
@@ -28,12 +32,8 @@ type User struct {
 	Address    string     `json:"address" gorm:"size:255;comment:地址"`
 	RegisterIP string     `json:"register_ip" gorm:"size:50;comment:注册IP"`
 
-	// 合并模式下的管理员字段
+	// 管理员字段
 	IsAdmin bool `json:"is_admin" gorm:"default:false;comment:是否管理员"`
-	// 关联
-	Roles     []*Role  `json:"roles" gorm:"many2many:user_role;"` // 关联的角色
-	RoleIDs   []int64  `json:"role_ids" gorm:"-"`                 // 角色ID列表，不映射到数据库
-	RoleCodes []string `json:"role_codes" gorm:"-"`               // 角色编码列表
 }
 
 func (User) TableName() string {
@@ -44,8 +44,81 @@ func NewUser() *User {
 	return &User{}
 }
 
-// 以下方法已移动到 repository/user_repository.go
-// IsExist
-// Create
-// GetUserByUsername
-// GetUserByID
+// UserRepo 用户仓库
+type UserRepo struct {
+	DB *gorm.DB
+}
+
+// NewUserRepo 创建用户仓库
+func NewUserRepo(db *gorm.DB) *UserRepo {
+	return &UserRepo{
+		DB: db,
+	}
+}
+
+// GetByID 根据ID获取用户
+func (r *UserRepo) GetByID(ctx context.Context, id uint) (*User, error) {
+	var user User
+	if err := r.DB.WithContext(ctx).First(&user, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errorx.ErrUserNotFound
+		}
+		return nil, errorx.WrapError(err, "查询用户失败")
+	}
+	return &user, nil
+}
+
+// GetByUsername 根据用户名获取用户
+func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*User, error) {
+	var user User
+	if err := r.DB.WithContext(ctx).Where("username = ?", username).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errorx.ErrUserNotFound
+		}
+		return nil, errorx.WrapError(err, "查询用户失败")
+	}
+	return &user, nil
+}
+
+// Create 创建用户
+func (r *UserRepo) Create(ctx context.Context, user *User) error {
+	return r.DB.WithContext(ctx).Create(user).Error
+}
+
+// Update 更新用户
+func (r *UserRepo) Update(ctx context.Context, user *User) error {
+	return r.DB.WithContext(ctx).Save(user).Error
+}
+
+// Delete 删除用户
+func (r *UserRepo) Delete(ctx context.Context, id uint) error {
+	return r.DB.WithContext(ctx).Delete(&User{}, id).Error
+}
+
+// IsExist 检查用户是否存在
+func (r *UserRepo) IsExist(ctx context.Context, username string) (bool, error) {
+	var count int64
+	if err := r.DB.WithContext(ctx).Model(&User{}).Where("username = ?", username).Count(&count).Error; err != nil {
+		return false, errorx.WrapError(err, "检查用户是否存在失败")
+	}
+	return count > 0, nil
+}
+
+// UpdateAvatar 更新用户头像
+func (r *UserRepo) UpdateAvatar(ctx context.Context, userID uint, fileID uint) error {
+	return r.DB.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Update("avatar_file_id", fileID).Error
+}
+
+// UpdatePassword 更新用户密码
+func (r *UserRepo) UpdatePassword(ctx context.Context, userID uint, password string) error {
+	return r.DB.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Update("password", password).Error
+}
+
+// UpdateLastLogin 更新最后登录信息
+func (r *UserRepo) UpdateLastLogin(ctx context.Context, userID uint, ip string) error {
+	now := time.Now()
+	return r.DB.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Updates(map[string]any{
+		"last_login": now,
+		"last_ip":    ip,
+	}).Error
+}
