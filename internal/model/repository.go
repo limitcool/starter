@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/options"
 	"gorm.io/gorm"
 )
 
@@ -11,14 +12,28 @@ import (
 // 所有可以被仓库管理的实体都应该实现这个接口
 type Entity any
 
+// QueryOptions 查询选项
+type QueryOptions struct {
+	// 查询条件
+	Condition string
+	// 查询参数
+	Args []any
+	// 查询选项
+	Opts []options.Option
+	// 预加载关联
+	Preloads []string
+}
+
 // Repository 数据库操作接口
 // 提供基本的CRUD操作
 type Repository[T Entity] interface {
 	// Create 创建实体
 	Create(ctx context.Context, entity *T) error
 
-	// GetByID 根据ID获取实体
-	GetByID(ctx context.Context, id any) (*T, error)
+	// Get 根据ID或条件获取单个实体
+	// id: 实体ID，如果为nil，则使用condition和args
+	// opts: 查询选项，可以为nil
+	Get(ctx context.Context, id any, opts *QueryOptions) (*T, error)
 
 	// Update 更新实体
 	Update(ctx context.Context, entity *T) error
@@ -27,10 +42,13 @@ type Repository[T Entity] interface {
 	Delete(ctx context.Context, id any) error
 
 	// List 获取实体列表
-	List(ctx context.Context, page, pageSize int) ([]T, error)
+	// page, pageSize: 分页参数
+	// opts: 查询选项，可以为nil
+	List(ctx context.Context, page, pageSize int, opts *QueryOptions) ([]T, error)
 
 	// Count 获取实体总数
-	Count(ctx context.Context) (int64, error)
+	// opts: 查询选项，可以为nil
+	Count(ctx context.Context, opts *QueryOptions) (int64, error)
 
 	// Transaction 在事务中执行函数
 	Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error
@@ -59,15 +77,45 @@ func (r *GenericRepo[T]) Create(ctx context.Context, entity *T) error {
 	return r.DB.WithContext(ctx).Create(entity).Error
 }
 
-// GetByID 根据ID获取实体
-func (r *GenericRepo[T]) GetByID(ctx context.Context, id any) (*T, error) {
+// Get 根据ID或条件获取单个实体
+func (r *GenericRepo[T]) Get(ctx context.Context, id any, opts *QueryOptions) (*T, error) {
 	var entity T
-	if err := r.DB.WithContext(ctx).First(&entity, id).Error; err != nil {
+	
+	// 创建查询
+	query := r.DB.WithContext(ctx)
+	
+	// 应用预加载
+	if opts != nil && opts.Preloads != nil {
+		for _, preload := range opts.Preloads {
+			query = query.Preload(preload)
+		}
+	}
+	
+	// 应用查询选项
+	if opts != nil && opts.Opts != nil && len(opts.Opts) > 0 {
+		query = options.Apply(query, opts.Opts...)
+	}
+	
+	// 执行查询
+	var err error
+	if id != nil {
+		// 根据ID查询
+		err = query.First(&entity, id).Error
+	} else if opts != nil && opts.Condition != "" {
+		// 根据条件查询
+		err = query.Where(opts.Condition, opts.Args...).First(&entity).Error
+	} else {
+		// 没有ID和条件，返回错误
+		return nil, errorx.ErrInvalidParams.WithMsg("查询参数不能为空")
+	}
+	
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errorx.ErrNotFound.WithMsg("记录不存在")
 		}
 		return nil, err
 	}
+	
 	return &entity, nil
 }
 
@@ -83,22 +131,64 @@ func (r *GenericRepo[T]) Delete(ctx context.Context, id any) error {
 }
 
 // List 获取实体列表
-func (r *GenericRepo[T]) List(ctx context.Context, page, pageSize int) ([]T, error) {
+func (r *GenericRepo[T]) List(ctx context.Context, page, pageSize int, opts *QueryOptions) ([]T, error) {
 	var entities []T
+	
+	// 创建查询
+	query := r.DB.WithContext(ctx)
+	
+	// 应用分页
 	offset := (page - 1) * pageSize
-	if err := r.DB.WithContext(ctx).Offset(offset).Limit(pageSize).Find(&entities).Error; err != nil {
+	query = query.Offset(offset).Limit(pageSize)
+	
+	// 应用预加载
+	if opts != nil && opts.Preloads != nil {
+		for _, preload := range opts.Preloads {
+			query = query.Preload(preload)
+		}
+	}
+	
+	// 应用查询选项
+	if opts != nil && opts.Opts != nil && len(opts.Opts) > 0 {
+		query = options.Apply(query, opts.Opts...)
+	}
+	
+	// 应用条件
+	if opts != nil && opts.Condition != "" {
+		query = query.Where(opts.Condition, opts.Args...)
+	}
+	
+	// 执行查询
+	if err := query.Find(&entities).Error; err != nil {
 		return nil, err
 	}
+	
 	return entities, nil
 }
 
 // Count 获取实体总数
-func (r *GenericRepo[T]) Count(ctx context.Context) (int64, error) {
+func (r *GenericRepo[T]) Count(ctx context.Context, opts *QueryOptions) (int64, error) {
 	var count int64
 	var entity T
-	if err := r.DB.WithContext(ctx).Model(&entity).Count(&count).Error; err != nil {
+	
+	// 创建查询
+	query := r.DB.WithContext(ctx).Model(&entity)
+	
+	// 应用查询选项
+	if opts != nil && opts.Opts != nil && len(opts.Opts) > 0 {
+		query = options.Apply(query, opts.Opts...)
+	}
+	
+	// 应用条件
+	if opts != nil && opts.Condition != "" {
+		query = query.Where(opts.Condition, opts.Args...)
+	}
+	
+	// 执行查询
+	if err := query.Count(&count).Error; err != nil {
 		return 0, err
 	}
+	
 	return count, nil
 }
 

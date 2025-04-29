@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/limitcool/starter/internal/pkg/errorx"
@@ -46,62 +47,131 @@ func NewUser() *User {
 
 // UserRepo 用户仓库
 type UserRepo struct {
-	DB *gorm.DB
+	DB          *gorm.DB
+	GenericRepo *GenericRepo[User]
 }
 
 // NewUserRepo 创建用户仓库
 func NewUserRepo(db *gorm.DB) *UserRepo {
+	genericRepo := NewGenericRepo[User](db)
+	genericRepo.ErrorCode = errorx.ErrorUserNotFoundCode
+
 	return &UserRepo{
-		DB: db,
+		DB:          db,
+		GenericRepo: genericRepo,
 	}
 }
 
 // GetByID 根据ID获取用户
 func (r *UserRepo) GetByID(ctx context.Context, id uint) (*User, error) {
-	var user User
-	if err := r.DB.WithContext(ctx).First(&user, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, errorx.ErrUserNotFound
-		}
+	user, err := r.GenericRepo.Get(ctx, id, nil)
+	if err != nil {
 		return nil, errorx.WrapError(err, "查询用户失败")
 	}
-	return &user, nil
+	return user, nil
+}
+
+// GetUserWithAvatar 获取用户信息，包括头像
+func (r *UserRepo) GetUserWithAvatar(ctx context.Context, id uint) (*User, error) {
+	user, err := r.GenericRepo.Get(ctx, id, &QueryOptions{
+		Preloads: []string{"AvatarFile"},
+	})
+	if err != nil {
+		return nil, errorx.WrapError(err, "查询用户及头像失败")
+	}
+	
+	// 设置头像URL
+	if user.AvatarFile != nil {
+		user.AvatarURL = user.AvatarFile.URL
+	}
+	
+	return user, nil
 }
 
 // GetByUsername 根据用户名获取用户
 func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*User, error) {
-	var user User
-	if err := r.DB.WithContext(ctx).Where("username = ?", username).First(&user).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+	user, err := r.GenericRepo.Get(ctx, nil, &QueryOptions{
+		Condition: "username = ?",
+		Args:      []any{username},
+	})
+	if err != nil {
+		if errors.Is(err, errorx.ErrNotFound) {
 			return nil, errorx.ErrUserNotFound
 		}
 		return nil, errorx.WrapError(err, "查询用户失败")
 	}
-	return &user, nil
+	return user, nil
 }
 
 // Create 创建用户
 func (r *UserRepo) Create(ctx context.Context, user *User) error {
-	return r.DB.WithContext(ctx).Create(user).Error
+	return r.GenericRepo.Create(ctx, user)
 }
 
 // Update 更新用户
 func (r *UserRepo) Update(ctx context.Context, user *User) error {
-	return r.DB.WithContext(ctx).Save(user).Error
+	return r.GenericRepo.Update(ctx, user)
 }
 
 // Delete 删除用户
 func (r *UserRepo) Delete(ctx context.Context, id uint) error {
-	return r.DB.WithContext(ctx).Delete(&User{}, id).Error
+	return r.GenericRepo.Delete(ctx, id)
 }
 
 // IsExist 检查用户是否存在
 func (r *UserRepo) IsExist(ctx context.Context, username string) (bool, error) {
-	var count int64
-	if err := r.DB.WithContext(ctx).Model(&User{}).Where("username = ?", username).Count(&count).Error; err != nil {
+	count, err := r.GenericRepo.Count(ctx, &QueryOptions{
+		Condition: "username = ?",
+		Args:      []any{username},
+	})
+	if err != nil {
 		return false, errorx.WrapError(err, "检查用户是否存在失败")
 	}
 	return count > 0, nil
+}
+
+// FindByUsername 根据用户名查找用户
+func (r *UserRepo) FindByUsername(ctx context.Context, username string) (*User, error) {
+	return r.GetByUsername(ctx, username)
+}
+
+// ListUsers 获取用户列表
+func (r *UserRepo) ListUsers(ctx context.Context, page, pageSize int, keyword string) ([]User, int64, error) {
+	var opts *QueryOptions
+	
+	// 如果有关键字，添加模糊查询条件
+	if keyword != "" {
+		opts = &QueryOptions{
+			Condition: "username LIKE ? OR nickname LIKE ? OR email LIKE ?",
+			Args:      []any{"%" + keyword + "%", "%" + keyword + "%", "%" + keyword + "%"},
+			Preloads:  []string{"AvatarFile"},
+		}
+	} else {
+		opts = &QueryOptions{
+			Preloads: []string{"AvatarFile"},
+		}
+	}
+	
+	// 获取用户列表
+	users, err := r.GenericRepo.List(ctx, page, pageSize, opts)
+	if err != nil {
+		return nil, 0, errorx.WrapError(err, "查询用户列表失败")
+	}
+	
+	// 设置头像URL
+	for i := range users {
+		if users[i].AvatarFile != nil {
+			users[i].AvatarURL = users[i].AvatarFile.URL
+		}
+	}
+	
+	// 获取总数
+	total, err := r.GenericRepo.Count(ctx, opts)
+	if err != nil {
+		return nil, 0, errorx.WrapError(err, "查询用户总数失败")
+	}
+	
+	return users, total, nil
 }
 
 // UpdateAvatar 更新用户头像
