@@ -10,7 +10,9 @@ import (
 
 // Entity 实体接口
 // 所有可以被仓库管理的实体都应该实现这个接口
-type Entity any
+type Entity interface {
+	TableName() string
+}
 
 // QueryOptions 查询选项
 type QueryOptions struct {
@@ -60,7 +62,6 @@ type Repository[T Entity] interface {
 // GenericRepo 通用仓库实现
 type GenericRepo[T Entity] struct {
 	DB        *gorm.DB
-	TableName string
 	ErrorCode int // 用于NotFound错误
 }
 
@@ -77,25 +78,39 @@ func (r *GenericRepo[T]) Create(ctx context.Context, entity *T) error {
 	return r.DB.WithContext(ctx).Create(entity).Error
 }
 
-// Get 根据ID或条件获取单个实体
-func (r *GenericRepo[T]) Get(ctx context.Context, id any, opts *QueryOptions) (*T, error) {
-	var entity T
-	
-	// 创建查询
-	query := r.DB.WithContext(ctx)
-	
+// applyQueryOptions 应用查询选项
+func (r *GenericRepo[T]) applyQueryOptions(query *gorm.DB, opts *QueryOptions) *gorm.DB {
+	if opts == nil {
+		return query
+	}
+
 	// 应用预加载
-	if opts != nil && opts.Preloads != nil {
+	if opts.Preloads != nil {
 		for _, preload := range opts.Preloads {
 			query = query.Preload(preload)
 		}
 	}
-	
+
 	// 应用查询选项
-	if opts != nil && opts.Opts != nil && len(opts.Opts) > 0 {
+	if len(opts.Opts) > 0 {
 		query = options.Apply(query, opts.Opts...)
 	}
-	
+
+	// 应用条件
+	if opts.Condition != "" {
+		query = query.Where(opts.Condition, opts.Args...)
+	}
+
+	return query
+}
+
+// Get 根据ID或条件获取单个实体
+func (r *GenericRepo[T]) Get(ctx context.Context, id any, opts *QueryOptions) (*T, error) {
+	var entity T
+
+	// 创建查询并应用选项
+	query := r.applyQueryOptions(r.DB.WithContext(ctx), opts)
+
 	// 执行查询
 	var err error
 	if id != nil {
@@ -103,19 +118,20 @@ func (r *GenericRepo[T]) Get(ctx context.Context, id any, opts *QueryOptions) (*
 		err = query.First(&entity, id).Error
 	} else if opts != nil && opts.Condition != "" {
 		// 根据条件查询
-		err = query.Where(opts.Condition, opts.Args...).First(&entity).Error
+		err = query.First(&entity).Error
 	} else {
 		// 没有ID和条件，返回错误
 		return nil, errorx.ErrInvalidParams.WithMsg("查询参数不能为空")
 	}
-	
+
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, errorx.ErrNotFound.WithMsg("记录不存在")
+			// 使用ErrorCode创建特定的错误
+			return nil, errorx.GetError(r.ErrorCode).WithMsg("记录不存在")
 		}
 		return nil, err
 	}
-	
+
 	return &entity, nil
 }
 
@@ -133,36 +149,22 @@ func (r *GenericRepo[T]) Delete(ctx context.Context, id any) error {
 // List 获取实体列表
 func (r *GenericRepo[T]) List(ctx context.Context, page, pageSize int, opts *QueryOptions) ([]T, error) {
 	var entities []T
-	
+
 	// 创建查询
 	query := r.DB.WithContext(ctx)
-	
+
 	// 应用分页
 	offset := (page - 1) * pageSize
 	query = query.Offset(offset).Limit(pageSize)
-	
-	// 应用预加载
-	if opts != nil && opts.Preloads != nil {
-		for _, preload := range opts.Preloads {
-			query = query.Preload(preload)
-		}
-	}
-	
+
 	// 应用查询选项
-	if opts != nil && opts.Opts != nil && len(opts.Opts) > 0 {
-		query = options.Apply(query, opts.Opts...)
-	}
-	
-	// 应用条件
-	if opts != nil && opts.Condition != "" {
-		query = query.Where(opts.Condition, opts.Args...)
-	}
-	
+	query = r.applyQueryOptions(query, opts)
+
 	// 执行查询
 	if err := query.Find(&entities).Error; err != nil {
 		return nil, err
 	}
-	
+
 	return entities, nil
 }
 
@@ -170,25 +172,18 @@ func (r *GenericRepo[T]) List(ctx context.Context, page, pageSize int, opts *Que
 func (r *GenericRepo[T]) Count(ctx context.Context, opts *QueryOptions) (int64, error) {
 	var count int64
 	var entity T
-	
+
 	// 创建查询
 	query := r.DB.WithContext(ctx).Model(&entity)
-	
+
 	// 应用查询选项
-	if opts != nil && opts.Opts != nil && len(opts.Opts) > 0 {
-		query = options.Apply(query, opts.Opts...)
-	}
-	
-	// 应用条件
-	if opts != nil && opts.Condition != "" {
-		query = query.Where(opts.Condition, opts.Args...)
-	}
-	
+	query = r.applyQueryOptions(query, opts)
+
 	// 执行查询
 	if err := query.Count(&count).Error; err != nil {
 		return 0, err
 	}
-	
+
 	return count, nil
 }
 
@@ -201,7 +196,6 @@ func (r *GenericRepo[T]) Transaction(ctx context.Context, fn func(tx *gorm.DB) e
 func (r *GenericRepo[T]) WithTx(tx *gorm.DB) Repository[T] {
 	return &GenericRepo[T]{
 		DB:        tx,
-		TableName: r.TableName,
 		ErrorCode: r.ErrorCode,
 	}
 }

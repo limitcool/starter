@@ -17,7 +17,7 @@ type User struct {
 	Username     string     `json:"username" gorm:"size:50;not null;unique;comment:用户名"`
 	Password     string     `json:"-" gorm:"size:100;not null;comment:密码"`
 	Nickname     string     `json:"nickname" gorm:"size:50;comment:昵称"`
-	AvatarFileID uint       `json:"-" gorm:"size:255;comment:头像文件ID"`
+	AvatarFileID int64      `json:"-" gorm:"comment:头像文件ID"`
 	AvatarURL    string     `json:"avatar" gorm:"-"`                            // 头像URL，不存储到数据库
 	AvatarFile   *File      `json:"avatar_file" gorm:"foreignKey:AvatarFileID"` // 关联的头像文件
 	Email        string     `json:"email" gorm:"size:100;comment:邮箱"`
@@ -63,7 +63,7 @@ func NewUserRepo(db *gorm.DB) *UserRepo {
 }
 
 // GetByID 根据ID获取用户
-func (r *UserRepo) GetByID(ctx context.Context, id uint) (*User, error) {
+func (r *UserRepo) GetByID(ctx context.Context, id int64) (*User, error) {
 	user, err := r.GenericRepo.Get(ctx, id, nil)
 	if err != nil {
 		return nil, errorx.WrapError(err, "查询用户失败")
@@ -72,19 +72,28 @@ func (r *UserRepo) GetByID(ctx context.Context, id uint) (*User, error) {
 }
 
 // GetUserWithAvatar 获取用户信息，包括头像
-func (r *UserRepo) GetUserWithAvatar(ctx context.Context, id uint) (*User, error) {
-	user, err := r.GenericRepo.Get(ctx, id, &QueryOptions{
-		Preloads: []string{"AvatarFile"},
-	})
+func (r *UserRepo) GetUserWithAvatar(ctx context.Context, id int64) (*User, error) {
+	// 先查询用户基本信息
+	user, err := r.GenericRepo.Get(ctx, id, nil)
 	if err != nil {
-		return nil, errorx.WrapError(err, "查询用户及头像失败")
+		return nil, errorx.WrapError(err, "查询用户失败")
 	}
-	
-	// 设置头像URL
-	if user.AvatarFile != nil {
-		user.AvatarURL = user.AvatarFile.URL
+
+	// 如果用户有头像，再预加载头像
+	if user.AvatarFileID > 0 {
+		user, err = r.GenericRepo.Get(ctx, id, &QueryOptions{
+			Preloads: []string{"AvatarFile"},
+		})
+		if err != nil {
+			return nil, errorx.WrapError(err, "查询用户头像失败")
+		}
+
+		// 设置头像URL
+		if user.AvatarFile != nil {
+			user.AvatarURL = user.AvatarFile.URL
+		}
 	}
-	
+
 	return user, nil
 }
 
@@ -114,7 +123,7 @@ func (r *UserRepo) Update(ctx context.Context, user *User) error {
 }
 
 // Delete 删除用户
-func (r *UserRepo) Delete(ctx context.Context, id uint) error {
+func (r *UserRepo) Delete(ctx context.Context, id int64) error {
 	return r.GenericRepo.Delete(ctx, id)
 }
 
@@ -130,15 +139,10 @@ func (r *UserRepo) IsExist(ctx context.Context, username string) (bool, error) {
 	return count > 0, nil
 }
 
-// FindByUsername 根据用户名查找用户
-func (r *UserRepo) FindByUsername(ctx context.Context, username string) (*User, error) {
-	return r.GetByUsername(ctx, username)
-}
-
 // ListUsers 获取用户列表
 func (r *UserRepo) ListUsers(ctx context.Context, page, pageSize int, keyword string) ([]User, int64, error) {
 	var opts *QueryOptions
-	
+
 	// 如果有关键字，添加模糊查询条件
 	if keyword != "" {
 		opts = &QueryOptions{
@@ -151,41 +155,41 @@ func (r *UserRepo) ListUsers(ctx context.Context, page, pageSize int, keyword st
 			Preloads: []string{"AvatarFile"},
 		}
 	}
-	
+
 	// 获取用户列表
 	users, err := r.GenericRepo.List(ctx, page, pageSize, opts)
 	if err != nil {
 		return nil, 0, errorx.WrapError(err, "查询用户列表失败")
 	}
-	
+
 	// 设置头像URL
 	for i := range users {
 		if users[i].AvatarFile != nil {
 			users[i].AvatarURL = users[i].AvatarFile.URL
 		}
 	}
-	
+
 	// 获取总数
 	total, err := r.GenericRepo.Count(ctx, opts)
 	if err != nil {
 		return nil, 0, errorx.WrapError(err, "查询用户总数失败")
 	}
-	
+
 	return users, total, nil
 }
 
 // UpdateAvatar 更新用户头像
-func (r *UserRepo) UpdateAvatar(ctx context.Context, userID uint, fileID uint) error {
+func (r *UserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID int64) error {
 	return r.DB.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Update("avatar_file_id", fileID).Error
 }
 
 // UpdatePassword 更新用户密码
-func (r *UserRepo) UpdatePassword(ctx context.Context, userID uint, password string) error {
+func (r *UserRepo) UpdatePassword(ctx context.Context, userID int64, password string) error {
 	return r.DB.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Update("password", password).Error
 }
 
 // UpdateLastLogin 更新最后登录信息
-func (r *UserRepo) UpdateLastLogin(ctx context.Context, userID uint, ip string) error {
+func (r *UserRepo) UpdateLastLogin(ctx context.Context, userID int64, ip string) error {
 	now := time.Now()
 	return r.DB.WithContext(ctx).Model(&User{}).Where("id = ?", userID).Updates(map[string]any{
 		"last_login": now,

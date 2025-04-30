@@ -34,7 +34,7 @@ type File struct {
 	Name           string    `json:"name" gorm:"size:255;comment:文件名称"`
 	OriginalName   string    `json:"original_name" gorm:"size:255;comment:原始文件名"`
 	Path           string    `json:"path" gorm:"size:500;comment:存储路径"`
-	URL            string    `json:"url" gorm:"size:500;comment:访问URL"`
+	URL            string    `json:"url" gorm:"-"` // 计算字段，不存储到数据库
 	Type           string    `json:"type" gorm:"size:50;comment:文件类型"`
 	Usage          string    `json:"usage" gorm:"size:50;default:'general';comment:文件用途"`
 	Size           int64     `json:"size" gorm:"comment:文件大小(字节)"`
@@ -80,7 +80,20 @@ func (r *FileRepo) GetByID(ctx context.Context, id uint) (*File, error) {
 	if err != nil {
 		return nil, errorx.WrapError(err, "查询文件失败")
 	}
+
+	// 设置URL字段
+	if file.Path != "" {
+		file.URL = r.buildFileURL(file.Path)
+	}
+
 	return file, nil
+}
+
+// buildFileURL 构建文件URL
+func (r *FileRepo) buildFileURL(path string) string {
+	// 这里可以根据实际情况构建URL，例如添加域名前缀等
+	// 简单示例：
+	return "/uploads/" + path
 }
 
 // Update 更新文件记录
@@ -110,6 +123,14 @@ func (r *FileRepo) ListByUser(ctx context.Context, userID int64, page, pageSize 
 	if err != nil {
 		return nil, errorx.WrapError(err, "查询用户文件列表失败")
 	}
+
+	// 为所有文件设置URL
+	for i := range files {
+		if files[i].Path != "" {
+			files[i].URL = r.buildFileURL(files[i].Path)
+		}
+	}
+
 	return files, nil
 }
 
@@ -162,6 +183,13 @@ func (r *FileRepo) ListFiles(ctx context.Context, page, pageSize int, fileType, 
 	files, err := r.GenericRepo.List(ctx, page, pageSize, opts)
 	if err != nil {
 		return nil, 0, errorx.WrapError(err, "查询文件列表失败")
+	}
+
+	// 为所有文件设置URL
+	for i := range files {
+		if files[i].Path != "" {
+			files[i].URL = r.buildFileURL(files[i].Path)
+		}
 	}
 
 	// 获取总数
