@@ -6,47 +6,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
-// ErrorLogger 是一个记录错误日志的中间件
-func ErrorLogger() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// 记录开始时间
-		start := time.Now()
-
-		// 处理请求
-		c.Next()
-
-		// 检查是否有错误
-		if len(c.Errors) > 0 {
-			// 获取最后一个错误
-			err := c.Errors.Last().Err
-
-			// 记录请求信息
-			ctx := c.Request.Context()
-			logger.ErrorContext(ctx, "API error occurred",
-				"method", c.Request.Method,
-				"path", c.Request.URL.Path,
-				"ip", c.ClientIP(),
-				"user_agent", c.Request.UserAgent(),
-				"latency_ms", time.Since(start).Milliseconds(),
-				"status", c.Writer.Status(),
-				"error", err.Error(),
-			)
-
-			// 返回错误响应
-			response.Error(c, err)
-
-			// 中止后续处理
-			c.Abort()
-		}
-	}
-}
-
-// RequestLogger 是一个记录请求日志的中间件
-func RequestLogger() gin.HandlerFunc {
+// RequestLoggerMiddleware 是一个记录请求日志的中间件
+func RequestLoggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 记录开始时间
 		start := time.Now()

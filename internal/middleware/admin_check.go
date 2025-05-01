@@ -46,7 +46,7 @@ func AdminCheckWithDB(userRepo *model.UserRepo) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		// 从上下文中获取用户ID
-		userID := GetUserID(c)
+		userID := GetUserIDInt64(c)
 		if userID == 0 {
 			logger.WarnContext(ctx, "未登录用户尝试访问管理员接口")
 			response.Error(c, errorx.ErrUserNoLogin)
@@ -55,7 +55,7 @@ func AdminCheckWithDB(userRepo *model.UserRepo) gin.HandlerFunc {
 		}
 
 		// 获取用户信息
-		user, err := userRepo.GetByID(ctx, uint(userID))
+		user, err := userRepo.GetByID(ctx, userID)
 		if err != nil {
 			logger.ErrorContext(ctx, "获取用户信息失败", "error", err, "user_id", userID)
 			response.Error(c, errorx.ErrUserNotFound)

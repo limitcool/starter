@@ -36,7 +36,7 @@ func UserCheckWithDB(userRepo *model.UserRepo) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		// 从上下文获取用户ID
-		userID := GetUserID(c)
+		userID := GetUserIDInt64(c)
 		if userID == 0 {
 			logger.WarnContext(ctx, "用户ID不存在")
 			response.Error(c, errorx.ErrUserNoLogin)

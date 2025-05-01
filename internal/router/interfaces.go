@@ -15,5 +15,6 @@ type RouteRegistrar struct{}
 
 // RegisterRoutes 注册应用路由
 func (rr *RouteRegistrar) RegisterRoutes(r *gin.RouterGroup, params RouterParams) {
+	// 注册应用路由
 	registerAppRoutes(r, params)
 }

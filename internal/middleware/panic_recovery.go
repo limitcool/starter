@@ -10,8 +10,9 @@ import (
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
-// ErrorHandler 全局错误处理中间件
-func ErrorHandler() gin.HandlerFunc {
+// PanicRecovery 中间件用于捕获 panic 并返回友好的错误响应
+// 这个中间件只处理 panic，其他错误由 GlobalErrorHandler 处理
+func PanicRecovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 使用defer+recover捕获所有可能的panic
 		defer func() {
@@ -53,18 +54,5 @@ func ErrorHandler() gin.HandlerFunc {
 
 		// 处理请求
 		c.Next()
-
-		// 检查是否有错误
-		if len(c.Errors) > 0 {
-			err := c.Errors.Last().Err
-			handleError(c, err)
-			c.Abort()
-		}
 	}
-}
-
-// handleError 处理不同类型的错误
-func handleError(c *gin.Context, err error) {
-	// 使用统一的错误响应函数
-	response.Error(c, err)
 }

@@ -121,7 +121,7 @@ func (h *UserHandler) UserLogin(ctx *gin.Context) {
 	}
 
 	// 更新最后登录时间和IP
-	if err := userRepo.UpdateLastLogin(reqCtx, uint(user.ID), clientIP); err != nil {
+	if err := userRepo.UpdateLastLogin(reqCtx, int64(user.ID), clientIP); err != nil {
 		logger.WarnContext(reqCtx, "UserLogin 更新登录信息失败",
 			"error", err,
 			"username", req.Username,
@@ -262,7 +262,7 @@ func (h *UserHandler) UserInfo(ctx *gin.Context) {
 	userRepo := model.NewUserRepo(h.db)
 
 	// 查询用户信息
-	user, err := userRepo.GetByID(reqCtx, uint(id))
+	user, err := userRepo.GetByID(reqCtx, id)
 	if err != nil {
 		if errors.Is(err, errorx.ErrUserNotFound) {
 			logger.WarnContext(reqCtx, "UserInfo 用户不存在",
@@ -316,7 +316,7 @@ func (h *UserHandler) UserChangePassword(ctx *gin.Context) {
 	userRepo := model.NewUserRepo(h.db)
 
 	// 查询用户
-	user, err := userRepo.GetByID(reqCtx, uint(id))
+	user, err := userRepo.GetByID(reqCtx, id)
 	if err != nil {
 		if errors.Is(err, errorx.ErrUserNotFound) {
 			logger.WarnContext(reqCtx, "UserChangePassword 用户不存在",
@@ -350,7 +350,7 @@ func (h *UserHandler) UserChangePassword(ctx *gin.Context) {
 	}
 
 	// 更新密码
-	if err := userRepo.UpdatePassword(reqCtx, uint(id), hashedPassword); err != nil {
+	if err := userRepo.UpdatePassword(reqCtx, id, hashedPassword); err != nil {
 		logger.ErrorContext(reqCtx, "UserChangePassword 更新密码失败",
 			"error", err,
 			"user_id", id)

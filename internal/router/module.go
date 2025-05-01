@@ -61,10 +61,17 @@ func NewRouter(params RouterParams) RouterResult {
 
 	// 添加中间件
 	r.Use(gin.Recovery())
-	r.Use(middleware.RequestLogger())
+	r.Use(middleware.RequestLoggerMiddleware())
 	r.Use(middleware.RequestContext())
 	r.Use(middleware.Cors())
-	r.Use(middleware.ErrorHandler())
+
+	// 添加错误处理中间件
+	// PanicRecovery: 用于捕获 panic 并返回友好的错误响应
+	r.Use(middleware.PanicRecovery())
+
+	// GlobalErrorHandler: 用于处理控制器方法通过 c.Error() 返回的错误
+	// 配合 ErrorHandlerFunc 使用，可以简化控制器代码
+	r.Use(middleware.GlobalErrorHandler())
 
 	// 使用用户模式服务
 	ctx := context.Background()
