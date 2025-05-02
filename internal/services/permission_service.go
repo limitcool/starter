@@ -7,7 +7,6 @@ import (
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/casbin"
-	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/repository"
 	"github.com/spf13/cast"
@@ -32,23 +31,6 @@ func NewPermissionService(params ServiceParams, casbinService casbin.Service, me
 	roleRepo := params.RoleRepo
 	menuRepo := params.MenuRepo
 	config := params.Config
-	// 获取用户模式
-	userMode := enum.GetUserMode(config.Admin.UserMode)
-
-	// 如果是简单模式，返回一个空的实现
-	if userMode == enum.UserModeSimple {
-		// 创建 PermissionService 实例
-		ps := &PermissionService{
-			permissionRepo: permissionRepo,
-			roleRepo:       roleRepo,
-			menuRepo:       menuRepo,
-			casbinService:  nil, // 简单模式不使用Casbin
-			config:         config,
-			menuService:    menuService,
-		}
-
-		return ps
-	}
 
 	// 创建 PermissionService 实例
 	ps := &PermissionService{
@@ -218,15 +200,12 @@ func (s *PermissionService) GetPermissionsByUserID(ctx context.Context, userID u
 
 // CheckPermission 检查权限
 func (s *PermissionService) CheckPermission(ctx context.Context, userID string, obj string, act string) (bool, error) {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，直接返回true
-	if userMode == enum.UserModeSimple || s.casbinService == nil {
+	// 如果Casbin服务未启用，直接返回true
+	if s.casbinService == nil {
 		return true, nil
 	}
 
-	// 分离模式，使用Casbin检查权限
+	// 使用Casbin检查权限
 	return s.casbinService.CheckPermission(ctx, userID, obj, act)
 }
 

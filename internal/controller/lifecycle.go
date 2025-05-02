@@ -5,7 +5,6 @@ import (
 
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"github.com/limitcool/starter/internal/pkg/usermode"
 	"go.uber.org/fx"
 )
 
@@ -13,9 +12,8 @@ import (
 type LifecycleParams struct {
 	fx.In
 
-	Lifecycle      fx.Lifecycle
-	Config         *configs.Config
-	UserModeService *usermode.Service
+	Lifecycle fx.Lifecycle
+	Config    *configs.Config
 
 	// 控制器接口
 	RoleController       RoleControllerInterface       `optional:"true"`
@@ -25,25 +23,14 @@ type LifecycleParams struct {
 
 // RegisterControllerLifecycle 注册控制器生命周期钩子
 func RegisterControllerLifecycle(params LifecycleParams) {
-	// 使用用户模式服务获取用户模式
-	userMode := params.UserModeService.GetMode()
-
 	// 注册生命周期钩子
 	params.Lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			if params.UserModeService.IsSimpleMode() {
-				logger.InfoContext(ctx, "简单模式控制器已注册", "user_mode", userMode)
-			} else {
-				logger.InfoContext(ctx, "分离模式控制器已注册", "user_mode", userMode)
-			}
+			logger.InfoContext(ctx, "控制器已注册")
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
-			if params.UserModeService.IsSimpleMode() {
-				logger.InfoContext(ctx, "简单模式控制器已停止", "user_mode", userMode)
-			} else {
-				logger.InfoContext(ctx, "分离模式控制器已停止", "user_mode", userMode)
-			}
+			logger.InfoContext(ctx, "控制器已停止")
 			return nil
 		},
 	})

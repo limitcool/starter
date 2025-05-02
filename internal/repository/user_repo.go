@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/limitcool/starter/internal/model"
-	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"go.uber.org/fx"
@@ -154,18 +153,8 @@ func (r *UserRepo) WithTx(tx *gorm.DB) *UserRepo {
 }
 
 // GetUserRoles 获取用户角色
-func (r *UserRepo) GetUserRoles(ctx context.Context, userID int64, isAdmin bool, userMode string) ([]string, error) {
-	// 如果是简单模式
-	if userMode == string(enum.UserModeSimple) {
-		// 如果是管理员
-		if isAdmin {
-			return []string{"admin"}, nil
-		}
-		// 普通用户
-		return []string{"user"}, nil
-	}
-
-	// 分离模式，从数据库查询角色
+func (r *UserRepo) GetUserRoles(ctx context.Context, userID int64) ([]string, error) {
+	// 从数据库查询角色
 	var roles []string
 	user := &model.User{}
 

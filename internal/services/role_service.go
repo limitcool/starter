@@ -6,7 +6,6 @@ import (
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/casbin"
-	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/limitcool/starter/internal/repository"
@@ -26,19 +25,8 @@ func NewRoleService(params ServiceParams, casbinService casbin.Service) *RoleSer
 	// 使用参数中的仓库和配置
 	roleRepo := params.RoleRepo
 	config := params.Config
-	// 获取用户模式
-	userMode := enum.GetUserMode(config.Admin.UserMode)
 
-	// 如果是简单模式，返回一个空的实现
-	if userMode == enum.UserModeSimple {
-		return &RoleService{
-			roleRepo:      roleRepo,
-			casbinService: nil, // 简单模式不使用Casbin
-			config:        config,
-		}
-	}
-
-	// 分离模式，使用完整的实现
+	// 创建服务实例
 	service := &RoleService{
 		roleRepo:      roleRepo,
 		casbinService: casbinService,
@@ -62,39 +50,16 @@ func NewRoleService(params ServiceParams, casbinService casbin.Service) *RoleSer
 
 // CreateRole 创建角色
 func (s *RoleService) CreateRole(ctx context.Context, role *model.Role) error {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，直接返回nil
-	if userMode == enum.UserModeSimple {
-		return nil
-	}
-
 	return s.roleRepo.Create(ctx, role)
 }
 
 // UpdateRole 更新角色
 func (s *RoleService) UpdateRole(ctx context.Context, role *model.Role) error {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，直接返回nil
-	if userMode == enum.UserModeSimple {
-		return nil
-	}
-
 	return s.roleRepo.Update(ctx, role)
 }
 
 // DeleteRole 删除角色
 func (s *RoleService) DeleteRole(ctx context.Context, id uint) error {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，直接返回nil
-	if userMode == enum.UserModeSimple {
-		return nil
-	}
 
 	// 检查角色是否已分配给用户
 	isAssigned, err := s.roleRepo.IsAssignedToUser(ctx, id)
@@ -130,49 +95,16 @@ func (s *RoleService) DeleteRole(ctx context.Context, id uint) error {
 
 // GetRoleByID 根据ID获取角色
 func (s *RoleService) GetRoleByID(ctx context.Context, id uint) (*model.Role, error) {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，返回一个空的角色
-	if userMode == enum.UserModeSimple {
-		return &model.Role{
-			BaseModel: model.BaseModel{ID: id},
-			Name:      "管理员",
-			Code:      "admin",
-		}, nil
-	}
-
 	return s.roleRepo.GetByID(ctx, id)
 }
 
 // GetRoles 获取角色列表
 func (s *RoleService) GetRoles(ctx context.Context) ([]model.Role, error) {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，返回一个包含管理员角色的列表
-	if userMode == enum.UserModeSimple {
-		return []model.Role{
-			{
-				BaseModel: model.BaseModel{ID: 1},
-				Name:      "管理员",
-				Code:      "admin",
-			},
-		}, nil
-	}
-
 	return s.roleRepo.GetAll(ctx)
 }
 
 // AssignRolesToUser 为用户分配角色
 func (s *RoleService) AssignRolesToUser(ctx context.Context, userID int64, roleIDs []uint) error {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，直接返回nil
-	if userMode == enum.UserModeSimple {
-		return nil
-	}
 
 	// 使用 roleRepo 的 AssignRolesToUser 方法
 	if err := s.roleRepo.AssignRolesToUser(ctx, userID, roleIDs); err != nil {
@@ -220,50 +152,22 @@ func (s *RoleService) AssignRolesToUser(ctx context.Context, userID int64, roleI
 
 // GetUserRoleIDs 获取用户角色ID列表
 func (s *RoleService) GetUserRoleIDs(ctx context.Context, userID uint) ([]uint, error) {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，返回一个包含管理员角色ID的列表
-	if userMode == enum.UserModeSimple {
-		return []uint{1}, nil
-	}
-
 	return s.roleRepo.GetRoleIDsByUserID(ctx, userID)
 }
 
 // GetRoleMenuIDs 获取角色菜单ID列表
 func (s *RoleService) GetRoleMenuIDs(ctx context.Context, roleID uint) ([]uint, error) {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，返回一个空的列表
-	if userMode == enum.UserModeSimple {
-		return []uint{}, nil
-	}
-
 	return s.roleRepo.GetMenuIDsByRoleID(ctx, roleID)
 }
 
 // AssignMenusToRole 为角色分配菜单
 func (s *RoleService) AssignMenusToRole(ctx context.Context, roleID uint, menuIDs []uint) error {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，直接返回nil
-	if userMode == enum.UserModeSimple {
-		return nil
-	}
-
 	return s.roleRepo.AssignMenusToRole(ctx, roleID, menuIDs)
 }
 
 // 为角色设置权限策略
 func (s *RoleService) SetRolePermission(ctx context.Context, roleCode string, obj string, act string) error {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，直接返回nil
-	if userMode == enum.UserModeSimple || s.casbinService == nil {
+	if s.casbinService == nil {
 		return nil
 	}
 
@@ -276,11 +180,7 @@ func (s *RoleService) SetRolePermission(ctx context.Context, roleCode string, ob
 
 // 删除角色的权限策略
 func (s *RoleService) DeleteRolePermission(ctx context.Context, roleCode string, obj string, act string) error {
-	// 获取用户模式
-	userMode := enum.GetUserMode(s.config.Admin.UserMode)
-
-	// 如果是简单模式，直接返回nil
-	if userMode == enum.UserModeSimple || s.casbinService == nil {
+	if s.casbinService == nil {
 		return nil
 	}
 

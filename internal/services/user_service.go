@@ -58,7 +58,7 @@ func (s *UserService) VerifyPassword(password, hashedPassword string) bool {
 }
 
 // Register 用户注册
-func (s *UserService) Register(ctx context.Context, req v1.UserRegisterRequest, registerIP string, isAdmin bool) (*model.User, error) {
+func (s *UserService) Register(ctx context.Context, req v1.UserRegisterRequest, registerIP string, _ bool) (*model.User, error) {
 	isExist, err := s.userRepo.IsExist(ctx, req.Username)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("检查用户名 %s 是否存在失败", req.Username))
@@ -86,7 +86,6 @@ func (s *UserService) Register(ctx context.Context, req v1.UserRegisterRequest, 
 		Birthday:   &time.Time{},
 		Address:    req.Address,
 		RegisterIP: registerIP,
-		IsAdmin:    isAdmin, // 设置是否为管理员
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
@@ -131,23 +130,14 @@ func (s *UserService) Login(ctx context.Context, username, password string, ip s
 		return nil, errorx.WrapError(err, fmt.Sprintf("更新用户 %s 的登录信息失败", username))
 	}
 
-	// 用户模式在GetUserRoles中使用
-
-	// 判断用户类型
+	// 判断用户类型 - 在分离模式下始终是普通用户
 	userType := enum.UserTypeUser
-	if user.IsAdmin {
-		userType = enum.UserTypeAdminUser
-	}
 
 	// 获取用户角色
-	roles, err := s.userRepo.GetUserRoles(ctx, user.ID, user.IsAdmin, s.config.Admin.UserMode)
+	roles, err := s.userRepo.GetUserRoles(ctx, user.ID)
 	if err != nil {
 		// 如果获取角色失败，使用默认角色
-		if user.IsAdmin {
-			roles = []string{"admin"}
-		} else {
-			roles = []string{"user"}
-		}
+		roles = []string{"user"}
 	}
 
 	// 生成令牌

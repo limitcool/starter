@@ -5,7 +5,6 @@ import (
 )
 
 // User 用户模型
-// 可以作为普通用户，也可以在合并模式下同时作为管理员用户
 type User struct {
 	SnowflakeModel
 
@@ -22,14 +21,12 @@ type User struct {
 	LastLogin    *time.Time `json:"last_login" gorm:"comment:最后登录时间"`
 	LastIP       string     `json:"last_ip" gorm:"size:50;comment:最后登录IP"`
 
-	// 普通用户特有字段
+	// 用户特有字段
 	Gender     string     `json:"gender" gorm:"size:10;comment:性别"`
 	Birthday   *time.Time `json:"birthday" gorm:"comment:生日"`
 	Address    string     `json:"address" gorm:"size:255;comment:地址"`
 	RegisterIP string     `json:"register_ip" gorm:"size:50;comment:注册IP"`
 
-	// 合并模式下的管理员字段
-	IsAdmin bool `json:"is_admin" gorm:"default:false;comment:是否管理员"`
 	// 关联
 	Roles     []*Role  `json:"roles" gorm:"many2many:user_role;"` // 关联的角色
 	RoleIDs   []int64  `json:"role_ids" gorm:"-"`                 // 角色ID列表，不映射到数据库

@@ -8,7 +8,6 @@ import (
 	"github.com/casbin/casbin/v2/model"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/limitcool/starter/configs"
-	"github.com/limitcool/starter/internal/pkg/enum"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"go.uber.org/fx"
 	"gorm.io/gorm"
@@ -27,12 +26,9 @@ func NewEnforcer(lc fx.Lifecycle, cfg *configs.Config, db *gorm.DB) (*casbin.Enf
 	// 使用默认上下文
 	ctx := context.Background()
 
-	// 获取用户模式
-	userMode := enum.GetUserMode(cfg.Admin.UserMode)
-
-	// 如果是简单模式或者Casbin未启用，则不初始化Casbin
-	if userMode == enum.UserModeSimple || !cfg.Casbin.Enabled {
-		logger.InfoContext(ctx, "Casbin disabled", "user_mode", userMode)
+	// 如果Casbin未启用，则不初始化Casbin
+	if !cfg.Casbin.Enabled {
+		logger.InfoContext(ctx, "Casbin disabled")
 		return nil, nil
 	}
 
@@ -109,12 +105,9 @@ func NewCasbinService(db *gorm.DB, cfg *configs.Config) (Service, error) {
 	// 使用默认上下文
 	ctx := context.Background()
 
-	// 获取用户模式
-	userMode := enum.GetUserMode(cfg.Admin.UserMode)
-
-	// 如果是简单模式或者Casbin未启用，则不初始化Casbin
-	if userMode == enum.UserModeSimple || !cfg.Casbin.Enabled {
-		logger.InfoContext(ctx, "Casbin service disabled", "user_mode", userMode)
+	// 如果Casbin未启用，则不初始化Casbin
+	if !cfg.Casbin.Enabled {
+		logger.InfoContext(ctx, "Casbin service disabled")
 		return nil, nil
 	}
 

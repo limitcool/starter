@@ -10,7 +10,6 @@ import (
 	"github.com/limitcool/starter/internal/controller"
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"github.com/limitcool/starter/internal/pkg/usermode"
 	"github.com/limitcool/starter/internal/repository"
 	"go.uber.org/fx"
 )
@@ -28,11 +27,10 @@ var Module = fx.Options(
 type RouterParams struct {
 	fx.In
 
-	Config         *configs.Config
-	LC             fx.Lifecycle
-	Enforcer       *casbin.Enforcer `optional:"true"`
-	Logger         *logger.Logger   `optional:"true"`
-	UserModeService *usermode.Service
+	Config   *configs.Config
+	LC       fx.Lifecycle
+	Enforcer *casbin.Enforcer `optional:"true"`
+	Logger   *logger.Logger   `optional:"true"`
 
 	// 路由注册器
 	RouteRegistrar RouteRegistrarInterface
@@ -83,8 +81,8 @@ func NewRouter(params RouterParams) RouterResult {
 	// 使用用户模式服务
 	ctx := context.Background()
 
-	// 在分离模式下添加Casbin中间件（如果启用）
-	if params.UserModeService.IsSeparateMode() && params.Config.Casbin.Enabled && params.Enforcer != nil {
+	// 添加Casbin中间件（如果启用）
+	if params.Config.Casbin.Enabled && params.Enforcer != nil {
 		// 检查PermissionController是否为空
 		if params.PermissionController != nil {
 			r.Use(middleware.CasbinMiddleware(params.PermissionController.GetPermissionService(), params.Config))

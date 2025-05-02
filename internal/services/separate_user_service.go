@@ -93,7 +93,6 @@ func (s *SeparateUserService) Register(ctx context.Context, req v1.UserRegisterR
 		Birthday:   &time.Time{},
 		Address:    req.Address,
 		RegisterIP: registerIP,
-		IsAdmin:    false, // 分离模式下，普通用户注册时IsAdmin始终为false
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
