@@ -20,7 +20,7 @@ type RoleRepo struct {
 // NewRoleRepo 创建角色仓库
 func NewRoleRepo(params RepoParams) *RoleRepo {
 	// 创建通用仓库并设置错误码
-	genericRepo := NewGenericRepo[model.Role](params.DB).SetErrorCode(errorx.ErrorNotFoundCode)
+	genericRepo := NewGenericRepo[model.Role](params.DB).SetErrorCode(errorx.ErrNotFoundCodeValue)
 
 	repo := &RoleRepo{
 		DB:          params.DB,

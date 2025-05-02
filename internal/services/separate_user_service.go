@@ -108,7 +108,7 @@ func (s *SeparateUserService) Login(ctx context.Context, username, password stri
 	user, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		// 判断是否是用户不存在错误
-		if errorx.IsAppErr(err) && err.(*errorx.AppError).GetErrorCode() == errorx.ErrorUserNotFoundCode {
+		if errorx.IsAppErr(err) && err.(*errorx.AppError).GetErrorCode() == errorx.ErrorUserNotFoundCodeValue {
 			// 保持原始错误码，但添加业务上下文
 			return nil, err
 		}
@@ -196,4 +196,74 @@ func (s *SeparateUserService) ChangePassword(ctx context.Context, id int64, oldP
 		return errorx.WrapError(err, fmt.Sprintf("更新用户ID %d 的密码失败", id))
 	}
 	return nil
+}
+
+// CreateUser 创建用户
+func (s *SeparateUserService) CreateUser(ctx context.Context, user *model.User) error {
+	// 检查用户名是否已存在
+	isExist, err := s.userRepo.IsExist(ctx, user.Username)
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("检查用户名 %s 是否存在失败", user.Username))
+	}
+	if isExist {
+		existsErr := errorx.Errorf(errorx.ErrUserExists, "用户名 %s 已存在", user.Username)
+		return errorx.WrapError(existsErr, "")
+	}
+
+	// 哈希密码
+	hashedPassword, err := crypto.HashPassword(user.Password)
+	if err != nil {
+		return errorx.WrapError(err, "密码加密失败")
+	}
+	user.Password = hashedPassword
+
+	// 创建用户
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("创建用户 %s 失败", user.Username))
+	}
+
+	return nil
+}
+
+// DeleteUser 删除用户
+func (s *SeparateUserService) DeleteUser(ctx context.Context, id int64) error {
+	// 检查用户是否存在
+	_, err := s.userRepo.GetByID(ctx, id)
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("获取用户ID %d 失败", id))
+	}
+
+	// 删除用户
+	if err := s.userRepo.Delete(ctx, id); err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("删除用户ID %d 失败", id))
+	}
+
+	return nil
+}
+
+// ListUsers 获取用户列表
+func (s *SeparateUserService) ListUsers(ctx context.Context, page, pageSize int) ([]*model.User, int64, error) {
+	users, total, err := s.userRepo.List(ctx, page, pageSize)
+	if err != nil {
+		return nil, 0, errorx.WrapError(err, "获取用户列表失败")
+	}
+	return users, total, nil
+}
+
+// FindUsersByStatus 根据状态查询用户
+func (s *SeparateUserService) FindUsersByStatus(ctx context.Context, status int, page, pageSize int) ([]*model.User, int64, error) {
+	users, total, err := s.userRepo.FindByStatus(ctx, status, page, pageSize)
+	if err != nil {
+		return nil, 0, errorx.WrapError(err, fmt.Sprintf("根据状态 %d 查询用户失败", status))
+	}
+	return users, total, nil
+}
+
+// GetUserByUsername 根据用户名获取用户
+func (s *SeparateUserService) GetUserByUsername(ctx context.Context, username string) (*model.User, error) {
+	user, err := s.userRepo.GetByUsername(ctx, username)
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("根据用户名 %s 获取用户失败", username))
+	}
+	return user, nil
 }

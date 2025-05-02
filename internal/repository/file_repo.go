@@ -17,7 +17,7 @@ type FileRepo struct {
 // NewFileRepo 创建文件仓库
 func NewFileRepo(db *gorm.DB) *FileRepo {
 	// 创建通用仓库并设置错误码
-	genericRepo := NewGenericRepo[model.File](db).SetErrorCode(errorx.ErrorNotFoundCode)
+	genericRepo := NewGenericRepo[model.File](db).SetErrorCode(errorx.ErrNotFoundCodeValue)
 
 	return &FileRepo{
 		DB:          db,

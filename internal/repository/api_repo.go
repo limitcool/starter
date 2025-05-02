@@ -19,7 +19,7 @@ type APIRepo struct {
 // NewAPIRepo 创建API仓库
 func NewAPIRepo(db *gorm.DB) *APIRepo {
 	// 创建通用仓库并设置错误码
-	genericRepo := NewGenericRepo[model.API](db).SetErrorCode(errorx.ErrorNotFoundCode)
+	genericRepo := NewGenericRepo[model.API](db).SetErrorCode(errorx.ErrNotFoundCodeValue)
 
 	return &APIRepo{
 		DB:          db,
@@ -90,7 +90,7 @@ func (r *APIRepo) GetByMenuID(ctx context.Context, menuID uint) ([]*model.API, e
 // WithTx 使用事务
 func (r *APIRepo) WithTx(tx *gorm.DB) *APIRepo {
 	// 创建通用仓库并设置错误码
-	genericRepo := NewGenericRepo[model.API](tx).SetErrorCode(errorx.ErrorNotFoundCode)
+	genericRepo := NewGenericRepo[model.API](tx).SetErrorCode(errorx.ErrNotFoundCodeValue)
 
 	return &APIRepo{
 		DB:          tx,

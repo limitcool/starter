@@ -128,7 +128,7 @@ func (r *MenuRepo) GetMenusByIDs(ctx context.Context, menuIDs []uint, preloads .
 // NewMenuRepo 创建菜单仓库
 func NewMenuRepo(db *gorm.DB) *MenuRepo {
 	// 创建通用仓库并设置错误码
-	genericRepo := NewGenericRepo[model.Menu](db).SetErrorCode(errorx.ErrorNotFoundCode)
+	genericRepo := NewGenericRepo[model.Menu](db).SetErrorCode(errorx.ErrNotFoundCodeValue)
 
 	return &MenuRepo{
 		DB:          db,

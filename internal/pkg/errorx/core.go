@@ -206,7 +206,7 @@ func GetErrorCodeWithContext(ctx context.Context, err error) int {
 	}
 
 	// 默认返回未知错误码
-	return 500000 // ErrorUnknownCode
+	return ErrUnknownCodeValue
 }
 
 // GetHttpStatus 获取HTTP状态码
@@ -302,65 +302,6 @@ func SetMaxStackFrames(frames int) {
 // GetError 根据错误码获取错误
 // 用法: GetError(10001)
 func GetError(code int) *AppError {
-	// 默认返回未知错误
-	switch code {
-	case SuccessCode:
-		return Success
-	case ErrorUnknownCode:
-		return ErrUnknown
-	case ErrorInvalidParamsCode:
-		return ErrInvalidParams
-	case ErrorInternalCode:
-		return ErrInternal
-	case ErrorUnauthorizedCode:
-		return ErrUnauthorized
-	case ErrorForbiddenCode:
-		return ErrForbidden
-	case ErrorNotFoundCode:
-		return ErrNotFound
-	case ErrorTimeoutCode:
-		return ErrTimeout
-	case ErrorTooManyRequestsCode:
-		return ErrTooManyRequests
-	case ErrorAccessDeniedCode:
-		return ErrAccessDenied
-	case ErrorUserAuthFailedCode:
-		return ErrUserAuthFailed
-	case ErrorCasbinServiceCode:
-		return ErrCasbinService
-	case ErrorFileStorageCode:
-		return ErrFileStorage
-	case ErrorUserNotFoundCode:
-		return ErrUserNotFound
-	case ErrorInvalidCredentialsCode:
-		return ErrInvalidCredentials
-	case ErrorUserDisabledCode:
-		return ErrUserDisabled
-	case ErrorUserExistsCode:
-		return ErrUserExists
-	case ErrorPasswordExpiredCode:
-		return ErrPasswordExpired
-	case ErrorUserPasswordErrorCode:
-		return ErrUserPasswordError
-	case ErrorUserTokenErrorCode:
-		return ErrUserTokenError
-	case ErrorUserNoLoginCode:
-		return ErrUserNoLogin
-	case ErrorDatabaseCode:
-		return ErrDatabase
-	case ErrorDatabaseQueryCode:
-		return ErrDatabaseQuery
-	case ErrorDatabaseInsertCode:
-		return ErrDatabaseInsert
-	case ErrorDatabaseUpdateCode:
-		return ErrDatabaseUpdate
-	case ErrorDatabaseDeleteCode:
-		return ErrDatabaseDelete
-	case ErrorDatabaseConnectionCode:
-		return ErrDatabaseConnection
-	case ErrorDatabaseTransactionCode:
-		return ErrDatabaseTransaction
-	default:
-		return ErrUnknown
-	}
+	// 使用 NewErrorFromCode 函数创建错误实例
+	return NewErrorFromCode(code)
 }

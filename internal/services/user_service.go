@@ -101,7 +101,7 @@ func (s *UserService) Login(ctx context.Context, username, password string, ip s
 	user, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		// 判断是否是用户不存在错误
-		if errorx.IsAppErr(err) && err.(*errorx.AppError).GetErrorCode() == errorx.ErrorUserNotFoundCode {
+		if errorx.IsAppErr(err) && err.(*errorx.AppError).GetErrorCode() == errorx.ErrorUserNotFoundCodeValue {
 			// 保持原始错误码，但添加业务上下文
 			return nil, err
 		}

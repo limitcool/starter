@@ -22,7 +22,7 @@ type UserRepo struct {
 // NewUserRepo 创建用户仓库
 func NewUserRepo(params RepoParams) *UserRepo {
 	// 创建通用仓库并设置错误码
-	genericRepo := NewGenericRepo[model.User](params.DB).SetErrorCode(errorx.ErrorUserNotFoundCode)
+	genericRepo := NewGenericRepo[model.User](params.DB).SetErrorCode(errorx.ErrorUserNotFoundCodeValue)
 
 	repo := &UserRepo{
 		DB:          params.DB,
@@ -143,7 +143,7 @@ func (r *UserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID uint) 
 // WithTx 使用事务
 func (r *UserRepo) WithTx(tx *gorm.DB) *UserRepo {
 	// 创建通用仓库并设置错误码
-	genericRepo := NewGenericRepo[model.User](tx).SetErrorCode(errorx.ErrorUserNotFoundCode)
+	genericRepo := NewGenericRepo[model.User](tx).SetErrorCode(errorx.ErrorUserNotFoundCodeValue)
 
 	// 创建新的仓库实例，使用事务
 	return &UserRepo{
@@ -179,4 +179,76 @@ func (r *UserRepo) GetUserRoles(ctx context.Context, userID int64) ([]string, er
 	}
 
 	return roles, nil
+}
+
+// List 获取用户列表
+func (r *UserRepo) List(ctx context.Context, page, pageSize int) ([]*model.User, int64, error) {
+	// 标准化分页参数
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	offset := (page - 1) * pageSize
+
+	var users []*model.User
+	var total int64
+
+	// 获取总数
+	if err := r.DB.WithContext(ctx).Model(&model.User{}).Count(&total).Error; err != nil {
+		return nil, 0, errorx.WrapError(err, "获取用户总数失败")
+	}
+
+	// 获取列表
+	if err := r.DB.WithContext(ctx).Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+		return nil, 0, errorx.WrapError(err, "获取用户列表失败")
+	}
+
+	return users, total, nil
+}
+
+// FindByStatus 根据状态查询用户
+func (r *UserRepo) FindByStatus(ctx context.Context, status int, page, pageSize int) ([]*model.User, int64, error) {
+	// 标准化分页参数
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	offset := (page - 1) * pageSize
+
+	var users []*model.User
+	var total int64
+
+	// 根据状态构建查询条件
+	query := r.DB.WithContext(ctx).Model(&model.User{})
+
+	// 根据状态值设置查询条件
+	if status == model.UserStatusActive {
+		query = query.Where("enabled = ?", true)
+	} else if status == model.UserStatusDisabled {
+		query = query.Where("enabled = ?", false)
+	}
+
+	// 获取总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, errorx.WrapError(err, fmt.Sprintf("获取状态为 %d 的用户总数失败", status))
+	}
+
+	// 获取列表
+	if err := query.Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+		return nil, 0, errorx.WrapError(err, fmt.Sprintf("获取状态为 %d 的用户列表失败", status))
+	}
+
+	return users, total, nil
 }

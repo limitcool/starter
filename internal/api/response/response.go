@@ -101,7 +101,7 @@ func Error(c *gin.Context, err error, msg ...string) {
 		// 如果不是 AppError类型，使用默认值
 		message = err.Error()
 		httpStatus = http.StatusInternalServerError
-		errorCode = errorx.ErrorUnknownCode
+		errorCode = errorx.ErrUnknownCodeValue
 	}
 
 	// 允许调用方覆盖原始错误消息

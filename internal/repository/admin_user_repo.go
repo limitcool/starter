@@ -20,7 +20,7 @@ type AdminUserRepo struct {
 // NewAdminUserRepo 创建管理员用户仓库
 func NewAdminUserRepo(params RepoParams) *AdminUserRepo {
 	// 创建通用仓库并设置错误码
-	genericRepo := NewGenericRepo[model.AdminUser](params.DB).SetErrorCode(errorx.ErrorUserNotFoundCode)
+	genericRepo := NewGenericRepo[model.AdminUser](params.DB).SetErrorCode(errorx.ErrorUserNotFoundCodeValue)
 
 	repo := &AdminUserRepo{
 		DB:          params.DB,

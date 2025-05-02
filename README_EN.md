@@ -344,8 +344,7 @@ Example language file content:
    ```
 
 3. **Adding new error code translations**:
-   - Define errors in `tools/errorgen/error_codes.md`
-   - Run the error code generator: `go run tools/errorgen/main.go tools/errorgen/error_codes.md internal/pkg/errorx/code_gen.go`
+   - Define errors in `internal/pkg/errorx/codes.go`
    - Add corresponding translations in language files (`locales/en-US.json` and `locales/zh-CN.json`)
 
 4. **Adding support for a new language**:

@@ -77,7 +77,7 @@ func (ctrl *UserController) UserLogin(ctx *gin.Context) {
 			errCode := appErr.GetErrorCode()
 
 			// 如果是用户不存在或密码错误，记录为警告
-			if errCode == errorx.ErrorUserNotFoundCode || errCode == errorx.ErrorUserPasswordErrorCode {
+			if errCode == errorx.ErrorUserNotFoundCodeValue || errCode == errorx.ErrorUserPasswordErrorCodeValue {
 				logger.WarnContext(reqCtx, "UserLogin 登录失败",
 					"error", err,
 					"username", req.Username,

@@ -65,7 +65,7 @@ type OperationLogRepo struct {
 // NewOperationLogRepo 创建操作日志仓库
 func NewOperationLogRepo(db *gorm.DB) *OperationLogRepo {
 	// 创建通用仓库并设置错误码
-	genericRepo := NewGenericRepo[model.OperationLog](db).SetErrorCode(errorx.ErrorNotFoundCode)
+	genericRepo := NewGenericRepo[model.OperationLog](db).SetErrorCode(errorx.ErrNotFoundCodeValue)
 
 	return &OperationLogRepo{
 		DB:          db,

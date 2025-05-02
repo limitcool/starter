@@ -16,6 +16,13 @@ type UserServiceInterface interface {
 	Login(ctx context.Context, username, password string, ip string) (*v1.LoginResponse, error)
 	UpdateUser(ctx context.Context, id uint, data map[string]any) error
 	ChangePassword(ctx context.Context, id int64, oldPassword, newPassword string) error
+
+	// 为V1版本控制器添加的方法
+	CreateUser(ctx context.Context, user *model.User) error
+	DeleteUser(ctx context.Context, id int64) error
+	ListUsers(ctx context.Context, page, pageSize int) ([]*model.User, int64, error)
+	FindUsersByStatus(ctx context.Context, status int, page, pageSize int) ([]*model.User, int64, error)
+	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
 }
 
 // AdminUserServiceInterface 管理员用户服务接口

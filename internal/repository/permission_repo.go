@@ -18,7 +18,7 @@ type PermissionRepo struct {
 // NewPermissionRepo 创建权限仓库
 func NewPermissionRepo(db *gorm.DB) *PermissionRepo {
 	// 创建通用仓库并设置错误码
-	genericRepo := NewGenericRepo[model.Permission](db).SetErrorCode(errorx.ErrorNotFoundCode)
+	genericRepo := NewGenericRepo[model.Permission](db).SetErrorCode(errorx.ErrNotFoundCodeValue)
 
 	return &PermissionRepo{
 		DB:          db,

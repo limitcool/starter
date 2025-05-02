@@ -48,6 +48,9 @@ type RouterParams struct {
 
 	// 仓库
 	UserRepo *repository.UserRepo `optional:"true"`
+
+	// 额外参数，用于传递特定路由需要的参数
+	ExtraParams interface{} `optional:"true"`
 }
 
 // RouterResult 路由结果

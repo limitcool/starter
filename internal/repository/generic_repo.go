@@ -47,7 +47,7 @@ func NewGenericRepo[T Entity](db *gorm.DB) Repository[T] {
 	return &GenericRepo[T]{
 		DB:        db,
 		TableName: tableName,
-		ErrorCode: errorx.ErrorNotFoundCode, // 默认错误码
+		ErrorCode: errorx.ErrNotFoundCodeValue, // 默认错误码
 	}
 }
 
