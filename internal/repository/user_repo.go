@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/limitcool/starter/internal/model"
@@ -51,7 +50,7 @@ func NewUserRepo(params RepoParams) *UserRepo {
 // GetByID 根据ID获取用户
 func (r *UserRepo) GetByID(ctx context.Context, id int64) (*model.User, error) {
 	// 使用仓库接口
-	user, err := r.GenericRepo.GetByID(ctx, id)
+	user, err := r.GenericRepo.Get(ctx, id, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +61,12 @@ func (r *UserRepo) GetByID(ctx context.Context, id int64) (*model.User, error) {
 
 // GetByUsername 根据用户名获取用户
 func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*model.User, error) {
-	// 使用仓库接口的高级查询
-	user, err := r.GenericRepo.FindByField(ctx, "username", username)
+	// 使用仓库接口的查询
+	opts := &QueryOptions{
+		Condition: "username = ?",
+		Args:      []any{username},
+	}
+	user, err := r.GenericRepo.Get(ctx, nil, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -98,8 +101,14 @@ func (r *UserRepo) Delete(ctx context.Context, id int64) error {
 
 // IsExist 判断用户是否存在
 func (r *UserRepo) IsExist(ctx context.Context, username string) (bool, error) {
-	var count int64
-	err := r.DB.WithContext(ctx).Model(&model.User{}).Where("username = ?", username).Count(&count).Error
+	// 使用泛型仓库的查询选项
+	opts := &QueryOptions{
+		Condition: "username = ?",
+		Args:      []any{username},
+	}
+
+	// 使用泛型仓库的Count方法
+	count, err := r.GenericRepo.Count(ctx, opts)
 	if err != nil {
 		return false, errorx.WrapError(err, fmt.Sprintf("检查用户是否存在失败: username=%s", username))
 	}
@@ -108,36 +117,23 @@ func (r *UserRepo) IsExist(ctx context.Context, username string) (bool, error) {
 
 // UpdateAvatar 更新用户头像
 func (r *UserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID uint) error {
-	// 开始事务
-	tx := r.DB.WithContext(ctx).Begin()
-	defer func() {
-		if rec := recover(); rec != nil {
-			tx.Rollback()
+	// 使用泛型仓库的事务支持
+	return r.GenericRepo.Transaction(ctx, func(tx *gorm.DB) error {
+		// 创建事务中的仓库
+		txRepo := r.GenericRepo.WithTx(tx)
+
+		// 查找用户
+		user, err := txRepo.GetByID(ctx, userID)
+		if err != nil {
+			return errorx.WrapError(err, fmt.Sprintf("查询用户失败: id=%d", userID))
 		}
-	}()
 
-	// 查找用户
-	user := model.User{}
-	if err := tx.WithContext(ctx).First(&user, userID).Error; err != nil {
-		tx.Rollback()
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			notFoundErr := errorx.Errorf(errorx.ErrUserNotFound, "用户ID %d 不存在", userID)
-			return errorx.WrapError(notFoundErr, "")
-		}
-		return errorx.WrapError(err, fmt.Sprintf("查询用户失败: id=%d", userID))
-	}
+		// 更新用户头像
+		user.AvatarFileID = fileID
 
-	// 更新用户头像
-	user.AvatarFileID = fileID
-	if err := tx.WithContext(ctx).Save(&user).Error; err != nil {
-		tx.Rollback()
-		return errorx.WrapError(err, fmt.Sprintf("更新用户头像失败: id=%d, fileID=%d", userID, fileID))
-	}
-
-	if err := tx.WithContext(ctx).Commit().Error; err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("提交事务失败: 更新用户头像, userID=%d, fileID=%d", userID, fileID))
-	}
-	return nil
+		// 保存用户
+		return txRepo.Update(ctx, user)
+	})
 }
 
 // WithTx 使用事务
@@ -154,21 +150,19 @@ func (r *UserRepo) WithTx(tx *gorm.DB) *UserRepo {
 
 // GetUserRoles 获取用户角色
 func (r *UserRepo) GetUserRoles(ctx context.Context, userID int64) ([]string, error) {
-	// 从数据库查询角色
-	var roles []string
-	user := &model.User{}
+	// 使用泛型仓库的Get方法，并预加载Roles关联
+	opts := &QueryOptions{
+		Preloads: []string{"Roles"},
+	}
 
 	// 查询用户及其角色
-	err := r.DB.WithContext(ctx).Preload("Roles").First(user, userID).Error
+	user, err := r.GenericRepo.Get(ctx, userID, opts)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			notFoundErr := errorx.Errorf(errorx.ErrUserNotFound, "用户ID %d 不存在", userID)
-			return nil, errorx.WrapError(notFoundErr, "")
-		}
 		return nil, errorx.WrapError(err, fmt.Sprintf("查询用户角色失败: id=%d", userID))
 	}
 
 	// 提取角色编码
+	var roles []string
 	for _, role := range user.Roles {
 		roles = append(roles, role.Code)
 	}
@@ -194,22 +188,19 @@ func (r *UserRepo) List(ctx context.Context, page, pageSize int) ([]*model.User,
 		pageSize = 100
 	}
 
-	offset := (page - 1) * pageSize
-
-	var users []*model.User
-	var total int64
-
-	// 获取总数
-	if err := r.DB.WithContext(ctx).Model(&model.User{}).Count(&total).Error; err != nil {
-		return nil, 0, errorx.WrapError(err, "获取用户总数失败")
-	}
-
-	// 获取列表
-	if err := r.DB.WithContext(ctx).Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+	// 使用泛型仓库的GetPage方法
+	users, total, err := r.GenericRepo.GetPage(ctx, page, pageSize, "")
+	if err != nil {
 		return nil, 0, errorx.WrapError(err, "获取用户列表失败")
 	}
 
-	return users, total, nil
+	// 转换为指针切片
+	userPtrs := make([]*model.User, len(users))
+	for i := range users {
+		userPtrs[i] = &users[i]
+	}
+
+	return userPtrs, total, nil
 }
 
 // FindByStatus 根据状态查询用户
@@ -225,30 +216,29 @@ func (r *UserRepo) FindByStatus(ctx context.Context, status int, page, pageSize 
 		pageSize = 100
 	}
 
-	offset := (page - 1) * pageSize
-
-	var users []*model.User
-	var total int64
-
-	// 根据状态构建查询条件
-	query := r.DB.WithContext(ctx).Model(&model.User{})
-
 	// 根据状态值设置查询条件
+	var condition string
+	var args []any
+
 	if status == model.UserStatusActive {
-		query = query.Where("enabled = ?", true)
+		condition = "enabled = ?"
+		args = []any{true}
 	} else if status == model.UserStatusDisabled {
-		query = query.Where("enabled = ?", false)
+		condition = "enabled = ?"
+		args = []any{false}
 	}
 
-	// 获取总数
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, errorx.WrapError(err, fmt.Sprintf("获取状态为 %d 的用户总数失败", status))
-	}
-
-	// 获取列表
-	if err := query.Offset(offset).Limit(pageSize).Find(&users).Error; err != nil {
+	// 使用泛型仓库的GetPage方法
+	users, total, err := r.GenericRepo.GetPage(ctx, page, pageSize, condition, args...)
+	if err != nil {
 		return nil, 0, errorx.WrapError(err, fmt.Sprintf("获取状态为 %d 的用户列表失败", status))
 	}
 
-	return users, total, nil
+	// 转换为指针切片
+	userPtrs := make([]*model.User, len(users))
+	for i := range users {
+		userPtrs[i] = &users[i]
+	}
+
+	return userPtrs, total, nil
 }

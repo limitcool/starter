@@ -7,8 +7,31 @@ import (
 	"go.uber.org/fx"
 )
 
-// 注意: Module 变量已经移动到 service_order.go 文件中
-// 请使用 ServiceOrderGroup 替代 Module
+// Module 服务模块
+var Module = fx.Options(
+	// 第一组：基础服务
+	fx.Provide(
+		NewAuthService,
+		NewMenuAPIService,
+		NewOperationLogService,
+		NewFileService,
+		NewAPIService,
+		NewAdminService,
+	),
+
+	// 第二组：用户和角色服务
+	fx.Provide(
+		NewUserService,
+		NewAdminUserService,
+		NewRoleService,
+	),
+
+	// 第三组：菜单服务（依赖角色服务）
+	fx.Provide(NewMenuService),
+
+	// 第四组：权限服务（依赖菜单服务）
+	fx.Provide(NewPermissionService),
+)
 
 // ServiceParams 服务参数
 type ServiceParams struct {

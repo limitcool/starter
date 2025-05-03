@@ -60,11 +60,17 @@ func (r *RoleRepo) GetByCode(ctx context.Context, code string) (*model.Role, err
 
 // GetAll 获取所有角色
 func (r *RoleRepo) GetAll(ctx context.Context) ([]model.Role, error) {
-	var roles []model.Role
-	err := r.DB.WithContext(ctx).Order("sort").Find(&roles).Error
+	// 使用泛型仓库的List方法，按照sort字段排序
+	opts := &QueryOptions{
+		Condition: "1=1 ORDER BY sort",
+	}
+
+	// 获取所有角色（不分页，传入一个很大的页大小）
+	roles, err := r.GenericRepo.List(ctx, 1, 1000, opts)
 	if err != nil {
 		return nil, errorx.WrapError(err, "查询所有角色失败")
 	}
+
 	return roles, nil
 }
 
@@ -88,8 +94,16 @@ func (r *RoleRepo) Delete(ctx context.Context, id uint) error {
 
 // IsAssignedToUser 检查角色是否已分配给用户
 func (r *RoleRepo) IsAssignedToUser(ctx context.Context, id uint) (bool, error) {
-	var count int64
-	err := r.DB.WithContext(ctx).Model(&model.UserRole{}).Where("role_id = ?", id).Count(&count).Error
+	// 创建UserRole的泛型仓库
+	userRoleRepo := NewGenericRepo[model.UserRole](r.DB)
+
+	// 使用泛型仓库的Count方法
+	opts := &QueryOptions{
+		Condition: "role_id = ?",
+		Args:      []any{id},
+	}
+
+	count, err := userRoleRepo.Count(ctx, opts)
 	if err != nil {
 		return false, errorx.WrapError(err, fmt.Sprintf("检查角色是否已分配给用户失败: roleID=%d", id))
 	}
@@ -98,6 +112,7 @@ func (r *RoleRepo) IsAssignedToUser(ctx context.Context, id uint) (bool, error) 
 
 // DeleteRoleMenus 删除角色的菜单关联
 func (r *RoleRepo) DeleteRoleMenus(ctx context.Context, roleID uint) error {
+	// 直接使用GORM删除
 	err := r.DB.WithContext(ctx).Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error
 	if err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("删除角色的菜单关联失败: roleID=%d", roleID))
@@ -143,52 +158,61 @@ func (r *RoleRepo) GetRoleIDsByUserID(ctx context.Context, userID uint) ([]uint,
 
 // AssignRolesToUser 为用户分配角色
 func (r *RoleRepo) AssignRolesToUser(ctx context.Context, userID int64, roleIDs []uint) error {
-	// 开始事务
-	tx := r.DB.WithContext(ctx).Begin()
-	defer func() {
-		if rec := recover(); rec != nil {
-			tx.Rollback()
+	// 使用泛型仓库的事务支持
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		// 删除原有的用户角色关联
+		if err := tx.WithContext(ctx).Where("user_id = ?", userID).Delete(&model.UserRole{}).Error; err != nil {
+			return errorx.WrapError(err, fmt.Sprintf("删除原有的用户角色关联失败: userID=%d", userID))
 		}
-	}()
 
-	// 删除原有的用户角色关联
-	if err := tx.WithContext(ctx).Where("user_id = ?", userID).Delete(&model.UserRole{}).Error; err != nil {
-		tx.Rollback()
-		return errorx.WrapError(err, fmt.Sprintf("删除原有的用户角色关联失败: userID=%d", userID))
-	}
+		// 添加新的用户角色关联
+		if len(roleIDs) > 0 {
+			var userRoles []model.UserRole
+			for _, roleID := range roleIDs {
+				userRoles = append(userRoles, model.UserRole{
+					UserID: userID,
+					RoleID: roleID,
+				})
+			}
 
-	// 添加新的用户角色关联
-	if len(roleIDs) > 0 {
-		var userRoles []model.UserRole
-		for _, roleID := range roleIDs {
-			userRoles = append(userRoles, model.UserRole{
-				UserID: userID,
-				RoleID: roleID,
-			})
+			// 创建UserRole的泛型仓库
+			userRoleRepo := NewGenericRepo[model.UserRole](tx)
+
+			// 批量创建用户角色关联
+			for i := range userRoles {
+				if err := userRoleRepo.Create(ctx, &userRoles[i]); err != nil {
+					return errorx.WrapError(err, fmt.Sprintf("创建用户角色关联失败: userID=%d, roleIDs=%v", userID, roleIDs))
+				}
+			}
 		}
-		if err := tx.WithContext(ctx).Create(&userRoles).Error; err != nil {
-			tx.Rollback()
-			return errorx.WrapError(err, fmt.Sprintf("创建用户角色关联失败: userID=%d, roleIDs=%v", userID, roleIDs))
-		}
-	}
 
-	if err := tx.WithContext(ctx).Commit().Error; err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("提交事务失败: 为用户分配角色, userID=%d, roleIDs=%v", userID, roleIDs))
-	}
-	return nil
+		return nil
+	})
 }
 
 // BatchCreateRoleMenus 批量创建角色菜单关联
 func (r *RoleRepo) BatchCreateRoleMenus(ctx context.Context, roleMenus []model.RoleMenu) error {
-	err := r.DB.WithContext(ctx).Create(&roleMenus).Error
-	if err != nil {
-		return errorx.WrapError(err, "批量创建角色菜单关联失败")
-	}
-	return nil
+	// 创建RoleMenu的泛型仓库
+	roleMenuRepo := NewGenericRepo[model.RoleMenu](r.DB)
+
+	// 使用事务批量创建
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		txRepo := roleMenuRepo.WithTx(tx)
+
+		// 逐个创建角色菜单关联
+		for i := range roleMenus {
+			if err := txRepo.Create(ctx, &roleMenus[i]); err != nil {
+				return errorx.WrapError(err, "批量创建角色菜单关联失败")
+			}
+		}
+
+		return nil
+	})
 }
 
 // DeleteUserRolesByUserID 删除用户的角色关联
 func (r *RoleRepo) DeleteUserRolesByUserID(ctx context.Context, userID int64) error {
+	// 直接使用GORM删除
 	err := r.DB.WithContext(ctx).Where("user_id = ?", userID).Delete(&model.UserRole{}).Error
 	if err != nil {
 		return errorx.WrapError(err, fmt.Sprintf("删除用户的角色关联失败: userID=%d", userID))
@@ -198,39 +222,36 @@ func (r *RoleRepo) DeleteUserRolesByUserID(ctx context.Context, userID int64) er
 
 // AssignMenusToRole 为角色分配菜单
 func (r *RoleRepo) AssignMenusToRole(ctx context.Context, roleID uint, menuIDs []uint) error {
-	// 开始事务
-	tx := r.DB.WithContext(ctx).Begin()
-	defer func() {
-		if rec := recover(); rec != nil {
-			tx.Rollback()
+	// 使用泛型仓库的事务支持
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		// 删除原有的角色菜单关联
+		if err := tx.WithContext(ctx).Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error; err != nil {
+			return errorx.WrapError(err, fmt.Sprintf("删除原有的角色菜单关联失败: roleID=%d", roleID))
 		}
-	}()
 
-	// 删除原有的角色菜单关联
-	if err := tx.WithContext(ctx).Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error; err != nil {
-		tx.Rollback()
-		return errorx.WrapError(err, fmt.Sprintf("删除原有的角色菜单关联失败: roleID=%d", roleID))
-	}
+		// 添加新的角色菜单关联
+		if len(menuIDs) > 0 {
+			var roleMenus []model.RoleMenu
+			for _, menuID := range menuIDs {
+				roleMenus = append(roleMenus, model.RoleMenu{
+					RoleID: roleID,
+					MenuID: menuID,
+				})
+			}
 
-	// 添加新的角色菜单关联
-	if len(menuIDs) > 0 {
-		var roleMenus []model.RoleMenu
-		for _, menuID := range menuIDs {
-			roleMenus = append(roleMenus, model.RoleMenu{
-				RoleID: roleID,
-				MenuID: menuID,
-			})
+			// 创建RoleMenu的泛型仓库
+			roleMenuRepo := NewGenericRepo[model.RoleMenu](tx)
+
+			// 逐个创建角色菜单关联
+			for i := range roleMenus {
+				if err := roleMenuRepo.Create(ctx, &roleMenus[i]); err != nil {
+					return errorx.WrapError(err, fmt.Sprintf("创建角色菜单关联失败: roleID=%d, menuIDs=%v", roleID, menuIDs))
+				}
+			}
 		}
-		if err := tx.WithContext(ctx).Create(&roleMenus).Error; err != nil {
-			tx.Rollback()
-			return errorx.WrapError(err, fmt.Sprintf("创建角色菜单关联失败: roleID=%d, menuIDs=%v", roleID, menuIDs))
-		}
-	}
 
-	if err := tx.WithContext(ctx).Commit().Error; err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("提交事务失败: 为角色分配菜单, roleID=%d, menuIDs=%v", roleID, menuIDs))
-	}
-	return nil
+		return nil
+	})
 }
 
 // GetRoleCodesByUserID 获取用户角色编码列表

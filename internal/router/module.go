@@ -16,9 +16,6 @@ import (
 
 // Module 路由模块
 var Module = fx.Options(
-	// 提供路由注册器
-	fx.Provide(ProvideRouteRegistrar),
-
 	// 提供路由
 	fx.Provide(NewRouter),
 )
@@ -50,7 +47,7 @@ type RouterParams struct {
 	UserRepo *repository.UserRepo `optional:"true"`
 
 	// 额外参数，用于传递特定路由需要的参数
-	ExtraParams interface{} `optional:"true"`
+	ExtraParams any `optional:"true"`
 }
 
 // RouterResult 路由结果
