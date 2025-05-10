@@ -29,6 +29,7 @@ type QueryOptions struct {
 // Repository 数据库操作接口
 // 提供基本的CRUD操作
 type Repository[T Entity] interface {
+	// 基础方法
 	// Create 创建实体
 	Create(ctx context.Context, entity *T) error
 
@@ -57,6 +58,22 @@ type Repository[T Entity] interface {
 
 	// WithTx 使用事务
 	WithTx(tx *gorm.DB) Repository[T]
+
+	// 便捷方法
+	// GetByID 根据ID获取实体
+	GetByID(ctx context.Context, id any) (*T, error)
+
+	// FindByField 根据字段查询实体
+	FindByField(ctx context.Context, field string, value any) (*T, error)
+
+	// UpdateFields 更新实体字段
+	UpdateFields(ctx context.Context, id any, fields map[string]any) error
+
+	// GetPage 分页查询
+	GetPage(ctx context.Context, page, pageSize int, condition string, args ...any) ([]T, int64, error)
+
+	// BatchDelete 批量删除实体
+	BatchDelete(ctx context.Context, ids []any) error
 }
 
 // GenericRepo 通用仓库实现
@@ -204,4 +221,53 @@ func (r *GenericRepo[T]) WithTx(tx *gorm.DB) Repository[T] {
 func (r *GenericRepo[T]) SetErrorCode(code int) *GenericRepo[T] {
 	r.ErrorCode = code
 	return r
+}
+
+// UpdateFields 更新实体字段
+func (r *GenericRepo[T]) UpdateFields(ctx context.Context, id any, fields map[string]any) error {
+	var entity T
+	return r.DB.WithContext(ctx).Model(&entity).Where("id = ?", id).Updates(fields).Error
+}
+
+// FindByField 根据字段查询实体
+func (r *GenericRepo[T]) FindByField(ctx context.Context, field string, value any) (*T, error) {
+	opts := &QueryOptions{
+		Condition: field + " = ?",
+		Args:      []any{value},
+	}
+	return r.Get(ctx, nil, opts)
+}
+
+// GetByID 根据ID获取实体（便捷方法）
+func (r *GenericRepo[T]) GetByID(ctx context.Context, id any) (*T, error) {
+	return r.Get(ctx, id, nil)
+}
+
+// GetPage 分页查询（便捷方法）
+func (r *GenericRepo[T]) GetPage(ctx context.Context, page, pageSize int, condition string, args ...any) ([]T, int64, error) {
+	// 创建查询选项
+	opts := &QueryOptions{
+		Condition: condition,
+		Args:      args,
+	}
+
+	// 获取列表
+	entities, err := r.List(ctx, page, pageSize, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 获取总数
+	total, err := r.Count(ctx, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return entities, total, nil
+}
+
+// BatchDelete 批量删除实体
+func (r *GenericRepo[T]) BatchDelete(ctx context.Context, ids []any) error {
+	var entity T
+	return r.DB.WithContext(ctx).Delete(&entity, ids).Error
 }

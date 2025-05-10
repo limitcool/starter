@@ -34,8 +34,8 @@ func (r *PermissionRepo) GetByID(ctx context.Context, id uint) (*model.Permissio
 
 // GetAll 获取所有权限
 func (r *PermissionRepo) GetAll(ctx context.Context) ([]model.Permission, error) {
-	var permissions []model.Permission
-	err := r.DB.WithContext(ctx).Find(&permissions).Error
+	// 使用泛型仓库的List方法
+	permissions, err := r.GenericRepo.List(ctx, 1, 1000, nil)
 	if err != nil {
 		return nil, errorx.WrapError(err, "查询所有权限失败")
 	}
@@ -62,68 +62,166 @@ func (r *PermissionRepo) Delete(ctx context.Context, id uint) error {
 
 // GetByRoleID 获取角色的权限列表
 func (r *PermissionRepo) GetByRoleID(ctx context.Context, roleID uint) ([]model.Permission, error) {
-	var permissions []model.Permission
+	// 创建RolePermission的泛型仓库
+	rolePermRepo := NewGenericRepo[model.RolePermission](r.DB)
 
-	// 通过关联表查询
-	err := r.DB.WithContext(ctx).Joins("JOIN sys_role_permission ON sys_role_permission.permission_id = sys_permission.id").
-		Where("sys_role_permission.role_id = ?", roleID).
-		Find(&permissions).Error
+	// 使用查询选项
+	rolePermOpts := &QueryOptions{
+		Condition: "role_id = ?",
+		Args:      []any{roleID},
+	}
 
+	// 获取所有关联记录
+	rolePerms, err := rolePermRepo.List(ctx, 1, 1000, rolePermOpts)
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色权限关联失败: roleID=%d", roleID))
+	}
+
+	// 提取权限ID
+	var permissionIDs []uint
+	for _, rolePerm := range rolePerms {
+		permissionIDs = append(permissionIDs, rolePerm.PermissionID)
+	}
+
+	if len(permissionIDs) == 0 {
+		return []model.Permission{}, nil
+	}
+
+	// 使用泛型仓库的List方法
+	opts := &QueryOptions{
+		Condition: "id IN ?",
+		Args:      []any{permissionIDs},
+	}
+
+	permissions, err := r.GenericRepo.List(ctx, 1, 1000, opts)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色权限失败: roleID=%d", roleID))
 	}
+
 	return permissions, nil
 }
 
 // GetByUserID 获取用户的权限列表
 func (r *PermissionRepo) GetByUserID(ctx context.Context, userID uint) ([]model.Permission, error) {
-	var permissions []model.Permission
+	// 创建UserRole的泛型仓库
+	userRoleRepo := NewGenericRepo[model.UserRole](r.DB)
 
-	// 通过用户角色关联查询权限
-	err := r.DB.WithContext(ctx).Joins("JOIN sys_role_permission ON sys_role_permission.permission_id = sys_permission.id").
-		Joins("JOIN sys_user_role ON sys_user_role.role_id = sys_role_permission.role_id").
-		Where("sys_user_role.user_id = ?", userID).
-		Find(&permissions).Error
+	// 使用查询选项
+	userRoleOpts := &QueryOptions{
+		Condition: "user_id = ?",
+		Args:      []any{userID},
+	}
 
-	return permissions, err
+	// 获取所有关联记录
+	userRoles, err := userRoleRepo.List(ctx, 1, 1000, userRoleOpts)
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询用户角色关联失败: userID=%d", userID))
+	}
+
+	// 提取角色ID
+	var roleIDs []uint
+	for _, userRole := range userRoles {
+		roleIDs = append(roleIDs, userRole.RoleID)
+	}
+
+	if len(roleIDs) == 0 {
+		return []model.Permission{}, nil
+	}
+
+	// 创建RolePermission的泛型仓库
+	rolePermRepo := NewGenericRepo[model.RolePermission](r.DB)
+
+	// 使用查询选项
+	rolePermOpts := &QueryOptions{
+		Condition: "role_id IN ?",
+		Args:      []any{roleIDs},
+	}
+
+	// 获取所有关联记录
+	rolePerms, err := rolePermRepo.List(ctx, 1, 1000, rolePermOpts)
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询角色权限关联失败: roleIDs=%v", roleIDs))
+	}
+
+	// 提取权限ID（去重）
+	permMap := make(map[uint]struct{})
+	for _, rolePerm := range rolePerms {
+		permMap[rolePerm.PermissionID] = struct{}{}
+	}
+
+	var permissionIDs []uint
+	for permID := range permMap {
+		permissionIDs = append(permissionIDs, permID)
+	}
+
+	if len(permissionIDs) == 0 {
+		return []model.Permission{}, nil
+	}
+
+	// 使用泛型仓库的List方法
+	opts := &QueryOptions{
+		Condition: "id IN ?",
+		Args:      []any{permissionIDs},
+	}
+
+	permissions, err := r.GenericRepo.List(ctx, 1, 1000, opts)
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询用户权限失败: userID=%d", userID))
+	}
+
+	return permissions, nil
 }
 
 // AssignPermissionToRole 为角色分配权限
 func (r *PermissionRepo) AssignPermissionToRole(ctx context.Context, roleID uint, permissionIDs []uint) error {
-	// 获取角色
-	var role model.Role
-	if err := r.DB.WithContext(ctx).First(&role, roleID).Error; err != nil {
-		return errorx.ErrNotFound.WithError(err)
+	// 创建Role的泛型仓库
+	roleRepo := NewGenericRepo[model.Role](r.DB)
+
+	// 检查角色是否存在
+	_, err := roleRepo.Get(ctx, roleID, nil)
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("查询角色失败: roleID=%d", roleID))
 	}
 
-	// 开始事务
-	tx := r.DB.WithContext(ctx).Begin()
-	defer func() {
-		if rec := recover(); rec != nil {
-			tx.Rollback()
-		}
-	}()
+	// 使用泛型仓库的事务支持
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		// 创建RolePermission的泛型仓库
+		rolePermRepo := NewGenericRepo[model.RolePermission](tx)
 
-	// 删除原有的角色权限关联
-	if err := tx.WithContext(ctx).Where("role_id = ?", roleID).Delete(&model.RolePermission{}).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// 添加新的角色权限关联
-	if len(permissionIDs) > 0 {
-		var rolePermissions []model.RolePermission
-		for _, permID := range permissionIDs {
-			rolePermissions = append(rolePermissions, model.RolePermission{
-				RoleID:       roleID,
-				PermissionID: permID,
-			})
+		// 使用查询选项
+		opts := &QueryOptions{
+			Condition: "role_id = ?",
+			Args:      []any{roleID},
 		}
-		if err := tx.WithContext(ctx).Create(&rolePermissions).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
 
-	return tx.Commit().Error
+		// 获取所有关联记录
+		rolePerms, err := rolePermRepo.List(ctx, 1, 1000, opts)
+		if err != nil {
+			return errorx.WrapError(err, fmt.Sprintf("查询角色权限关联失败: roleID=%d", roleID))
+		}
+
+		// 删除所有关联记录
+		for _, rolePerm := range rolePerms {
+			if err := rolePermRepo.Delete(ctx, rolePerm.ID); err != nil {
+				return errorx.WrapError(err, fmt.Sprintf("删除角色权限关联失败: roleID=%d, permissionID=%d", roleID, rolePerm.PermissionID))
+			}
+		}
+
+		// 添加新的角色权限关联
+		if len(permissionIDs) > 0 {
+
+			// 逐个创建角色权限关联
+			for _, permID := range permissionIDs {
+				rolePermission := model.RolePermission{
+					RoleID:       roleID,
+					PermissionID: permID,
+				}
+				if err := rolePermRepo.Create(ctx, &rolePermission); err != nil {
+					return errorx.WrapError(err, fmt.Sprintf("创建角色权限关联失败: roleID=%d, permissionID=%d", roleID, permID))
+				}
+			}
+		}
+
+		return nil
+	})
 }

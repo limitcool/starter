@@ -48,15 +48,14 @@ func NewAdminUserRepo(params RepoParams) *AdminUserRepo {
 
 // GetByID 根据ID获取管理员用户
 func (r *AdminUserRepo) GetByID(ctx context.Context, id int64) (*model.AdminUser, error) {
-	// 使用仓库接口获取用户
-	user, err := r.GenericRepo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
+	// 使用仓库接口获取用户，并预加载角色
+	opts := &QueryOptions{
+		Preloads: []string{"Roles"},
 	}
 
-	// 获取用户的角色
-	if err := r.DB.WithContext(ctx).Model(user).Association("Roles").Find(&user.Roles); err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("查询管理员用户角色失败: id=%d", id))
+	user, err := r.GenericRepo.Get(ctx, id, opts)
+	if err != nil {
+		return nil, err
 	}
 
 	// 提取角色编码
@@ -69,15 +68,16 @@ func (r *AdminUserRepo) GetByID(ctx context.Context, id int64) (*model.AdminUser
 
 // GetByUsername 根据用户名获取管理员用户
 func (r *AdminUserRepo) GetByUsername(ctx context.Context, username string) (*model.AdminUser, error) {
-	// 使用仓库接口获取用户
-	user, err := r.GenericRepo.FindByField(ctx, "username", username)
-	if err != nil {
-		return nil, err
+	// 使用仓库接口获取用户，并预加载角色
+	opts := &QueryOptions{
+		Condition: "username = ?",
+		Args:      []any{username},
+		Preloads:  []string{"Roles"},
 	}
 
-	// 获取用户的角色
-	if err := r.DB.WithContext(ctx).Model(user).Association("Roles").Find(&user.Roles); err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("查询管理员用户角色失败: username=%s", username))
+	user, err := r.GenericRepo.Get(ctx, nil, opts)
+	if err != nil {
+		return nil, err
 	}
 
 	// 提取角色编码
@@ -148,16 +148,16 @@ func (r *AdminUserRepo) List(ctx context.Context, query *model.AdminUserQuery) (
 		}
 	}
 
-	// 设置默认排序
+	// 添加排序
 	if query.OrderBy == "" {
-		// 在查询前设置默认排序
-		r.DB = r.DB.Order("id DESC")
+		// 设置默认排序
+		condition += " ORDER BY id DESC"
 	} else {
 		direction := "ASC"
 		if query.OrderDesc {
 			direction = "DESC"
 		}
-		r.DB = r.DB.Order(query.OrderBy + " " + direction)
+		condition += " ORDER BY " + query.OrderBy + " " + direction
 	}
 
 	// 使用仓库接口的分页查询
@@ -172,7 +172,10 @@ func (r *AdminUserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID u
 		txRepo := r.GenericRepo.WithTx(tx)
 
 		// 查找用户
-		user, err := txRepo.GetByID(ctx, userID)
+		opts := &QueryOptions{
+			Preloads: []string{"Roles"},
+		}
+		user, err := txRepo.Get(ctx, userID, opts)
 		if err != nil {
 			return err
 		}
@@ -182,5 +185,49 @@ func (r *AdminUserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID u
 
 		// 保存用户
 		return txRepo.Update(ctx, user)
+	})
+}
+
+// AssignRolesToAdminUser 为管理员用户分配角色
+func (r *AdminUserRepo) AssignRolesToAdminUser(ctx context.Context, adminUserID int64, roleIDs []uint) error {
+	// 使用泛型仓库的事务支持
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		// 创建AdminUserRole的泛型仓库
+		adminUserRoleRepo := NewGenericRepo[model.AdminUserRole](tx)
+
+		// 使用查询选项
+		opts := &QueryOptions{
+			Condition: "admin_user_id = ?",
+			Args:      []any{adminUserID},
+		}
+
+		// 获取所有关联记录
+		adminUserRoles, err := adminUserRoleRepo.List(ctx, 1, 1000, opts)
+		if err != nil {
+			return errorx.WrapError(err, fmt.Sprintf("查询管理员用户角色关联失败: adminUserID=%d", adminUserID))
+		}
+
+		// 删除所有关联记录
+		for _, adminUserRole := range adminUserRoles {
+			if err := adminUserRoleRepo.Delete(ctx, adminUserRole.ID); err != nil {
+				return errorx.WrapError(err, fmt.Sprintf("删除管理员用户角色关联失败: adminUserID=%d, roleID=%d", adminUserID, adminUserRole.RoleID))
+			}
+		}
+
+		// 添加新的管理员用户角色关联
+		if len(roleIDs) > 0 {
+			// 批量创建管理员用户角色关联
+			for _, roleID := range roleIDs {
+				adminUserRole := model.AdminUserRole{
+					AdminUserID: adminUserID,
+					RoleID:      roleID,
+				}
+				if err := adminUserRoleRepo.Create(ctx, &adminUserRole); err != nil {
+					return errorx.WrapError(err, fmt.Sprintf("创建管理员用户角色关联失败: adminUserID=%d, roleID=%d", adminUserID, roleID))
+				}
+			}
+		}
+
+		return nil
 	})
 }

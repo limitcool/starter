@@ -49,13 +49,17 @@ func NewRoleRepo(params RepoParams) *RoleRepo {
 // GetByID 根据ID获取角色
 func (r *RoleRepo) GetByID(ctx context.Context, id uint) (*model.Role, error) {
 	// 使用仓库接口
-	return r.GenericRepo.GetByID(ctx, id)
+	return r.GenericRepo.Get(ctx, id, nil)
 }
 
 // GetByCode 根据编码获取角色
 func (r *RoleRepo) GetByCode(ctx context.Context, code string) (*model.Role, error) {
 	// 使用仓库接口的高级查询
-	return r.GenericRepo.FindByField(ctx, "code", code)
+	opts := &QueryOptions{
+		Condition: "code = ?",
+		Args:      []any{code},
+	}
+	return r.GenericRepo.Get(ctx, nil, opts)
 }
 
 // GetAll 获取所有角色
@@ -112,27 +116,53 @@ func (r *RoleRepo) IsAssignedToUser(ctx context.Context, id uint) (bool, error) 
 
 // DeleteRoleMenus 删除角色的菜单关联
 func (r *RoleRepo) DeleteRoleMenus(ctx context.Context, roleID uint) error {
-	// 直接使用GORM删除
-	err := r.DB.WithContext(ctx).Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("删除角色的菜单关联失败: roleID=%d", roleID))
+	// 创建RoleMenu的泛型仓库
+	roleMenuRepo := NewGenericRepo[model.RoleMenu](r.DB)
+
+	// 使用查询选项
+	opts := &QueryOptions{
+		Condition: "role_id = ?",
+		Args:      []any{roleID},
 	}
+
+	// 获取所有关联记录
+	roleMenus, err := roleMenuRepo.List(ctx, 1, 1000, opts)
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("查询角色菜单关联失败: roleID=%d", roleID))
+	}
+
+	// 删除所有关联记录
+	for _, roleMenu := range roleMenus {
+		if err := roleMenuRepo.Delete(ctx, roleMenu.ID); err != nil {
+			return errorx.WrapError(err, fmt.Sprintf("删除角色菜单关联失败: roleID=%d, menuID=%d", roleID, roleMenu.MenuID))
+		}
+	}
+
 	return nil
 }
 
 // GetMenuIDsByRoleID 获取角色菜单ID列表
 // 使用直接查询避免N+1查询问题
 func (r *RoleRepo) GetMenuIDsByRoleID(ctx context.Context, roleID uint) ([]uint, error) {
-	// 直接查询菜单ID，避免中间对象转换
-	var menuIDs []uint
-	err := r.DB.WithContext(ctx).
-		Model(&model.RoleMenu{}).
-		Select("menu_id").
-		Where("role_id = ?", roleID).
-		Pluck("menu_id", &menuIDs).Error
+	// 创建RoleMenu的泛型仓库
+	roleMenuRepo := NewGenericRepo[model.RoleMenu](r.DB)
 
+	// 使用查询选项
+	opts := &QueryOptions{
+		Condition: "role_id = ?",
+		Args:      []any{roleID},
+	}
+
+	// 获取所有关联记录
+	roleMenus, err := roleMenuRepo.List(ctx, 1, 1000, opts)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("获取角色菜单ID列表失败: roleID=%d", roleID))
+	}
+
+	// 提取菜单ID
+	var menuIDs []uint
+	for _, roleMenu := range roleMenus {
+		menuIDs = append(menuIDs, roleMenu.MenuID)
 	}
 
 	return menuIDs, nil
@@ -141,16 +171,25 @@ func (r *RoleRepo) GetMenuIDsByRoleID(ctx context.Context, roleID uint) ([]uint,
 // GetRoleIDsByUserID 获取用户角色ID列表
 // 使用直接查询避免N+1查询问题
 func (r *RoleRepo) GetRoleIDsByUserID(ctx context.Context, userID uint) ([]uint, error) {
-	// 直接查询角色ID，避免中间对象转换
-	var roleIDs []uint
-	err := r.DB.WithContext(ctx).
-		Model(&model.UserRole{}).
-		Select("role_id").
-		Where("user_id = ?", userID).
-		Pluck("role_id", &roleIDs).Error
+	// 创建UserRole的泛型仓库
+	userRoleRepo := NewGenericRepo[model.UserRole](r.DB)
 
+	// 使用查询选项
+	opts := &QueryOptions{
+		Condition: "user_id = ?",
+		Args:      []any{userID},
+	}
+
+	// 获取所有关联记录
+	userRoles, err := userRoleRepo.List(ctx, 1, 1000, opts)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("获取用户角色ID列表失败: userID=%d", userID))
+	}
+
+	// 提取角色ID
+	var roleIDs []uint
+	for _, userRole := range userRoles {
+		roleIDs = append(roleIDs, userRole.RoleID)
 	}
 
 	return roleIDs, nil
@@ -160,28 +199,38 @@ func (r *RoleRepo) GetRoleIDsByUserID(ctx context.Context, userID uint) ([]uint,
 func (r *RoleRepo) AssignRolesToUser(ctx context.Context, userID int64, roleIDs []uint) error {
 	// 使用泛型仓库的事务支持
 	return r.DB.Transaction(func(tx *gorm.DB) error {
-		// 删除原有的用户角色关联
-		if err := tx.WithContext(ctx).Where("user_id = ?", userID).Delete(&model.UserRole{}).Error; err != nil {
-			return errorx.WrapError(err, fmt.Sprintf("删除原有的用户角色关联失败: userID=%d", userID))
+		// 创建UserRole的泛型仓库
+		userRoleRepo := NewGenericRepo[model.UserRole](tx)
+
+		// 使用查询选项
+		opts := &QueryOptions{
+			Condition: "user_id = ?",
+			Args:      []any{userID},
+		}
+
+		// 获取所有关联记录
+		userRoles, err := userRoleRepo.List(ctx, 1, 1000, opts)
+		if err != nil {
+			return errorx.WrapError(err, fmt.Sprintf("查询用户角色关联失败: userID=%d", userID))
+		}
+
+		// 删除所有关联记录
+		for _, userRole := range userRoles {
+			if err := userRoleRepo.Delete(ctx, userRole.ID); err != nil {
+				return errorx.WrapError(err, fmt.Sprintf("删除用户角色关联失败: userID=%d, roleID=%d", userID, userRole.RoleID))
+			}
 		}
 
 		// 添加新的用户角色关联
 		if len(roleIDs) > 0 {
-			var userRoles []model.UserRole
+			// 批量创建用户角色关联
 			for _, roleID := range roleIDs {
-				userRoles = append(userRoles, model.UserRole{
+				userRole := model.UserRole{
 					UserID: userID,
 					RoleID: roleID,
-				})
-			}
-
-			// 创建UserRole的泛型仓库
-			userRoleRepo := NewGenericRepo[model.UserRole](tx)
-
-			// 批量创建用户角色关联
-			for i := range userRoles {
-				if err := userRoleRepo.Create(ctx, &userRoles[i]); err != nil {
-					return errorx.WrapError(err, fmt.Sprintf("创建用户角色关联失败: userID=%d, roleIDs=%v", userID, roleIDs))
+				}
+				if err := userRoleRepo.Create(ctx, &userRole); err != nil {
+					return errorx.WrapError(err, fmt.Sprintf("创建用户角色关联失败: userID=%d, roleID=%d", userID, roleID))
 				}
 			}
 		}
@@ -212,11 +261,28 @@ func (r *RoleRepo) BatchCreateRoleMenus(ctx context.Context, roleMenus []model.R
 
 // DeleteUserRolesByUserID 删除用户的角色关联
 func (r *RoleRepo) DeleteUserRolesByUserID(ctx context.Context, userID int64) error {
-	// 直接使用GORM删除
-	err := r.DB.WithContext(ctx).Where("user_id = ?", userID).Delete(&model.UserRole{}).Error
-	if err != nil {
-		return errorx.WrapError(err, fmt.Sprintf("删除用户的角色关联失败: userID=%d", userID))
+	// 创建UserRole的泛型仓库
+	userRoleRepo := NewGenericRepo[model.UserRole](r.DB)
+
+	// 使用查询选项
+	opts := &QueryOptions{
+		Condition: "user_id = ?",
+		Args:      []any{userID},
 	}
+
+	// 获取所有关联记录
+	userRoles, err := userRoleRepo.List(ctx, 1, 1000, opts)
+	if err != nil {
+		return errorx.WrapError(err, fmt.Sprintf("查询用户角色关联失败: userID=%d", userID))
+	}
+
+	// 删除所有关联记录
+	for _, userRole := range userRoles {
+		if err := userRoleRepo.Delete(ctx, userRole.ID); err != nil {
+			return errorx.WrapError(err, fmt.Sprintf("删除用户角色关联失败: userID=%d, roleID=%d", userID, userRole.RoleID))
+		}
+	}
+
 	return nil
 }
 
@@ -224,28 +290,38 @@ func (r *RoleRepo) DeleteUserRolesByUserID(ctx context.Context, userID int64) er
 func (r *RoleRepo) AssignMenusToRole(ctx context.Context, roleID uint, menuIDs []uint) error {
 	// 使用泛型仓库的事务支持
 	return r.DB.Transaction(func(tx *gorm.DB) error {
-		// 删除原有的角色菜单关联
-		if err := tx.WithContext(ctx).Where("role_id = ?", roleID).Delete(&model.RoleMenu{}).Error; err != nil {
-			return errorx.WrapError(err, fmt.Sprintf("删除原有的角色菜单关联失败: roleID=%d", roleID))
+		// 创建RoleMenu的泛型仓库
+		roleMenuRepo := NewGenericRepo[model.RoleMenu](tx)
+
+		// 使用查询选项
+		opts := &QueryOptions{
+			Condition: "role_id = ?",
+			Args:      []any{roleID},
+		}
+
+		// 获取所有关联记录
+		roleMenus, err := roleMenuRepo.List(ctx, 1, 1000, opts)
+		if err != nil {
+			return errorx.WrapError(err, fmt.Sprintf("查询角色菜单关联失败: roleID=%d", roleID))
+		}
+
+		// 删除所有关联记录
+		for _, roleMenu := range roleMenus {
+			if err := roleMenuRepo.Delete(ctx, roleMenu.ID); err != nil {
+				return errorx.WrapError(err, fmt.Sprintf("删除角色菜单关联失败: roleID=%d, menuID=%d", roleID, roleMenu.MenuID))
+			}
 		}
 
 		// 添加新的角色菜单关联
 		if len(menuIDs) > 0 {
-			var roleMenus []model.RoleMenu
+			// 逐个创建角色菜单关联
 			for _, menuID := range menuIDs {
-				roleMenus = append(roleMenus, model.RoleMenu{
+				roleMenu := model.RoleMenu{
 					RoleID: roleID,
 					MenuID: menuID,
-				})
-			}
-
-			// 创建RoleMenu的泛型仓库
-			roleMenuRepo := NewGenericRepo[model.RoleMenu](tx)
-
-			// 逐个创建角色菜单关联
-			for i := range roleMenus {
-				if err := roleMenuRepo.Create(ctx, &roleMenus[i]); err != nil {
-					return errorx.WrapError(err, fmt.Sprintf("创建角色菜单关联失败: roleID=%d, menuIDs=%v", roleID, menuIDs))
+				}
+				if err := roleMenuRepo.Create(ctx, &roleMenu); err != nil {
+					return errorx.WrapError(err, fmt.Sprintf("创建角色菜单关联失败: roleID=%d, menuID=%d", roleID, menuID))
 				}
 			}
 		}
@@ -257,17 +333,32 @@ func (r *RoleRepo) AssignMenusToRole(ctx context.Context, roleID uint, menuIDs [
 // GetRoleCodesByUserID 获取用户角色编码列表
 // 使用JOIN查询避免N+1查询问题
 func (r *RoleRepo) GetRoleCodesByUserID(ctx context.Context, userID int64) ([]string, error) {
-	// 使用JOIN查询直接获取角色编码
-	var roleCodes []string
-	err := r.DB.WithContext(ctx).
-		Model(&model.Role{}).
-		Select("sys_role.code").
-		Joins("JOIN sys_user_role ON sys_user_role.role_id = sys_role.id").
-		Where("sys_user_role.user_id = ?", userID).
-		Pluck("code", &roleCodes).Error
-
+	// 首先获取用户的角色ID
+	roleIDs, err := r.GetRoleIDsByUserID(ctx, uint(userID))
 	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("获取用户角色编码失败: userID=%d", userID))
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取用户角色ID失败: userID=%d", userID))
+	}
+
+	if len(roleIDs) == 0 {
+		return []string{"user"}, nil // 默认角色
+	}
+
+	// 使用查询选项
+	opts := &QueryOptions{
+		Condition: "id IN ?",
+		Args:      []any{roleIDs},
+	}
+
+	// 获取所有角色
+	roles, err := r.GenericRepo.List(ctx, 1, 1000, opts)
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取用户角色失败: userID=%d", userID))
+	}
+
+	// 提取角色编码
+	var roleCodes []string
+	for _, role := range roles {
+		roleCodes = append(roleCodes, role.Code)
 	}
 
 	// 如果没有角色，返回默认角色
@@ -281,17 +372,47 @@ func (r *RoleRepo) GetRoleCodesByUserID(ctx context.Context, userID int64) ([]st
 // GetRoleCodesByAdminUserID 获取管理员用户角色编码列表
 // 使用JOIN查询避免N+1查询问题
 func (r *RoleRepo) GetRoleCodesByAdminUserID(ctx context.Context, adminUserID int64) ([]string, error) {
-	// 使用JOIN查询直接获取角色编码
-	var roleCodes []string
-	err := r.DB.WithContext(ctx).
-		Model(&model.Role{}).
-		Select("sys_role.code").
-		Joins("JOIN admin_user_role ON admin_user_role.role_id = sys_role.id").
-		Where("admin_user_role.admin_user_id = ?", adminUserID).
-		Pluck("code", &roleCodes).Error
+	// 创建AdminUserRole的泛型仓库
+	adminUserRoleRepo := NewGenericRepo[model.AdminUserRole](r.DB)
 
+	// 使用查询选项
+	adminUserRoleOpts := &QueryOptions{
+		Condition: "admin_user_id = ?",
+		Args:      []any{adminUserID},
+	}
+
+	// 获取所有关联记录
+	adminUserRoles, err := adminUserRoleRepo.List(ctx, 1, 1000, adminUserRoleOpts)
 	if err != nil {
-		return nil, errorx.WrapError(err, fmt.Sprintf("获取管理员用户角色编码失败: adminUserID=%d", adminUserID))
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询管理员用户角色关联失败: adminUserID=%d", adminUserID))
+	}
+
+	// 提取角色ID
+	var roleIDs []uint
+	for _, adminUserRole := range adminUserRoles {
+		roleIDs = append(roleIDs, adminUserRole.RoleID)
+	}
+
+	if len(roleIDs) == 0 {
+		return []string{"admin"}, nil // 默认管理员角色
+	}
+
+	// 使用查询选项
+	roleOpts := &QueryOptions{
+		Condition: "id IN ?",
+		Args:      []any{roleIDs},
+	}
+
+	// 获取所有角色
+	roles, err := r.GenericRepo.List(ctx, 1, 1000, roleOpts)
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("获取管理员用户角色失败: adminUserID=%d", adminUserID))
+	}
+
+	// 提取角色编码
+	var roleCodes []string
+	for _, role := range roles {
+		roleCodes = append(roleCodes, role.Code)
 	}
 
 	// 如果没有角色，返回默认角色
@@ -305,17 +426,48 @@ func (r *RoleRepo) GetRoleCodesByAdminUserID(ctx context.Context, adminUserID in
 // GetRolesByMenuID 获取拥有指定菜单的所有角色
 // 使用JOIN查询避免N+1查询问题
 func (r *RoleRepo) GetRolesByMenuID(ctx context.Context, menuID uint) ([]*model.Role, error) {
-	// 使用JOIN查询直接获取角色
-	var roles []*model.Role
-	err := r.DB.WithContext(ctx).
-		Model(&model.Role{}).
-		Joins("JOIN sys_role_menu ON sys_role_menu.role_id = sys_role.id").
-		Where("sys_role_menu.menu_id = ?", menuID).
-		Find(&roles).Error
+	// 创建RoleMenu的泛型仓库
+	roleMenuRepo := NewGenericRepo[model.RoleMenu](r.DB)
 
+	// 使用查询选项
+	roleMenuOpts := &QueryOptions{
+		Condition: "menu_id = ?",
+		Args:      []any{menuID},
+	}
+
+	// 获取所有关联记录
+	roleMenus, err := roleMenuRepo.List(ctx, 1, 1000, roleMenuOpts)
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询菜单角色关联失败: menuID=%d", menuID))
+	}
+
+	// 提取角色ID
+	var roleIDs []uint
+	for _, roleMenu := range roleMenus {
+		roleIDs = append(roleIDs, roleMenu.RoleID)
+	}
+
+	if len(roleIDs) == 0 {
+		return []*model.Role{}, nil
+	}
+
+	// 使用查询选项
+	opts := &QueryOptions{
+		Condition: "id IN ?",
+		Args:      []any{roleIDs},
+	}
+
+	// 获取所有角色
+	roles, err := r.GenericRepo.List(ctx, 1, 1000, opts)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("查询菜单关联的角色失败: menuID=%d", menuID))
 	}
 
-	return roles, nil
+	// 转换为指针切片
+	rolePtrs := make([]*model.Role, len(roles))
+	for i := range roles {
+		rolePtrs[i] = &roles[i]
+	}
+
+	return rolePtrs, nil
 }

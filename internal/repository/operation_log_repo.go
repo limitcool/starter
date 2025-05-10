@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
-	"github.com/limitcool/starter/internal/pkg/options"
 	"gorm.io/gorm"
 )
 
@@ -190,57 +189,67 @@ func (r *OperationLogRepo) GetLogs(ctx context.Context, query *OperationLogQuery
 	// 标准化分页请求
 	query.Normalize()
 
-	// 构建查询选项
-	var opts []options.Option
+	// 构建查询条件
+	conditions := []string{}
+	args := []any{}
 
-	// 添加分页选项
-	opts = append(opts, options.WithPage(query.Page, query.PageSize))
-
-	// 添加排序选项
-	opts = append(opts, options.WithOrder(query.SortBy, query.GetSortDirection()))
-
-	// 添加条件过滤选项
+	// 添加条件过滤
 	if query.UserType != "" {
-		opts = append(opts, options.WithExactMatch("user_type", query.UserType))
+		conditions = append(conditions, "user_type = ?")
+		args = append(args, query.UserType)
 	}
 
 	if query.Username != "" {
-		opts = append(opts, options.WithLike("username", query.Username))
+		conditions = append(conditions, "username LIKE ?")
+		args = append(args, "%"+query.Username+"%")
 	}
 
 	if query.Module != "" {
-		opts = append(opts, options.WithExactMatch("module", query.Module))
+		conditions = append(conditions, "module = ?")
+		args = append(args, query.Module)
 	}
 
 	if query.Action != "" {
-		opts = append(opts, options.WithExactMatch("action", query.Action))
+		conditions = append(conditions, "action = ?")
+		args = append(args, query.Action)
 	}
 
 	if query.IP != "" {
-		opts = append(opts, options.WithLike("ip", query.IP))
+		conditions = append(conditions, "ip LIKE ?")
+		args = append(args, "%"+query.IP+"%")
 	}
 
-	// 添加时间范围选项
-	if query.StartTime != nil || query.EndTime != nil {
-		opts = append(opts, options.WithTimeRange("operate_at", query.StartTime, query.EndTime))
+	// 添加时间范围
+	if query.StartTime != nil {
+		conditions = append(conditions, "operate_at >= ?")
+		args = append(args, query.StartTime)
 	}
 
-	// 构建查询
-	tx := r.DB.WithContext(ctx).Model(&model.OperationLog{})
-
-	// 获取总数
-	var total int64
-	if err := tx.Count(&total).Error; err != nil {
-		return nil, err
+	if query.EndTime != nil {
+		conditions = append(conditions, "operate_at <= ?")
+		args = append(args, query.EndTime)
 	}
 
-	// 应用所有选项
-	tx = options.Apply(tx, opts...)
+	// 组合条件
+	condition := ""
+	if len(conditions) > 0 {
+		condition = conditions[0]
+		for i := 1; i < len(conditions); i++ {
+			condition += " AND " + conditions[i]
+		}
+	}
 
-	// 执行查询
-	var logs []model.OperationLog
-	if err := tx.Find(&logs).Error; err != nil {
-		return nil, err
+	// 添加排序
+	if query.SortBy != "" {
+		condition += " ORDER BY " + query.SortBy + " " + query.GetSortDirection()
+	} else {
+		condition += " ORDER BY id DESC" // 默认按ID降序排序
+	}
+
+	// 使用泛型仓库的GetPage方法
+	logs, total, err := r.GenericRepo.GetPage(ctx, query.Page, query.PageSize, condition, args...)
+	if err != nil {
+		return nil, errorx.WrapError(err, "查询操作日志失败")
 	}
 
 	// 构建响应

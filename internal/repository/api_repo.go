@@ -53,38 +53,85 @@ func (r *APIRepo) GetByID(ctx context.Context, id uint) (*model.API, error) {
 
 // GetAll 获取所有API
 func (r *APIRepo) GetAll(ctx context.Context) ([]*model.API, error) {
-	var apis []*model.API
-	err := r.DB.WithContext(ctx).Find(&apis).Error
+	// 使用泛型仓库的List方法
+	apis, err := r.GenericRepo.List(ctx, 1, 1000, nil)
 	if err != nil {
 		return nil, errorx.WrapError(err, "查询所有API失败")
 	}
-	return apis, nil
+
+	// 转换为指针切片
+	apiPtrs := make([]*model.API, len(apis))
+	for i := range apis {
+		apiPtrs[i] = &apis[i]
+	}
+
+	return apiPtrs, nil
 }
 
 // GetByPath 根据路径获取API
 func (r *APIRepo) GetByPath(ctx context.Context, path string, method string) (*model.API, error) {
-	// 使用数据库直接查询
-	var api model.API
-	err := r.DB.WithContext(ctx).Where("path = ? AND method = ?", path, method).First(&api).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil // 返回nil表示未找到
+	// 使用泛型仓库的Get方法
+	opts := &QueryOptions{
+		Condition: "path = ? AND method = ?",
+		Args:      []any{path, method},
 	}
+
+	api, err := r.GenericRepo.Get(ctx, nil, opts)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil // 返回nil表示未找到
+		}
 		return nil, errorx.WrapError(err, fmt.Sprintf("查询API失败: path=%s, method=%s", path, method))
 	}
-	return &api, nil
+
+	return api, nil
 }
 
 // GetByMenuID 获取菜单关联的API
 func (r *APIRepo) GetByMenuID(ctx context.Context, menuID uint) ([]*model.API, error) {
-	var apis []*model.API
-	err := r.DB.WithContext(ctx).Joins("JOIN sys_menu_api ON sys_menu_api.api_id = sys_api.id").
-		Where("sys_menu_api.menu_id = ?", menuID).
-		Find(&apis).Error
+	// 创建MenuAPI的泛型仓库
+	menuAPIRepo := NewGenericRepo[model.MenuAPI](r.DB)
+
+	// 使用查询选项
+	menuAPIopts := &QueryOptions{
+		Condition: "menu_id = ?",
+		Args:      []any{menuID},
+	}
+
+	// 获取所有关联记录
+	menuAPIs, err := menuAPIRepo.List(ctx, 1, 1000, menuAPIopts)
+	if err != nil {
+		return nil, errorx.WrapError(err, fmt.Sprintf("查询菜单API关联失败: menuID=%d", menuID))
+	}
+
+	// 提取API ID
+	var apiIDs []uint
+	for _, menuAPI := range menuAPIs {
+		apiIDs = append(apiIDs, menuAPI.APIID)
+	}
+
+	if len(apiIDs) == 0 {
+		return []*model.API{}, nil
+	}
+
+	// 使用泛型仓库的List方法
+	opts := &QueryOptions{
+		Condition: "id IN ?",
+		Args:      []any{apiIDs},
+	}
+
+	apis, err := r.GenericRepo.List(ctx, 1, 1000, opts)
 	if err != nil {
 		return nil, errorx.WrapError(err, fmt.Sprintf("查询菜单关联API失败: menuID=%d", menuID))
 	}
-	return apis, nil
+
+	// 转换为指针切片
+	apiPtrs := make([]*model.API, len(apis))
+	for i := range apis {
+		apiPtrs[i] = &apis[i]
+	}
+
+	return apiPtrs, nil
 }
 
 // WithTx 使用事务

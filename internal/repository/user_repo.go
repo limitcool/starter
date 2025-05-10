@@ -123,7 +123,10 @@ func (r *UserRepo) UpdateAvatar(ctx context.Context, userID int64, fileID uint) 
 		txRepo := r.GenericRepo.WithTx(tx)
 
 		// 查找用户
-		user, err := txRepo.GetByID(ctx, userID)
+		opts := &QueryOptions{
+			Preloads: []string{"Roles"},
+		}
+		user, err := txRepo.Get(ctx, userID, opts)
 		if err != nil {
 			return errorx.WrapError(err, fmt.Sprintf("查询用户失败: id=%d", userID))
 		}
