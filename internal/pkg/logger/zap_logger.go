@@ -31,63 +31,6 @@ func NewZapLogger(w io.Writer, level Level, format Format) *ZapLogger {
 
 // NewZapLoggerWithConfig 使用配置创建一个新的 ZapLogger
 func NewZapLoggerWithConfig(config logconfig.LogConfig) *ZapLogger {
-	// 创建输出器
-	var writers []io.Writer
-
-	// 检查是否需要输出到控制台
-	hasConsole := false
-	for _, output := range config.Output {
-		if output == "console" {
-			hasConsole = true
-			break
-		}
-	}
-
-	// 如果配置为空，默认输出到控制台
-	if len(config.Output) == 0 {
-		hasConsole = true
-	}
-
-	// 添加控制台输出
-	if hasConsole {
-		writers = append(writers, os.Stdout)
-	}
-
-	// 检查是否需要输出到文件
-	var fileOutput io.Writer
-	for _, output := range config.Output {
-		if output == "file" {
-			fileOutput = &lumberjack.Logger{
-				Filename:   config.FileConfig.Path,
-				MaxSize:    config.FileConfig.MaxSize,
-				MaxAge:     config.FileConfig.MaxAge,
-				MaxBackups: config.FileConfig.MaxBackups,
-				Compress:   config.FileConfig.Compress,
-			}
-			writers = append(writers, fileOutput)
-			break
-		}
-	}
-
-	// 如果没有输出，默认输出到控制台
-	if len(writers) == 0 {
-		writers = append(writers, os.Stdout)
-	}
-
-	// 创建多输出器
-	var writer io.Writer
-	if len(writers) == 1 {
-		writer = writers[0]
-	} else {
-		writer = io.MultiWriter(writers...)
-	}
-
-	// 设置日志格式
-	format := TextFormat
-	if config.Format == logconfig.LogFormatJSON {
-		format = JSONFormat
-	}
-
 	// 解析日志级别
 	level := parseLogLevel(config.Level)
 
@@ -100,8 +43,119 @@ func NewZapLoggerWithConfig(config logconfig.LogConfig) *ZapLogger {
 		stackLevel = zapcore.FatalLevel + 1
 	}
 
-	// 创建日志器
-	return newZapLoggerWithConfig(writer, level, format, &stackLevel, config)
+	// 创建多个core，支持不同格式的输出
+	var cores []zapcore.Core
+
+	// 检查是否需要输出到控制台
+	hasConsole := false
+	hasFile := false
+	for _, output := range config.Output {
+		if output == "console" {
+			hasConsole = true
+		} else if output == "file" {
+			hasFile = true
+		}
+	}
+
+	// 如果配置为空，默认输出到控制台
+	if len(config.Output) == 0 {
+		hasConsole = true
+	}
+
+	// 添加控制台输出 - 使用text格式
+	if hasConsole {
+		consoleCore := createCore(os.Stdout, level, TextFormat, config)
+		cores = append(cores, consoleCore)
+	}
+
+	// 添加文件输出 - 使用JSON格式
+	if hasFile {
+		fileOutput := &lumberjack.Logger{
+			Filename:   config.FileConfig.Path,
+			MaxSize:    config.FileConfig.MaxSize,
+			MaxAge:     config.FileConfig.MaxAge,
+			MaxBackups: config.FileConfig.MaxBackups,
+			Compress:   config.FileConfig.Compress,
+		}
+		fileCore := createCore(fileOutput, level, JSONFormat, config)
+		cores = append(cores, fileCore)
+	}
+
+	// 如果没有输出，默认输出到控制台
+	if len(cores) == 0 {
+		consoleCore := createCore(os.Stdout, level, TextFormat, config)
+		cores = append(cores, consoleCore)
+	}
+
+	// 合并所有core
+	var core zapcore.Core
+	if len(cores) == 1 {
+		core = cores[0]
+	} else {
+		core = zapcore.NewTee(cores...)
+	}
+
+	// 创建 Logger 选项
+	options := []zap.Option{
+		zap.AddCaller(),
+		zap.AddCallerSkip(1),
+	}
+
+	// 添加堆栈跟踪
+	options = append(options, zap.AddStacktrace(stackLevel))
+
+	// 开发模式设置
+	if config.Development {
+		options = append(options, zap.Development())
+	}
+
+	// 创建 Logger
+	structLogger := zap.New(core, options...)
+
+	return &ZapLogger{
+		logger:        structLogger.Sugar(),
+		structLogger:  structLogger,
+		level:         level,
+		format:        TextFormat, // 默认格式设为text
+		style:         config.Style,
+		development:   config.Development,
+		sampling:      config.Sampling,
+		encoderConfig: config.EncoderConfig,
+	}
+}
+
+// createCore 创建一个zapcore.Core
+func createCore(w io.Writer, level Level, format Format, config logconfig.LogConfig) zapcore.Core {
+	// 创建编码器配置
+	encoderConfig := zapcore.EncoderConfig{
+		TimeKey:          config.EncoderConfig.TimeKey,
+		LevelKey:         config.EncoderConfig.LevelKey,
+		NameKey:          config.EncoderConfig.NameKey,
+		CallerKey:        config.EncoderConfig.CallerKey,
+		MessageKey:       config.EncoderConfig.MessageKey,
+		StacktraceKey:    config.EncoderConfig.StacktraceKey,
+		LineEnding:       zapcore.DefaultLineEnding,
+		EncodeLevel:      getZapLevelEncoder(config.EncoderConfig.EncodeLevel),
+		EncodeTime:       getZapTimeEncoder(config.EncoderConfig.EncodeTime),
+		EncodeDuration:   getZapDurationEncoder(config.EncoderConfig.EncodeDuration),
+		EncodeCaller:     getZapCallerEncoder(config.EncoderConfig.EncodeCaller),
+		ConsoleSeparator: " ", // 添加控制台分隔符，让字段之间有空格
+	}
+
+	// 创建编码器
+	var encoder zapcore.Encoder
+	if format == JSONFormat {
+		encoder = zapcore.NewJSONEncoder(encoderConfig)
+	} else {
+		encoder = zapcore.NewConsoleEncoder(encoderConfig)
+	}
+
+	// 创建 Core
+	return zapcore.NewCore(
+		encoder,
+		zapcore.AddSync(w),
+		convertToZapLevel(level),
+	)
 }
 
 // newZapLogger 创建一个新的 ZapLogger
@@ -115,45 +169,8 @@ func newZapLogger(w io.Writer, level Level, format Format, stackLevel *zapcore.L
 		config.Format = logconfig.LogFormatText
 	}
 
-	return newZapLoggerWithConfig(w, level, format, stackLevel, config)
-}
-
-// newZapLoggerWithConfig 使用完整配置创建一个新的 ZapLogger
-func newZapLoggerWithConfig(w io.Writer, level Level, format Format, stackLevel *zapcore.Level, config logconfig.LogConfig) *ZapLogger {
-	// 如果没有指定输出，默认输出到标准输出
-	if w == nil {
-		w = os.Stdout
-	}
-
-	// 创建编码器配置
-	encoderConfig := zapcore.EncoderConfig{
-		TimeKey:        config.EncoderConfig.TimeKey,
-		LevelKey:       config.EncoderConfig.LevelKey,
-		NameKey:        config.EncoderConfig.NameKey,
-		CallerKey:      config.EncoderConfig.CallerKey,
-		MessageKey:     config.EncoderConfig.MessageKey,
-		StacktraceKey:  config.EncoderConfig.StacktraceKey,
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    getZapLevelEncoder(config.EncoderConfig.EncodeLevel),
-		EncodeTime:     getZapTimeEncoder(config.EncoderConfig.EncodeTime),
-		EncodeDuration: getZapDurationEncoder(config.EncoderConfig.EncodeDuration),
-		EncodeCaller:   getZapCallerEncoder(config.EncoderConfig.EncodeCaller),
-	}
-
-	// 创建编码器
-	var encoder zapcore.Encoder
-	if format == JSONFormat {
-		encoder = zapcore.NewJSONEncoder(encoderConfig)
-	} else {
-		encoder = zapcore.NewConsoleEncoder(encoderConfig)
-	}
-
-	// 创建 Core
-	core := zapcore.NewCore(
-		encoder,
-		zapcore.AddSync(w),
-		convertToZapLevel(level),
-	)
+	// 创建core
+	core := createCore(w, level, format, config)
 
 	// 创建 Logger 选项
 	options := []zap.Option{

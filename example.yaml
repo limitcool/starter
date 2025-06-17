@@ -69,3 +69,8 @@ I18n:
     - zh-CN
     - en-US
   ResourcesPath: locales
+
+# 性能分析配置
+Pprof:
+  Enabled: false  # 是否启用pprof，生产环境建议设为false
+  Port: 0         # pprof服务端口，0表示使用主服务端口，也可以设置独立端口如6060

@@ -4,6 +4,7 @@ import (
 	"github.com/limitcool/starter/internal/app"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/spf13/cobra"
+	"go.uber.org/automaxprocs/maxprocs"
 )
 
 // serverCmd 表示server子命令
@@ -26,6 +27,9 @@ func init() {
 
 // runServer 运行HTTP服务器
 func runServer(cmd *cobra.Command, args []string) {
+	// 静默设置 GOMAXPROCS，避免日志输出
+	_, _ = maxprocs.Set(maxprocs.Logger(func(string, ...any) {}))
+
 	// 加载配置
 	cfg := InitConfig(cmd, args)
 

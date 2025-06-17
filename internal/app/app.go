@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,14 +24,15 @@ import (
 
 // App 应用容器
 type App struct {
-	config   *configs.Config
-	db       *gorm.DB
-	redis    *redis.Client
-	cache    cache.Cache
-	storage  *filestore.Storage
-	handlers *Handlers
-	router   *gin.Engine
-	server   *http.Server
+	config      *configs.Config
+	db          *gorm.DB
+	redis       *redis.Client
+	cache       cache.Cache
+	storage     *filestore.Storage
+	handlers    *Handlers
+	router      *gin.Engine
+	server      *http.Server
+	pprofServer *http.Server // pprof服务器
 }
 
 // Handlers 处理器集合
@@ -69,6 +71,10 @@ func New(config *configs.Config) (*App, error) {
 
 	if err := app.initServer(); err != nil {
 		return nil, fmt.Errorf("failed to initialize server: %w", err)
+	}
+
+	if err := app.initPprof(); err != nil {
+		return nil, fmt.Errorf("failed to initialize pprof: %w", err)
 	}
 
 	return app, nil
@@ -203,14 +209,53 @@ func (a *App) initServer() error {
 	return nil
 }
 
+// initPprof 初始化pprof服务器
+func (a *App) initPprof() error {
+	if !a.config.Pprof.Enabled {
+		logger.Info("Pprof disabled")
+		return nil
+	}
+
+	// 如果端口为0，则在主服务器上启用pprof
+	if a.config.Pprof.Port == 0 {
+		logger.Info("Pprof enabled on main server", "path", "/debug/pprof/")
+		return nil
+	}
+
+	// 创建独立的pprof服务器
+	pprofMux := http.NewServeMux()
+	pprofMux.Handle("/debug/pprof/", http.DefaultServeMux)
+
+	a.pprofServer = &http.Server{
+		Addr:    fmt.Sprintf(":%d", a.config.Pprof.Port),
+		Handler: pprofMux,
+	}
+
+	logger.Info("Pprof server initialized successfully", "port", a.config.Pprof.Port)
+	return nil
+}
+
 // Run 运行应用
 func (a *App) Run() error {
+	// 启动pprof服务器（如果配置了独立端口）
+	if a.pprofServer != nil {
+		go func() {
+			logger.Info("Pprof server started", "address", fmt.Sprintf("http://localhost:%d/debug/pprof/", a.config.Pprof.Port))
+			if err := a.pprofServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				logger.Error("Pprof server error", "error", err)
+			}
+		}()
+	}
+
 	// 启动HTTP服务器
 	go func() {
 		logger.Info("==================================================")
 		logger.Info("HTTP服务器已启动",
 			"address", fmt.Sprintf("http://localhost:%d", a.config.App.Port),
 			"mode", a.config.App.Mode)
+		if a.config.Pprof.Enabled && a.config.Pprof.Port == 0 {
+			logger.Info("Pprof enabled", "address", fmt.Sprintf("http://localhost:%d/debug/pprof/", a.config.App.Port))
+		}
 		logger.Info("==================================================")
 
 		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -233,6 +278,15 @@ func (a *App) Run() error {
 func (a *App) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	// 关闭pprof服务器
+	if a.pprofServer != nil {
+		if err := a.pprofServer.Shutdown(ctx); err != nil {
+			logger.Error("Pprof server forced to shutdown", "error", err)
+		} else {
+			logger.Info("Pprof server stopped")
+		}
+	}
 
 	// 关闭HTTP服务器
 	if a.server != nil {

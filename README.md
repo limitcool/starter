@@ -498,6 +498,87 @@ func example() {
 }
 ```
 
+## 性能分析 (Pprof) 支持
+
+项目内置了 Go 官方的 pprof 性能分析工具，可以帮助开发者分析应用的性能瓶颈。
+
+### 配置示例
+
+```yaml
+Pprof:
+  Enabled: true    # 是否启用pprof
+  Port: 0          # pprof服务端口，0表示使用主服务端口
+```
+
+### 配置说明
+
+- `Enabled`: 是否启用pprof功能，生产环境建议设为false
+- `Port`: pprof服务端口
+  - `0`: 在主HTTP服务器上启用pprof路由 (推荐开发环境)
+  - `6060`: 启动独立的pprof服务器 (推荐生产环境调试)
+
+### 使用方法
+
+#### 1. 主服务器模式 (Port: 0)
+
+当配置 `Port: 0` 时，pprof路由会添加到主HTTP服务器：
+
+```bash
+# 启动应用
+./starter server
+
+# 访问pprof主页
+curl http://localhost:8080/debug/pprof/
+
+# 查看goroutine信息
+curl http://localhost:8080/debug/pprof/goroutine?debug=1
+
+# 获取CPU profile (30秒)
+curl http://localhost:8080/debug/pprof/profile?seconds=30 > cpu.prof
+
+# 查看内存heap信息
+curl http://localhost:8080/debug/pprof/heap?debug=1
+```
+
+#### 2. 独立服务器模式 (Port: 6060)
+
+当配置具体端口时，会启动独立的pprof服务器：
+
+```yaml
+Pprof:
+  Enabled: true
+  Port: 6060
+```
+
+```bash
+# 启动应用
+./starter server
+
+# 访问独立pprof服务器
+curl http://localhost:6060/debug/pprof/
+
+# 使用go tool pprof分析
+go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
+go tool pprof http://localhost:6060/debug/pprof/heap
+```
+
+### 常用pprof端点
+
+- `/debug/pprof/` - pprof主页，显示所有可用的profile
+- `/debug/pprof/goroutine` - 查看所有goroutine的堆栈信息
+- `/debug/pprof/heap` - 查看内存分配信息
+- `/debug/pprof/profile` - CPU性能分析 (默认30秒)
+- `/debug/pprof/block` - 查看阻塞操作的堆栈信息
+- `/debug/pprof/mutex` - 查看互斥锁竞争信息
+- `/debug/pprof/allocs` - 查看内存分配采样信息
+- `/debug/pprof/threadcreate` - 查看线程创建信息
+
+### 安全建议
+
+- **开发环境**: 可以使用主服务器模式 (`Port: 0`)，方便调试
+- **生产环境**: 建议禁用pprof (`Enabled: false`) 或使用独立端口并限制访问
+- **调试生产问题**: 临时启用独立端口模式，调试完成后立即禁用
+
 ## gRPC 支持
 
 项目集成了 gRPC 支持，可与 HTTP 服务并行运行，提供高性能的 RPC 服务。

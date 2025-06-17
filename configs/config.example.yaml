@@ -120,3 +120,8 @@ i18n:
   default_language: "zh-CN"
   languages: ["zh-CN", "en-US"]
   resources_path: "configs/i18n"
+
+# 性能分析配置
+pprof:
+  enabled: false  # 是否启用pprof，生产环境建议设为false
+  port: 0         # pprof服务端口，0表示使用主服务端口，也可以设置独立端口如6060
