@@ -21,7 +21,6 @@ import (
 type FileHandler struct {
 	db      *gorm.DB
 	config  *configs.Config
-	logger  *logger.Logger
 	storage *filestore.Storage
 }
 

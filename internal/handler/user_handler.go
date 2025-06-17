@@ -20,7 +20,6 @@ import (
 type UserHandler struct {
 	db          *gorm.DB
 	config      *configs.Config
-	logger      *logger.Logger
 	authService *AuthService
 }
 

@@ -12,7 +12,6 @@ import (
 type AdminHandler struct {
 	db     *gorm.DB
 	config *configs.Config
-	logger *logger.Logger
 }
 
 // NewAdminHandler 创建管理员处理器

@@ -190,21 +190,3 @@ func (l *CharmLogger) ErrorContext(ctx context.Context, msg string, keysAndValue
 func (l *CharmLogger) FatalContext(ctx context.Context, msg string, keysAndValues ...any) {
 	l.WithContext(ctx).Fatal(msg, keysAndValues...)
 }
-
-// convertFromCharmLevel 将 charmbracelet/log 的日志级别转换为我们的日志级别
-func convertFromCharmLevel(level log.Level) Level {
-	switch level {
-	case log.DebugLevel:
-		return DebugLevel
-	case log.InfoLevel:
-		return InfoLevel
-	case log.WarnLevel:
-		return WarnLevel
-	case log.ErrorLevel:
-		return ErrorLevel
-	case log.FatalLevel:
-		return FatalLevel
-	default:
-		return InfoLevel
-	}
-}
