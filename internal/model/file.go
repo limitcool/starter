@@ -54,8 +54,13 @@ func (File) TableName() string {
 
 // FileRepo 文件仓库
 type FileRepo struct {
-	DB          *gorm.DB
-	GenericRepo *GenericRepo[File]
+	*GenericRepo[File]
+	fileUtil FileURLBuilder // 文件URL构建器接口
+}
+
+// FileURLBuilder 文件URL构建器接口
+type FileURLBuilder interface {
+	BuildFileURL(path string) string
 }
 
 // NewFileRepo 创建文件仓库
@@ -64,52 +69,51 @@ func NewFileRepo(db *gorm.DB) *FileRepo {
 	genericRepo.ErrorCode = errorx.ErrorFileNotFoundCode
 
 	return &FileRepo{
-		DB:          db,
 		GenericRepo: genericRepo,
+		fileUtil:    &defaultFileURLBuilder{}, // 使用默认实现
 	}
 }
 
-// Create 创建文件记录
-func (r *FileRepo) Create(ctx context.Context, file *File) error {
-	return r.GenericRepo.Create(ctx, file)
+// NewFileRepoWithURLBuilder 创建带有自定义URL构建器的文件仓库
+func NewFileRepoWithURLBuilder(db *gorm.DB, urlBuilder FileURLBuilder) *FileRepo {
+	genericRepo := NewGenericRepo[File](db)
+	genericRepo.ErrorCode = errorx.ErrorFileNotFoundCode
+
+	return &FileRepo{
+		GenericRepo: genericRepo,
+		fileUtil:    urlBuilder,
+	}
+}
+
+// defaultFileURLBuilder 默认的文件URL构建器
+type defaultFileURLBuilder struct{}
+
+func (d *defaultFileURLBuilder) BuildFileURL(path string) string {
+	if path == "" {
+		return ""
+	}
+	return "/uploads/" + path
 }
 
 // GetByID 根据ID获取文件
 func (r *FileRepo) GetByID(ctx context.Context, id uint) (*File, error) {
-	file, err := r.GenericRepo.Get(ctx, id, nil)
+	file, err := r.Get(ctx, id, nil)
 	if err != nil {
 		return nil, errorx.WrapError(err, "查询文件失败")
 	}
 
 	// 设置URL字段
 	if file.Path != "" {
-		file.URL = r.buildFileURL(file.Path)
+		file.URL = r.fileUtil.BuildFileURL(file.Path)
 	}
 
 	return file, nil
 }
 
-// buildFileURL 构建文件URL
-func (r *FileRepo) buildFileURL(path string) string {
-	// 这里可以根据实际情况构建URL，例如添加域名前缀等
-	// 简单示例：
-	return "/uploads/" + path
-}
-
-// Update 更新文件记录
-func (r *FileRepo) Update(ctx context.Context, file *File) error {
-	return r.GenericRepo.Update(ctx, file)
-}
-
-// Delete 删除文件记录
-func (r *FileRepo) Delete(ctx context.Context, id uint) error {
-	return r.GenericRepo.Delete(ctx, id)
-}
-
 // UpdateFileUsage 更新文件用途
 func (r *FileRepo) UpdateFileUsage(ctx context.Context, file *File, usage string) error {
 	file.Usage = usage
-	return r.GenericRepo.Update(ctx, file)
+	return r.Update(ctx, file)
 }
 
 // ListByUser 获取用户的文件列表
@@ -119,7 +123,7 @@ func (r *FileRepo) ListByUser(ctx context.Context, userID int64, page, pageSize 
 		Condition: "uploaded_by = ? AND uploaded_by_type = ?",
 		Args:      []any{userID, 2},
 	}
-	files, err := r.GenericRepo.List(ctx, page, pageSize, opts)
+	files, err := r.List(ctx, page, pageSize, opts)
 	if err != nil {
 		return nil, errorx.WrapError(err, "查询用户文件列表失败")
 	}
@@ -127,7 +131,7 @@ func (r *FileRepo) ListByUser(ctx context.Context, userID int64, page, pageSize 
 	// 为所有文件设置URL
 	for i := range files {
 		if files[i].Path != "" {
-			files[i].URL = r.buildFileURL(files[i].Path)
+			files[i].URL = r.fileUtil.BuildFileURL(files[i].Path)
 		}
 	}
 
@@ -136,7 +140,7 @@ func (r *FileRepo) ListByUser(ctx context.Context, userID int64, page, pageSize 
 
 // CountByUser 获取用户的文件总数
 func (r *FileRepo) CountByUser(ctx context.Context, userID int64) (int64, error) {
-	count, err := r.GenericRepo.Count(ctx, &QueryOptions{
+	count, err := r.Count(ctx, &QueryOptions{
 		Condition: "uploaded_by = ? AND uploaded_by_type = ?",
 		Args:      []any{userID, 2},
 	})
@@ -180,7 +184,7 @@ func (r *FileRepo) ListFiles(ctx context.Context, page, pageSize int, fileType, 
 	}
 
 	// 获取文件列表
-	files, err := r.GenericRepo.List(ctx, page, pageSize, opts)
+	files, err := r.List(ctx, page, pageSize, opts)
 	if err != nil {
 		return nil, 0, errorx.WrapError(err, "查询文件列表失败")
 	}
@@ -188,12 +192,12 @@ func (r *FileRepo) ListFiles(ctx context.Context, page, pageSize int, fileType, 
 	// 为所有文件设置URL
 	for i := range files {
 		if files[i].Path != "" {
-			files[i].URL = r.buildFileURL(files[i].Path)
+			files[i].URL = r.fileUtil.BuildFileURL(files[i].Path)
 		}
 	}
 
 	// 获取总数
-	total, err := r.GenericRepo.Count(ctx, opts)
+	total, err := r.Count(ctx, opts)
 	if err != nil {
 		return nil, 0, errorx.WrapError(err, "查询文件总数失败")
 	}

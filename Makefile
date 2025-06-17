@@ -86,7 +86,11 @@ version:
 .PHONY: build-dev
 build-dev:
 	@echo "Building $(APP_NAME) for development..."
-	go build $(BUILDFLAGS) -ldflags="$(LDFLAGS)" -o $(APP_NAME)$(if $(filter windows,$(shell go env GOOS)),.exe,)
+ifeq ($(OS),Windows_NT)
+	go build $(BUILDFLAGS) -ldflags="$(LDFLAGS)" -o $(APP_NAME).exe
+else
+	go build $(BUILDFLAGS) -ldflags="$(LDFLAGS)" -o $(APP_NAME)
+endif
 
 # Docker 相关目标
 .PHONY: docker-build

@@ -42,42 +42,63 @@ type Handlers struct {
 	Admin *handler.AdminHandler
 }
 
+// InitStep 初始化步骤
+type InitStep struct {
+	Name     string
+	Required bool
+	Init     func() error
+}
+
 // New 创建新的应用实例
 func New(config *configs.Config) (*App, error) {
-	app := &App{
-		config: config,
-	}
+	app := &App{config: config}
 
-	// 按顺序初始化各个组件
-	if err := app.initDatabase(); err != nil {
-		return nil, fmt.Errorf("failed to initialize database: %w", err)
-	}
+	// 定义初始化步骤
+	steps := app.getInitSteps()
 
-	if err := app.initRedis(); err != nil {
-		return nil, fmt.Errorf("failed to initialize redis: %w", err)
-	}
+	// 按顺序执行初始化
+	for _, step := range steps {
+		logger.Info("Initializing component", "component", step.Name)
 
-	if err := app.initStorage(); err != nil {
-		return nil, fmt.Errorf("failed to initialize storage: %w", err)
-	}
+		if err := step.Init(); err != nil {
+			logger.Error("Failed to initialize component",
+				"component", step.Name,
+				"required", step.Required,
+				"error", err)
 
-	if err := app.initHandlers(); err != nil {
-		return nil, fmt.Errorf("failed to initialize handlers: %w", err)
-	}
+			if step.Required {
+				return nil, fmt.Errorf("failed to initialize required component %s: %w", step.Name, err)
+			}
 
-	if err := app.initRouter(); err != nil {
-		return nil, fmt.Errorf("failed to initialize router: %w", err)
-	}
+			logger.Warn("Optional component initialization failed, continuing",
+				"component", step.Name)
+			continue
+		}
 
-	if err := app.initServer(); err != nil {
-		return nil, fmt.Errorf("failed to initialize server: %w", err)
-	}
-
-	if err := app.initPprof(); err != nil {
-		return nil, fmt.Errorf("failed to initialize pprof: %w", err)
+		logger.Info("Component initialized successfully", "component", step.Name)
 	}
 
 	return app, nil
+}
+
+// getInitSteps 获取初始化步骤列表
+func (app *App) getInitSteps() []InitStep {
+	steps := []InitStep{
+		// 数据库和Redis根据配置启用，失败时不影响应用启动（内部有禁用检查）
+		{Name: "database", Required: false, Init: app.initDatabase},
+		{Name: "redis", Required: false, Init: app.initRedis},
+
+		// 存储服务是可选的，某些功能可能需要它
+		{Name: "storage", Required: false, Init: app.initStorage},
+
+		// 核心组件，必须成功初始化
+		{Name: "handlers", Required: true, Init: app.initHandlers},
+		{Name: "router", Required: true, Init: app.initRouter},
+		{Name: "server", Required: true, Init: app.initServer},
+		{Name: "pprof", Required: false, Init: app.initPprof},
+	}
+
+	return steps
 }
 
 // initDatabase 初始化数据库连接

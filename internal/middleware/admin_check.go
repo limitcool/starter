@@ -11,29 +11,9 @@ import (
 // AdminCheck 管理员检查中间件 - 基于JWT中的is_admin字段
 func AdminCheck() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 获取请求上下文
-		ctx := c.Request.Context()
-
-		// 从上下文中获取用户ID
-		_, exists := c.Get("user_id")
-		if !exists {
-			logger.WarnContext(ctx, "AdminCheck 未找到用户ID")
-			response.Error(c, errorx.ErrUserNoLogin)
-			c.Abort()
+		if !CheckAdminPermission(c) {
 			return
 		}
-
-		// 检查用户是否为管理员
-		isAdmin, ok := c.Get("is_admin")
-		if !ok || !isAdmin.(bool) {
-			logger.WarnContext(ctx, "AdminCheck 用户不是管理员",
-				"is_admin", isAdmin)
-			response.Error(c, errorx.ErrUserNoLogin.WithMsg("用户无权限"))
-			c.Abort()
-			return
-		}
-
-		// 继续处理请求
 		c.Next()
 	}
 }

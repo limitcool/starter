@@ -19,20 +19,18 @@ import (
 
 // FileHandler 文件处理器
 type FileHandler struct {
-	db      *gorm.DB
-	config  *configs.Config
+	*BaseHandler
 	storage *filestore.Storage
 }
 
 // NewFileHandler 创建文件处理器
 func NewFileHandler(db *gorm.DB, config *configs.Config, storage *filestore.Storage) *FileHandler {
 	handler := &FileHandler{
-		db:      db,
-		config:  config,
-		storage: storage,
+		BaseHandler: NewBaseHandler(db, config),
+		storage:     storage,
 	}
 
-	logger.Info("FileHandler initialized")
+	handler.LogInit("FileHandler")
 	return handler
 }
 
@@ -72,7 +70,7 @@ func (h *FileHandler) GetUploadURL(ctx *gin.Context) {
 
 	// 验证文件类型
 	ext := strings.ToLower(filepath.Ext(req.Filename))
-	if !isAllowedFileType(ext, req.FileType) {
+	if !h.FileUtil.IsAllowedFileType(ext, req.FileType) {
 		logger.WarnContext(reqCtx, "GetUploadURL 不支持的文件类型",
 			"user_id", id,
 			"file_type", req.FileType,
@@ -82,8 +80,8 @@ func (h *FileHandler) GetUploadURL(ctx *gin.Context) {
 	}
 
 	// 生成唯一的文件名和存储路径
-	fileName := generateFileName(req.Filename)
-	storagePath := getStoragePath(req.FileType, fileName, req.IsPublic)
+	fileName := h.FileUtil.GenerateFileName(req.Filename)
+	storagePath := h.FileUtil.GetStoragePath(req.FileType, fileName, req.IsPublic)
 
 	// 生成上传预签名URL
 	uploadURL, err := h.storage.GetUploadPresignedURL(reqCtx, storagePath, req.ContentType, 15) // 15分钟有效期
@@ -97,7 +95,7 @@ func (h *FileHandler) GetUploadURL(ctx *gin.Context) {
 	}
 
 	// 创建文件记录（状态为pending，等待上传完成确认）
-	fileRepo := model.NewFileRepo(h.db)
+	fileRepo := model.NewFileRepo(h.DB)
 	fileModel := &model.File{
 		Name:           fileName,
 		OriginalName:   req.Filename,
@@ -172,7 +170,7 @@ func (h *FileHandler) ConfirmUpload(ctx *gin.Context) {
 	}
 
 	// 创建文件仓库
-	fileRepo := model.NewFileRepo(h.db)
+	fileRepo := model.NewFileRepo(h.DB)
 
 	// 获取文件记录
 	fileModel, err := fileRepo.GetByID(reqCtx, req.FileID)
@@ -312,7 +310,7 @@ func (h *FileHandler) UploadFile(ctx *gin.Context) {
 	size := fileHeader.Size
 
 	// 验证文件类型
-	if !isAllowedFileType(ext, fileType) {
+	if !h.FileUtil.IsAllowedFileType(ext, fileType) {
 		logger.WarnContext(reqCtx, "UploadFile 文件类型不允许",
 			"user_id", id,
 			"file_type", fileType,
@@ -322,7 +320,7 @@ func (h *FileHandler) UploadFile(ctx *gin.Context) {
 	}
 
 	// 验证文件大小
-	if !isAllowedFileSize(size, fileType) {
+	if !h.FileUtil.IsAllowedFileSize(size, fileType) {
 		logger.WarnContext(reqCtx, "UploadFile 文件大小超出限制",
 			"user_id", id,
 			"file_type", fileType,
@@ -343,8 +341,8 @@ func (h *FileHandler) UploadFile(ctx *gin.Context) {
 	defer file.Close()
 
 	// 生成文件名和存储路径
-	fileName := generateFileName(originalName)
-	storagePath := getStoragePath(fileType, fileName, isPublic)
+	fileName := h.FileUtil.GenerateFileName(originalName)
+	storagePath := h.FileUtil.GetStoragePath(fileType, fileName, isPublic)
 
 	// 上传文件到存储（权限由路径和Bucket Policy控制）
 	err = h.storage.Put(reqCtx, storagePath, file)
@@ -369,7 +367,7 @@ func (h *FileHandler) UploadFile(ctx *gin.Context) {
 	}
 
 	// 创建文件仓库
-	fileRepo := model.NewFileRepo(h.db)
+	fileRepo := model.NewFileRepo(h.DB)
 
 	// 记录到数据库
 	fileModel := &model.File{
@@ -434,7 +432,7 @@ func (h *FileHandler) GetFileURL(ctx *gin.Context) {
 	}
 
 	// 创建文件仓库
-	fileRepo := model.NewFileRepo(h.db)
+	fileRepo := model.NewFileRepo(h.DB)
 
 	// 获取文件信息
 	fileModel, err := fileRepo.GetByID(reqCtx, fileID)
@@ -569,7 +567,7 @@ func (h *FileHandler) ServePublicFile(ctx *gin.Context) {
 	}
 
 	// 创建文件仓库
-	fileRepo := model.NewFileRepo(h.db)
+	fileRepo := model.NewFileRepo(h.DB)
 
 	// 获取文件信息
 	fileModel, err := fileRepo.GetByID(reqCtx, fileID)
@@ -632,7 +630,7 @@ func (h *FileHandler) ListFiles(ctx *gin.Context) {
 	}
 
 	// 创建文件仓库
-	fileRepo := model.NewFileRepo(h.db)
+	fileRepo := model.NewFileRepo(h.DB)
 
 	// 获取文件列表
 	files, total, err := fileRepo.ListFiles(reqCtx, page, pageSize, fileType, usage, nil)
@@ -678,7 +676,7 @@ func (h *FileHandler) GetFileInfo(ctx *gin.Context) {
 	}
 
 	// 创建文件仓库
-	fileRepo := model.NewFileRepo(h.db)
+	fileRepo := model.NewFileRepo(h.DB)
 
 	// 获取文件信息
 	fileModel, err := fileRepo.GetByID(reqCtx, fileID)
@@ -695,93 +693,4 @@ func (h *FileHandler) GetFileInfo(ctx *gin.Context) {
 		"file_name", fileModel.Name)
 
 	response.Success(ctx, fileModel)
-}
-
-// 生成文件名
-func generateFileName(originalName string) string {
-	ext := filepath.Ext(originalName)
-	name := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), randString(8), ext)
-	return name
-}
-
-// 随机字符串
-func randString(n int) string {
-	const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letters[int(time.Now().UnixNano()%int64(len(letters)))]
-		time.Sleep(1 * time.Nanosecond) // 确保随机性
-	}
-	return string(b)
-}
-
-// 获取存储路径
-func getStoragePath(fileType, fileName string, isPublic bool) string {
-	// 根据是否公开选择根目录
-	var rootDir string
-	if isPublic {
-		rootDir = "public"
-	} else {
-		rootDir = "private"
-	}
-
-	// 根据文件类型选择子目录
-	var typeDir string
-	switch fileType {
-	case model.FileTypeImage:
-		typeDir = "images"
-	case model.FileTypeDocument:
-		typeDir = "documents"
-	case model.FileTypeVideo:
-		typeDir = "videos"
-	case model.FileTypeAudio:
-		typeDir = "audios"
-	default:
-		typeDir = "others"
-	}
-
-	// 添加日期子目录
-	dateDir := time.Now().Format("2006/01/02")
-
-	// 构建完整路径：public/documents/2025/06/17/filename.txt
-	path := filepath.Join(rootDir, typeDir, dateDir, fileName)
-	// 确保Windows上也使用正斜杠
-	return strings.ReplaceAll(path, "\\", "/")
-}
-
-// 检查文件类型是否允许
-func isAllowedFileType(ext string, fileType string) bool {
-	ext = strings.ToLower(ext)
-	switch fileType {
-	case model.FileTypeImage:
-		return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp" || ext == ".svg"
-	case model.FileTypeDocument:
-		return ext == ".pdf" || ext == ".doc" || ext == ".docx" || ext == ".xls" || ext == ".xlsx" || ext == ".txt"
-	case model.FileTypeVideo:
-		return ext == ".mp4" || ext == ".avi" || ext == ".mov" || ext == ".wmv" || ext == ".flv"
-	case model.FileTypeAudio:
-		return ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac"
-	default:
-		return true
-	}
-}
-
-// 检查文件大小是否允许
-func isAllowedFileSize(size int64, fileType string) bool {
-	const (
-		MB = 1024 * 1024
-	)
-
-	switch fileType {
-	case model.FileTypeImage:
-		return size <= 10*MB // 图片最大10MB
-	case model.FileTypeDocument:
-		return size <= 50*MB // 文档最大50MB
-	case model.FileTypeVideo:
-		return size <= 500*MB // 视频最大500MB
-	case model.FileTypeAudio:
-		return size <= 100*MB // 音频最大100MB
-	default:
-		return size <= 50*MB // 其他类型最大50MB
-	}
 }

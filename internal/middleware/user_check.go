@@ -11,19 +11,9 @@ import (
 // UserCheck 用户检查中间件 - 确保用户已登录
 func UserCheck() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 获取请求上下文
-		ctx := c.Request.Context()
-
-		// 从上下文获取用户ID
-		_, exists := c.Get("user_id")
-		if !exists {
-			logger.WarnContext(ctx, "用户ID不存在")
-			response.Error(c, errorx.ErrUserNoLogin)
-			c.Abort()
+		if !CheckUserLogin(c) {
 			return
 		}
-
-		// 继续处理请求
 		c.Next()
 	}
 }
@@ -62,28 +52,21 @@ func UserCheckWithDB(userRepo *model.UserRepo) gin.HandlerFunc {
 // 适用于只允许普通用户访问的接口
 func RegularUserCheck() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 获取请求上下文
-		ctx := c.Request.Context()
-
-		// 从上下文获取用户ID
-		_, exists := c.Get("user_id")
-		if !exists {
-			logger.WarnContext(ctx, "用户ID不存在")
-			response.Error(c, errorx.ErrUserNoLogin)
-			c.Abort()
+		// 先检查是否已登录
+		if !CheckUserLogin(c) {
 			return
 		}
 
 		// 检查用户是否为管理员
 		isAdmin, ok := c.Get("is_admin")
 		if ok && isAdmin.(bool) {
+			ctx := c.Request.Context()
 			logger.WarnContext(ctx, "管理员不能访问普通用户接口")
 			response.Error(c, errorx.ErrAccessDenied)
 			c.Abort()
 			return
 		}
 
-		// 继续处理请求
 		c.Next()
 	}
 }

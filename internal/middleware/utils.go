@@ -4,6 +4,9 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/limitcool/starter/internal/api/response"
+	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
 // GetUserID 从上下文中获取用户ID
@@ -63,4 +66,40 @@ func GetUserIDString(c *gin.Context) string {
 		return ""
 	}
 	return fmt.Sprintf("%d", id)
+}
+
+// CheckUserLogin 检查用户是否已登录，如果未登录则返回错误响应
+func CheckUserLogin(c *gin.Context) bool {
+	ctx := c.Request.Context()
+
+	_, exists := c.Get("user_id")
+	if !exists {
+		logger.WarnContext(ctx, "用户ID不存在")
+		response.Error(c, errorx.ErrUserNoLogin)
+		c.Abort()
+		return false
+	}
+
+	return true
+}
+
+// CheckAdminPermission 检查用户是否为管理员，如果不是则返回错误响应
+func CheckAdminPermission(c *gin.Context) bool {
+	ctx := c.Request.Context()
+
+	// 先检查是否已登录
+	if !CheckUserLogin(c) {
+		return false
+	}
+
+	// 检查用户是否为管理员
+	isAdmin, ok := c.Get("is_admin")
+	if !ok || !isAdmin.(bool) {
+		logger.WarnContext(ctx, "用户不是管理员", "is_admin", isAdmin)
+		response.Error(c, errorx.ErrUserNoLogin.WithMsg("用户无权限"))
+		c.Abort()
+		return false
+	}
+
+	return true
 }

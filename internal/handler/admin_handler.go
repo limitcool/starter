@@ -10,18 +10,16 @@ import (
 
 // AdminHandler 管理员处理器
 type AdminHandler struct {
-	db     *gorm.DB
-	config *configs.Config
+	*BaseHandler
 }
 
 // NewAdminHandler 创建管理员处理器
 func NewAdminHandler(db *gorm.DB, config *configs.Config) *AdminHandler {
 	handler := &AdminHandler{
-		db:     db,
-		config: config,
+		BaseHandler: NewBaseHandler(db, config),
 	}
 
-	logger.Info("AdminHandler initialized")
+	handler.LogInit("AdminHandler")
 	return handler
 }
 
@@ -35,9 +33,9 @@ func (h *AdminHandler) GetSystemSettings(ctx *gin.Context) {
 
 	// 返回系统设置
 	settings := map[string]any{
-		"app_name":    h.config.App.Name,
+		"app_name":    h.Config.App.Name,
 		"app_version": "1.0.0",
-		"app_mode":    h.config.App.Mode,
+		"app_mode":    h.Config.App.Mode,
 	}
 
 	response.Success(ctx, settings)

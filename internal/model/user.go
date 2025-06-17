@@ -47,8 +47,7 @@ func NewUser() *User {
 
 // UserRepo 用户仓库
 type UserRepo struct {
-	DB          *gorm.DB
-	GenericRepo *GenericRepo[User]
+	*GenericRepo[User]
 }
 
 // NewUserRepo 创建用户仓库
@@ -57,14 +56,13 @@ func NewUserRepo(db *gorm.DB) *UserRepo {
 	genericRepo.ErrorCode = errorx.ErrorUserNotFoundCode
 
 	return &UserRepo{
-		DB:          db,
 		GenericRepo: genericRepo,
 	}
 }
 
 // GetByID 根据ID获取用户
 func (r *UserRepo) GetByID(ctx context.Context, id int64) (*User, error) {
-	user, err := r.GenericRepo.Get(ctx, id, nil)
+	user, err := r.Get(ctx, id, nil)
 	if err != nil {
 		return nil, errorx.WrapError(err, "查询用户失败")
 	}
@@ -81,7 +79,7 @@ func (r *UserRepo) GetUserWithAvatar(ctx context.Context, id int64) (*User, erro
 
 	// 如果用户有头像，再预加载头像
 	if user.AvatarFileID > 0 {
-		user, err = r.GenericRepo.Get(ctx, id, &QueryOptions{
+		user, err = r.Get(ctx, id, &QueryOptions{
 			Preloads: []string{"AvatarFile"},
 		})
 		if err != nil {
@@ -99,7 +97,7 @@ func (r *UserRepo) GetUserWithAvatar(ctx context.Context, id int64) (*User, erro
 
 // GetByUsername 根据用户名获取用户
 func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*User, error) {
-	user, err := r.GenericRepo.Get(ctx, nil, &QueryOptions{
+	user, err := r.Get(ctx, nil, &QueryOptions{
 		Condition: "username = ?",
 		Args:      []any{username},
 	})
@@ -112,24 +110,9 @@ func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*User, e
 	return user, nil
 }
 
-// Create 创建用户
-func (r *UserRepo) Create(ctx context.Context, user *User) error {
-	return r.GenericRepo.Create(ctx, user)
-}
-
-// Update 更新用户
-func (r *UserRepo) Update(ctx context.Context, user *User) error {
-	return r.GenericRepo.Update(ctx, user)
-}
-
-// Delete 删除用户
-func (r *UserRepo) Delete(ctx context.Context, id int64) error {
-	return r.GenericRepo.Delete(ctx, id)
-}
-
 // IsExist 检查用户是否存在
 func (r *UserRepo) IsExist(ctx context.Context, username string) (bool, error) {
-	count, err := r.GenericRepo.Count(ctx, &QueryOptions{
+	count, err := r.Count(ctx, &QueryOptions{
 		Condition: "username = ?",
 		Args:      []any{username},
 	})
@@ -157,7 +140,7 @@ func (r *UserRepo) ListUsers(ctx context.Context, page, pageSize int, keyword st
 	}
 
 	// 获取用户列表
-	users, err := r.GenericRepo.List(ctx, page, pageSize, opts)
+	users, err := r.List(ctx, page, pageSize, opts)
 	if err != nil {
 		return nil, 0, errorx.WrapError(err, "查询用户列表失败")
 	}
@@ -170,7 +153,7 @@ func (r *UserRepo) ListUsers(ctx context.Context, page, pageSize int, keyword st
 	}
 
 	// 获取总数
-	total, err := r.GenericRepo.Count(ctx, opts)
+	total, err := r.Count(ctx, opts)
 	if err != nil {
 		return nil, 0, errorx.WrapError(err, "查询用户总数失败")
 	}

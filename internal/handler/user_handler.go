@@ -12,26 +12,23 @@ import (
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"github.com/spf13/cast"
 	"gorm.io/gorm"
 )
 
 // UserHandler 用户处理器
 type UserHandler struct {
-	db          *gorm.DB
-	config      *configs.Config
+	*BaseHandler
 	authService *AuthService
 }
 
 // NewUserHandler 创建用户处理器
 func NewUserHandler(db *gorm.DB, config *configs.Config) *UserHandler {
 	handler := &UserHandler{
-		db:          db,
-		config:      config,
+		BaseHandler: NewBaseHandler(db, config),
 		authService: NewAuthService(config),
 	}
 
-	logger.Info("UserHandler initialized")
+	handler.LogInit("UserHandler")
 	return handler
 }
 
@@ -64,7 +61,7 @@ func (h *UserHandler) UserLogin(ctx *gin.Context) {
 		"ip", clientIP)
 
 	// 创建用户仓库
-	userRepo := model.NewUserRepo(h.db)
+	userRepo := model.NewUserRepo(h.DB)
 
 	// 查询用户
 	user, err := userRepo.GetByUsername(reqCtx, req.Username)
@@ -161,7 +158,7 @@ func (h *UserHandler) UserRegister(ctx *gin.Context) {
 	clientIP := ctx.ClientIP()
 
 	// 创建用户仓库
-	userRepo := model.NewUserRepo(h.db)
+	userRepo := model.NewUserRepo(h.DB)
 
 	// 检查用户名是否已存在
 	exists, err := userRepo.IsExist(reqCtx, req.Username)
@@ -230,97 +227,64 @@ func (h *UserHandler) UserRegister(ctx *gin.Context) {
 
 // UserInfo 获取用户信息
 func (h *UserHandler) UserInfo(ctx *gin.Context) {
-	// 获取请求上下文
-	reqCtx := ctx.Request.Context()
-
-	// 从上下文中获取用户ID
-	userID, exists := ctx.Get("user_id")
-	if !exists {
-		logger.WarnContext(reqCtx, "UserInfo user ID not found")
-		response.Error(ctx, errorx.ErrUserNoLogin)
+	// 获取用户ID
+	id, ok := h.Helper.GetUserID(ctx)
+	if !ok {
 		return
 	}
 
-	// 转换用户ID
-	id := cast.ToInt64(userID)
-
 	// 创建用户仓库
-	userRepo := model.NewUserRepo(h.db)
+	userRepo := model.NewUserRepo(h.DB)
 
 	// 查询用户信息
-	user, err := userRepo.GetByID(reqCtx, id)
+	user, err := userRepo.GetByID(ctx.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, errorx.ErrUserNotFound) {
-			logger.WarnContext(reqCtx, "UserInfo user not found",
-				"user_id", id)
-			response.Error(ctx, err)
+			h.Helper.HandleNotFoundError(ctx, err, "UserInfo", "user_id", id)
 			return
 		}
-		logger.ErrorContext(reqCtx, "UserInfo failed to query user",
-			"error", err,
-			"user_id", id)
-		response.Error(ctx, err)
+		h.Helper.HandleDBError(ctx, err, "UserInfo", "user_id", id)
 		return
 	}
 
 	// 隐藏敏感信息
 	user.Password = ""
 
-	logger.InfoContext(reqCtx, "UserInfo get user info successful",
-		"user_id", id)
-
+	h.Helper.LogSuccess(ctx, "UserInfo", "user_id", id)
 	response.Success(ctx, user)
 }
 
 // UserChangePassword 修改密码
 func (h *UserHandler) UserChangePassword(ctx *gin.Context) {
-	// 获取请求上下文
-	reqCtx := ctx.Request.Context()
-
-	// 从上下文中获取用户ID
-	userID, exists := ctx.Get("user_id")
-	if !exists {
-		logger.WarnContext(reqCtx, "UserChangePassword user ID not found")
-		response.Error(ctx, errorx.ErrUserNoLogin)
+	// 获取用户ID
+	id, ok := h.Helper.GetUserID(ctx)
+	if !ok {
 		return
 	}
 
-	// 转换用户ID
-	id := cast.ToInt64(userID)
-
 	// 绑定请求参数
 	var req v1.UserChangePasswordRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logger.WarnContext(reqCtx, "UserChangePassword request validation failed",
-			"error", err,
-			"user_id", id)
-		response.Error(ctx, errorx.ErrInvalidParams.WithError(err))
+	if !h.Helper.BindJSON(ctx, &req, "UserChangePassword") {
 		return
 	}
 
 	// 创建用户仓库
-	userRepo := model.NewUserRepo(h.db)
+	userRepo := model.NewUserRepo(h.DB)
 
 	// 查询用户
-	user, err := userRepo.GetByID(reqCtx, id)
+	user, err := userRepo.GetByID(ctx.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, errorx.ErrUserNotFound) {
-			logger.WarnContext(reqCtx, "UserChangePassword user not found",
-				"user_id", id)
-			response.Error(ctx, err)
+			h.Helper.HandleNotFoundError(ctx, err, "UserChangePassword", "user_id", id)
 			return
 		}
-		logger.ErrorContext(reqCtx, "UserChangePassword failed to query user",
-			"error", err,
-			"user_id", id)
-		response.Error(ctx, err)
+		h.Helper.HandleDBError(ctx, err, "UserChangePassword", "user_id", id)
 		return
 	}
 
 	// 验证旧密码
 	if !crypto.CheckPassword(user.Password, req.OldPassword) {
-		logger.WarnContext(reqCtx, "UserChangePassword old password incorrect",
-			"user_id", id)
+		h.Helper.LogWarning(ctx, "UserChangePassword old password incorrect", "user_id", id)
 		response.Error(ctx, errorx.Errorf(errorx.ErrUserPasswordError, "旧密码错误"))
 		return
 	}
@@ -328,24 +292,17 @@ func (h *UserHandler) UserChangePassword(ctx *gin.Context) {
 	// 哈希新密码
 	hashedPassword, err := crypto.HashPassword(req.NewPassword)
 	if err != nil {
-		logger.ErrorContext(reqCtx, "UserChangePassword failed to hash password",
-			"error", err,
-			"user_id", id)
+		h.Helper.LogError(ctx, "UserChangePassword failed to hash password", "error", err, "user_id", id)
 		response.Error(ctx, errorx.WrapError(err, "密码加密失败"))
 		return
 	}
 
 	// 更新密码
-	if err := userRepo.UpdatePassword(reqCtx, id, hashedPassword); err != nil {
-		logger.ErrorContext(reqCtx, "UserChangePassword failed to update password",
-			"error", err,
-			"user_id", id)
-		response.Error(ctx, err)
+	if err := userRepo.UpdatePassword(ctx.Request.Context(), id, hashedPassword); err != nil {
+		h.Helper.HandleDBError(ctx, err, "UserChangePassword", "user_id", id)
 		return
 	}
 
-	logger.InfoContext(reqCtx, "UserChangePassword password change successful",
-		"user_id", id)
-
+	h.Helper.LogSuccess(ctx, "UserChangePassword", "user_id", id)
 	response.SuccessNoData(ctx, "密码修改成功")
 }
