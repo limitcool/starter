@@ -9,7 +9,7 @@
 
 ## 特征
 - 提供基于 Gin 框架的轻量级项目模板
-- 使用 Uber fx 框架进行依赖注入，实现清晰的代码结构
+- 使用简洁的手动依赖注入，实现清晰的代码结构
 - 采用简化的架构设计，专注于快速开发
 - 集成 GORM 进行 ORM 映射和数据库操作
   - 支持 PostgreSQL (使用 pgx 驱动)
@@ -29,7 +29,7 @@
 
 ## 架构设计
 
-项目采用简化的架构设计，并结合 Uber fx 依赖注入框架，实现了清晰的代码结构：
+项目采用简化的架构设计，使用手动依赖注入，实现了清晰的代码结构：
 
 ### 1. 简化的分层架构
 
@@ -39,7 +39,7 @@
 
 ### 2. 依赖注入
 
-项目使用 Uber fx 框架实现依赖注入，通过构造函数注入依赖：
+项目使用简洁的手动依赖注入，通过构造函数注入依赖：
 
 ```go
 // Model 层
@@ -58,26 +58,29 @@ func NewRouter(userHandler *handler.UserHandler) *gin.Engine {
 }
 ```
 
-### 3. 生命周期管理
+### 3. 应用容器管理
 
-使用 fx.Lifecycle 管理组件的生命周期，确保组件的正确初始化和清理：
+使用应用容器管理组件的生命周期，确保组件的正确初始化和清理：
 
 ```go
-func NewComponent(lc fx.Lifecycle) *Component {
-    component := &Component{}
+type App struct {
+    config   *configs.Config
+    db       *gorm.DB
+    handlers *Handlers
+    router   *gin.Engine
+    server   *http.Server
+}
 
-    lc.Append(fx.Hook{
-        OnStart: func(ctx context.Context) error {
-            // 初始化逻辑
-            return nil
-        },
-        OnStop: func(ctx context.Context) error {
-            // 清理逻辑
-            return nil
-        },
-    })
+func New(config *configs.Config) (*App, error) {
+    app := &App{config: config}
 
-    return component
+    // 按顺序初始化各个组件
+    if err := app.initDatabase(); err != nil {
+        return nil, err
+    }
+    // ... 其他组件初始化
+
+    return app, nil
 }
 ```
 
@@ -599,21 +602,21 @@ GRPC:
 
 4. **注册 gRPC 服务**
 
-   在 `internal/controller/module.go` 中注册 gRPC 控制器：
+   在应用容器中注册 gRPC 控制器：
 
    ```go
-   // Module 控制器模块
-   var Module = fx.Options(
-       // 提供 HTTP 控制器
-       fx.Provide(NewUserController),
-       // ...
+   // 在应用容器中初始化 gRPC 服务
+   func (a *App) initGRPCServer() error {
+       // 创建 gRPC 服务器
+       grpcServer := grpc.NewServer()
 
-       // 提供 gRPC 控制器
-       fx.Provide(NewSystemGRPCController),
+       // 注册服务
+       systemController := NewSystemGRPCController(a.config)
+       pb.RegisterSystemServiceServer(grpcServer, systemController)
 
-       // 注册 gRPC 控制器
-       fx.Invoke(RegisterSystemGRPCController),
-   )
+       a.grpcServer = grpcServer
+       return nil
+   }
    ```
 
 5. **使用 gRPC 客户端**

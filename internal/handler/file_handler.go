@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -15,7 +14,6 @@ import (
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/spf13/cast"
-	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
 
@@ -28,25 +26,14 @@ type FileHandler struct {
 }
 
 // NewFileHandler 创建文件处理器
-func NewFileHandler(db *gorm.DB, config *configs.Config, lc fx.Lifecycle, storage *filestore.Storage) *FileHandler {
+func NewFileHandler(db *gorm.DB, config *configs.Config, storage *filestore.Storage) *FileHandler {
 	handler := &FileHandler{
 		db:      db,
 		config:  config,
 		storage: storage,
 	}
 
-	// 注册生命周期钩子
-	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			logger.InfoContext(ctx, "FileHandler initialized")
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			logger.InfoContext(ctx, "FileHandler stopped")
-			return nil
-		},
-	})
-
+	logger.Info("FileHandler initialized")
 	return handler
 }
 

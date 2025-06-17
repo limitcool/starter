@@ -297,6 +297,9 @@ func (m *Migrator) Status() ([]map[string]any, error) {
 	return status, nil
 }
 
+// 全局迁移列表
+var pendingMigrations []*MigrationEntry
+
 // RegisterMigration 注册迁移
 func RegisterMigration(name string, up, down MigrationFunc) {
 	// 生成版本号，使用当前时间戳
@@ -310,8 +313,8 @@ func RegisterMigration(name string, up, down MigrationFunc) {
 		Down:    down,
 	}
 
-	// 将迁移项添加到全局迁移器中
-	globalMigrator.Register(entry)
+	// 将迁移项添加到待注册列表中
+	pendingMigrations = append(pendingMigrations, entry)
 }
 
 // 全局迁移器
@@ -321,6 +324,11 @@ var globalMigrator *Migrator
 func InitializeMigrator(db *gorm.DB, config *configs.Config) (*Migrator, error) {
 	migrator := NewMigrator(db, config)
 	globalMigrator = migrator
+
+	// 注册所有待注册的迁移
+	for _, migration := range pendingMigrations {
+		migrator.Register(migration)
+	}
 
 	// 注册所有迁移
 	RegisterMigrations(migrator)

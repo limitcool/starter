@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"errors"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/spf13/cast"
-	"go.uber.org/fx"
 	"gorm.io/gorm"
 )
 
@@ -27,25 +25,14 @@ type UserHandler struct {
 }
 
 // NewUserHandler 创建用户处理器
-func NewUserHandler(db *gorm.DB, config *configs.Config, lc fx.Lifecycle) *UserHandler {
+func NewUserHandler(db *gorm.DB, config *configs.Config) *UserHandler {
 	handler := &UserHandler{
 		db:          db,
 		config:      config,
 		authService: NewAuthService(config),
 	}
 
-	// 注册生命周期钩子
-	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			logger.InfoContext(ctx, "UserHandler initialized")
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			logger.InfoContext(ctx, "UserHandler stopped")
-			return nil
-		},
-	})
-
+	logger.Info("UserHandler initialized")
 	return handler
 }
 

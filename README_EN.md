@@ -9,7 +9,7 @@ English | [中文](README.md)
 
 ## Features
 - Provides a lightweight Gin framework project template
-- Uses Uber fx framework for dependency injection, creating clearer code structure
+- Uses simple manual dependency injection, creating clearer code structure
 - Adopts simplified architecture design, focused on rapid development
 - Integrates GORM for ORM mapping and database operations
   - Supports PostgreSQL (using pgx driver)
@@ -58,26 +58,29 @@ func NewRouter(userHandler *handler.UserHandler) *gin.Engine {
 }
 ```
 
-### 3. Lifecycle Management
+### 3. Application Container Management
 
-Uses fx.Lifecycle to manage component lifecycles, ensuring proper initialization and cleanup of components:
+Uses application container to manage component lifecycles, ensuring proper initialization and cleanup:
 
 ```go
-func NewComponent(lc fx.Lifecycle) *Component {
-    component := &Component{}
+type App struct {
+    config   *configs.Config
+    db       *gorm.DB
+    handlers *Handlers
+    router   *gin.Engine
+    server   *http.Server
+}
 
-    lc.Append(fx.Hook{
-        OnStart: func(ctx context.Context) error {
-            // Initialization logic
-            return nil
-        },
-        OnStop: func(ctx context.Context) error {
-            // Cleanup logic
-            return nil
-        },
-    })
+func New(config *configs.Config) (*App, error) {
+    app := &App{config: config}
 
-    return component
+    // Initialize components in order
+    if err := app.initDatabase(); err != nil {
+        return nil, err
+    }
+    // ... other component initialization
+
+    return app, nil
 }
 ```
 
@@ -572,18 +575,18 @@ GRPC:
    Register gRPC controllers in `internal/controller/module.go`:
 
    ```go
-   // Module controller module
-   var Module = fx.Options(
-       // Provide HTTP controllers
-       fx.Provide(NewUserController),
-       // ...
+   // Initialize gRPC server in application container
+   func (a *App) initGRPCServer() error {
+       // Create gRPC server
+       grpcServer := grpc.NewServer()
 
-       // Provide gRPC controllers
-       fx.Provide(NewSystemGRPCController),
+       // Register services
+       systemController := NewSystemGRPCController(a.config)
+       pb.RegisterSystemServiceServer(grpcServer, systemController)
 
-       // Register gRPC controllers
-       fx.Invoke(RegisterSystemGRPCController),
-   )
+       a.grpcServer = grpcServer
+       return nil
+   }
    ```
 
 5. **Use gRPC Client**

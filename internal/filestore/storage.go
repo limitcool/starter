@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/types"
 	"github.com/qor/oss"
@@ -186,4 +187,36 @@ func GetMimeType(filename string) string {
 		return mime
 	}
 	return "application/octet-stream" // 默认二进制流
+}
+
+// NewWithConfig 使用配置创建存储服务
+func NewWithConfig(cfg configs.Config) (*Storage, error) {
+	if !cfg.Storage.Enabled {
+		return nil, nil
+	}
+
+	storageConfig := Config{
+		Type: cfg.Storage.Type,
+	}
+
+	// 根据存储类型设置配置
+	switch cfg.Storage.Type {
+	case types.StorageTypeLocal:
+		storageConfig.Path = cfg.Storage.Local.Path
+		storageConfig.URL = cfg.Storage.Local.URL
+	case types.StorageTypeS3:
+		storageConfig.AccessKey = cfg.Storage.S3.AccessKey
+		storageConfig.SecretKey = cfg.Storage.S3.SecretKey
+		storageConfig.Region = cfg.Storage.S3.Region
+		storageConfig.Bucket = cfg.Storage.S3.Bucket
+		storageConfig.Endpoint = cfg.Storage.S3.Endpoint
+	case types.StorageTypeOSS:
+		storageConfig.AccessKey = cfg.Storage.OSS.AccessKey
+		storageConfig.SecretKey = cfg.Storage.OSS.SecretKey
+		storageConfig.Region = cfg.Storage.OSS.Region
+		storageConfig.Bucket = cfg.Storage.OSS.Bucket
+		storageConfig.Endpoint = cfg.Storage.OSS.Endpoint
+	}
+
+	return New(storageConfig)
 }

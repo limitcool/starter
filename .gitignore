@@ -1,4 +1,4 @@
-configs/*.yaml
+rrconfigs/*.yaml
 README.md
 /gen
 *.db
@@ -16,3 +16,4 @@ build/*
 dev.yaml
 *.exe
 openapi.json
+.rules
