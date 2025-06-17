@@ -251,14 +251,14 @@ Configuration files can be placed in the following locations (in order of lookup
 When using for the first time, please copy the example configuration and rename it according to the environment:
 
 ```bash
-# Development environment (in root directory)
-cp example.yaml ./dev.yaml
+# Development environment
+cp example.yaml dev.yaml
 
-# Or in configs directory
-cp example.yaml configs/dev.yaml
+# Test environment
+cp example.yaml test.yaml
 
 # Production environment
-cp example.yaml configs/prod.yaml
+cp example.yaml prod.yaml
 ```
 
 The application will automatically find and load the corresponding configuration file based on the `APP_ENV` environment variable. For example, when `APP_ENV=dev`, it will look for configuration files in the following order:

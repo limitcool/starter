@@ -11,7 +11,7 @@ import (
 // registerRoutes 注册应用路由
 func registerAppRoutes(r *gin.RouterGroup, params RouterParams) {
 	ctx := context.Background()
-	logger.InfoContext(ctx, "注册应用路由")
+	logger.InfoContext(ctx, "Registering application routes")
 
 	// 公共路由
 	public := r.Group("")

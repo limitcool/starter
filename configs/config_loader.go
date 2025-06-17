@@ -170,12 +170,12 @@ func LoadConfig(configPath string) *Config {
 func PrintConfig(config *Config) {
 	// 使用我们的统一logger
 	ctx := context.Background()
-	logger.InfoContext(ctx, "应用配置", "app_name", config.App.Name, "app_port", config.App.Port)
-	logger.InfoContext(ctx, "数据库配置", "db_enabled", config.Database.Enabled, "db_driver", config.Driver, "db_host", config.Database.Host, "db_port", config.Database.Port)
-	logger.InfoContext(ctx, "MongoDB配置", "mongo_enabled", config.Mongo.Enabled)
-	logger.InfoContext(ctx, "Redis配置", "redis_instances", len(config.Redis.Instances), "redis_default_enabled", config.Redis.Instances["default"].Enabled)
-	logger.InfoContext(ctx, "存储配置", "storage_enabled", config.Storage.Enabled, "storage_type", config.Storage.Type)
-	logger.InfoContext(ctx, "国际化配置", "i18n_enabled", config.I18n.Enabled, "i18n_default", config.I18n.DefaultLanguage)
+	logger.InfoContext(ctx, "Application configuration", "app_name", config.App.Name, "app_port", config.App.Port)
+	logger.InfoContext(ctx, "Database configuration", "db_enabled", config.Database.Enabled, "db_driver", config.Driver, "db_host", config.Database.Host, "db_port", config.Database.Port)
+	logger.InfoContext(ctx, "MongoDB configuration", "mongo_enabled", config.Mongo.Enabled)
+	logger.InfoContext(ctx, "Redis configuration", "redis_instances", len(config.Redis.Instances), "redis_default_enabled", config.Redis.Instances["default"].Enabled)
+	logger.InfoContext(ctx, "Storage configuration", "storage_enabled", config.Storage.Enabled, "storage_type", config.Storage.Type)
+	logger.InfoContext(ctx, "I18n configuration", "i18n_enabled", config.I18n.Enabled, "i18n_default", config.I18n.DefaultLanguage)
 }
 
 // SaveConfig 保存配置到文件
@@ -207,7 +207,7 @@ func SaveConfig(config *Config, path string) error {
 	}
 
 	ctx := context.Background()
-	logger.InfoContext(ctx, "配置保存成功", "config_path", path)
+	logger.InfoContext(ctx, "Configuration saved successfully", "config_path", path)
 	return nil
 }
 

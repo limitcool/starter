@@ -275,14 +275,14 @@ APP_ENV=prod ./<app-name> migrate
 首次使用时，请复制示例配置并根据环境重命名：
 
 ```bash
-# 开发环境（放在根目录）
-cp example.yaml ./dev.yaml
+# 开发环境
+cp example.yaml dev.yaml
 
-# 或放在configs目录
-cp example.yaml configs/dev.yaml
+# 测试环境
+cp example.yaml test.yaml
 
 # 生产环境
-cp example.yaml configs/prod.yaml
+cp example.yaml prod.yaml
 ```
 
 应用程序会根据环境变量 `APP_ENV` 自动寻找并加载对应的配置文件。例如，当 `APP_ENV=dev` 时，将按以下顺序查找配置文件：

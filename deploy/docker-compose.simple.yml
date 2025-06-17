@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # 仅启动主应用（用于测试已构建的镜像）
+  starter:
+    image: starter:${VERSION:-latest}
+    container_name: starter-app-simple
+    ports:
+      - "8080:8080"
+      - "6060:6060"  # pprof端口（如果启用）
+    environment:
+      - APP_MODE=release
+      - APP_PORT=8080
+    volumes:
+      - ./config:/app/config:ro  # 配置文件目录（可选）
+      - starter_logs:/app/logs   # 日志目录
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# 数据卷配置
+volumes:
+  starter_logs:
+    driver: local

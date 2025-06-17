@@ -48,7 +48,7 @@ func NewRouter(config *configs.Config, userHandler *handler.UserHandler, fileHan
 
 	// 打印路由信息
 	logger.Info("==================================================")
-	logger.Info("路由信息:")
+	logger.Info("Route information:")
 
 	// 获取所有路由
 	routes := r.Routes()

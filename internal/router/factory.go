@@ -10,6 +10,6 @@ import (
 // ProvideRouteRegistrar 提供路由注册器
 func ProvideRouteRegistrar(config *configs.Config) RouteRegistrarInterface {
 	ctx := context.Background()
-	logger.InfoContext(ctx, "初始化路由注册器")
+	logger.InfoContext(ctx, "Initializing route registrar")
 	return &RouteRegistrar{}
 }

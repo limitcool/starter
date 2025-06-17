@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/limitcool/starter/internal/app"
 	"github.com/limitcool/starter/internal/pkg/logger"
+	"github.com/limitcool/starter/internal/version"
 	"github.com/spf13/cobra"
 	"go.uber.org/automaxprocs/maxprocs"
 )
@@ -35,6 +36,19 @@ func runServer(cmd *cobra.Command, args []string) {
 
 	// 设置日志
 	InitLogger(cfg)
+
+	// 显示版本信息
+	vInfo := version.GetVersion()
+	gitCommitShort := vInfo.GitCommit
+	if len(gitCommitShort) > 8 {
+		gitCommitShort = gitCommitShort[:8]
+	}
+	logger.Info("Application starting",
+		"version", vInfo.Version,
+		"gitCommit", gitCommitShort,
+		"buildDate", vInfo.BuildDate,
+		"goVersion", vInfo.GoVersion,
+		"platform", vInfo.Platform)
 
 	// 检查是否从命令行指定了端口
 	port, _ := cmd.Flags().GetInt("port")

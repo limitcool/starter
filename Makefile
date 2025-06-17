@@ -1,8 +1,7 @@
 # 变量定义
 APP_NAME = starter
-VERSION ?= $(shell git describe --tags --always || echo "v0.1.0")
-GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-GIT_TREE_STATE ?= $(shell if git status --porcelain 2>/dev/null | grep -q .; then echo "dirty"; else echo "clean"; fi)
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+GIT_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BUILD_DIR = build
 
@@ -17,8 +16,10 @@ ARCH ?= amd64
 LDFLAGS = -s -w \
 	-X github.com/limitcool/starter/internal/version.Version=$(VERSION) \
 	-X github.com/limitcool/starter/internal/version.GitCommit=$(GIT_COMMIT) \
-	-X github.com/limitcool/starter/internal/version.GitTreeState=$(GIT_TREE_STATE) \
 	-X github.com/limitcool/starter/internal/version.BuildDate=$(BUILD_TIME)
+
+# 构建标志
+BUILDFLAGS = -trimpath
 
 # 默认目标
 .PHONY: all
@@ -32,21 +33,21 @@ $(BUILD_DIR):
 .PHONY: linux
 linux: $(BUILD_DIR)
 	@echo "Building for Linux ($(ARCH))..."
-	GOOS=linux GOARCH=$(ARCH) go build -ldflags="$(LDFLAGS)" \
+	GOOS=linux GOARCH=$(ARCH) go build $(BUILDFLAGS) -ldflags="$(LDFLAGS)" \
 		-o $(BUILD_DIR)/$(APP_NAME)-linux-$(ARCH)
 
 # 构建 Windows 版本
 .PHONY: windows
 windows: $(BUILD_DIR)
 	@echo "Building for Windows ($(ARCH))..."
-	GOOS=windows GOARCH=$(ARCH) go build -ldflags="$(LDFLAGS)" \
+	GOOS=windows GOARCH=$(ARCH) go build $(BUILDFLAGS) -ldflags="$(LDFLAGS)" \
 		-o $(BUILD_DIR)/$(APP_NAME)-windows-$(ARCH).exe
 
 # 构建 MacOS 版本
 .PHONY: darwin
 darwin: $(BUILD_DIR)
 	@echo "Building for MacOS ($(ARCH))..."
-	GOOS=darwin GOARCH=$(ARCH) go build -ldflags="$(LDFLAGS)" \
+	GOOS=darwin GOARCH=$(ARCH) go build $(BUILDFLAGS) -ldflags="$(LDFLAGS)" \
 		-o $(BUILD_DIR)/$(APP_NAME)-darwin-$(ARCH)
 
 # 构建所有平台 amd64 版本
@@ -73,6 +74,52 @@ test:
 run:
 	go run main.go
 
+# 显示版本信息
+.PHONY: version
+version:
+	@echo "Project: $(APP_NAME)"
+	@echo "Version: $(VERSION)"
+	@echo "Git Commit: $(GIT_COMMIT)"
+	@echo "Build Time: $(BUILD_TIME)"
+
+# 快速构建（开发用）
+.PHONY: build-dev
+build-dev:
+	@echo "Building $(APP_NAME) for development..."
+	go build $(BUILDFLAGS) -ldflags="$(LDFLAGS)" -o $(APP_NAME)$(if $(filter windows,$(shell go env GOOS)),.exe,)
+
+# Docker 相关目标
+.PHONY: docker-build
+docker-build:
+	@echo "Building Docker image..."
+	./deploy/build.sh $(VERSION)
+
+.PHONY: docker-run
+docker-run:
+	@echo "Running Docker container..."
+	docker run -p 8080:8080 -p 6060:6060 --name $(APP_NAME)-container $(APP_NAME):$(VERSION)
+
+.PHONY: docker-run-bg
+docker-run-bg:
+	@echo "Running Docker container in background..."
+	docker run -d -p 8080:8080 -p 6060:6060 --name $(APP_NAME)-container $(APP_NAME):$(VERSION)
+
+.PHONY: docker-stop
+docker-stop:
+	@echo "Stopping Docker container..."
+	docker stop $(APP_NAME)-container || true
+	docker rm $(APP_NAME)-container || true
+
+.PHONY: docker-logs
+docker-logs:
+	@echo "Showing Docker container logs..."
+	docker logs -f $(APP_NAME)-container
+
+.PHONY: docker-version
+docker-version:
+	@echo "Checking Docker image version..."
+	docker run --rm $(APP_NAME):$(VERSION) version
+
 # 生成错误码
 .PHONY: gen-errors
 gen-errors:
@@ -93,21 +140,35 @@ proto:
 .PHONY: help
 help:
 	@echo "Make targets:"
-	@echo "  linux    - Build for Linux (ARCH=amd64/arm64)"
-	@echo "  windows  - Build for Windows (ARCH=amd64/arm64)"
-	@echo "  darwin   - Build for MacOS (ARCH=amd64/arm64)"
-	@echo "  all-arch - Build for all platforms (amd64)"
-	@echo "  all-arm64 - Build for all platforms (arm64)"
-	@echo "  clean    - Clean build directory"
-	@echo "  test     - Run tests"
-	@echo "  run      - Run the application"
-	@echo "  gen-errors - Generate error codes from Markdown definition
-  proto     - Generate protobuf code from proto files"
+	@echo "  linux         - Build for Linux (ARCH=amd64/arm64)"
+	@echo "  windows       - Build for Windows (ARCH=amd64/arm64)"
+	@echo "  darwin        - Build for MacOS (ARCH=amd64/arm64)"
+	@echo "  all-arch      - Build for all platforms (amd64)"
+	@echo "  all-arm64     - Build for all platforms (arm64)"
+	@echo "  build-dev     - Quick build for development"
+	@echo "  clean         - Clean build directory"
+	@echo "  test          - Run tests"
+	@echo "  run           - Run the application"
+	@echo "  version       - Show version information"
+	@echo "  gen-errors    - Generate error codes from Markdown definition"
+	@echo "  proto         - Generate protobuf code from proto files"
+	@echo ""
+	@echo "Docker targets:"
+	@echo "  docker-build  - Build Docker image with version info"
+	@echo "  docker-run    - Run Docker container (foreground)"
+	@echo "  docker-run-bg - Run Docker container (background)"
+	@echo "  docker-stop   - Stop and remove Docker container"
+	@echo "  docker-logs   - Show Docker container logs"
+	@echo "  docker-version- Check Docker image version"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make linux ARCH=arm64   - Build Linux arm64 version"
-	@echo "  make darwin ARCH=arm64  - Build MacOS arm64 version"
-	@echo "  make all-arch          - Build all platforms in amd64"
-	@echo "  make all-arm64         - Build all platforms in arm64"
-	@echo "  make gen-errors        - Generate error codes from $(ERROR_MD)
-  make proto             - Generate protobuf code"
+	@echo "  make linux ARCH=arm64     - Build Linux arm64 version"
+	@echo "  make darwin ARCH=arm64    - Build MacOS arm64 version"
+	@echo "  make all-arch             - Build all platforms in amd64"
+	@echo "  make all-arm64            - Build all platforms in arm64"
+	@echo "  make build-dev            - Quick development build"
+	@echo "  make version              - Show build version information"
+	@echo "  make docker-build         - Build Docker image"
+	@echo "  make docker-run VERSION=v1.0.0 - Run specific version"
+	@echo "  make gen-errors           - Generate error codes from $(ERROR_MD)"
+	@echo "  make proto                - Generate protobuf code"

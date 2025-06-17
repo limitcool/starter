@@ -250,7 +250,7 @@ func (a *App) Run() error {
 	// 启动HTTP服务器
 	go func() {
 		logger.Info("==================================================")
-		logger.Info("HTTP服务器已启动",
+		logger.Info("HTTP server started",
 			"address", fmt.Sprintf("http://localhost:%d", a.config.App.Port),
 			"mode", a.config.App.Mode)
 		if a.config.Pprof.Enabled && a.config.Pprof.Port == 0 {
