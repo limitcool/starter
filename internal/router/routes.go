@@ -34,12 +34,29 @@ func registerAppRoutes(r *gin.RouterGroup, params RouterParams) {
 		// 文件管理
 		files := admin.Group("/files")
 		{
-			// 上传文件
+			// 获取上传预签名URL（推荐方式）
+			files.POST("/upload-url", params.FileHandler.GetUploadURL)
+			// 确认上传完成
+			files.POST("/confirm-upload", params.FileHandler.ConfirmUpload)
+			// 上传文件（废弃，保留兼容性）
 			files.POST("/upload", params.FileHandler.UploadFile)
+			// 获取文件列表
+			files.GET("/list", params.FileHandler.ListFiles)
+			// 获取文件信息
+			files.GET("/:id", params.FileHandler.GetFileInfo)
+			// 获取文件访问URL
+			files.GET("/:id/url", params.FileHandler.GetFileURL)
 		}
 
 		// 系统设置
 		admin.GET("/settings", params.AdminHandler.GetSystemSettings)
+	}
+
+	// 公开文件访问（无需认证）
+	publicFiles := r.Group("/public")
+	{
+		// 公开文件访问（长期URL的实现）
+		publicFiles.GET("/files/:id", params.FileHandler.ServePublicFile)
 	}
 
 	// 普通用户路由 - 使用JWT认证

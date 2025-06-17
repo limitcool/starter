@@ -77,7 +77,7 @@ func (s *AuthService) GenerateTokensWithContext(ctx context.Context, userID uint
 
 	// 创建访问令牌
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
-	accessTokenString, err := accessToken.SignedString([]byte("starter-lite-secret-key"))
+	accessTokenString, err := accessToken.SignedString([]byte(s.config.JwtAuth.AccessSecret))
 	if err != nil {
 		logger.ErrorContext(ctx, "生成访问令牌失败", "error", err)
 		return nil, errorx.WrapError(err, "生成访问令牌失败")
@@ -85,7 +85,7 @@ func (s *AuthService) GenerateTokensWithContext(ctx context.Context, userID uint
 
 	// 创建刷新令牌
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
-	refreshTokenString, err := refreshToken.SignedString([]byte("starter-lite-secret-key"))
+	refreshTokenString, err := refreshToken.SignedString([]byte(s.config.JwtAuth.RefreshSecret))
 	if err != nil {
 		logger.ErrorContext(ctx, "生成刷新令牌失败", "error", err)
 		return nil, errorx.WrapError(err, "生成刷新令牌失败")
@@ -120,7 +120,7 @@ func (s *AuthService) ParseTokenWithContext(ctx context.Context, tokenString str
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte("starter-lite-secret-key"), nil
+		return []byte(s.config.JwtAuth.AccessSecret), nil
 	})
 
 	if err != nil {
