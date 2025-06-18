@@ -1,4 +1,4 @@
-package v1
+package dto
 
 // PageRequest 分页请求基础结构
 type PageRequest struct {

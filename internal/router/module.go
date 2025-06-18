@@ -10,12 +10,9 @@ import (
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
-// RouterParams 路由参数（保留用于兼容性）
+// RouterParams 路由参数
 type RouterParams struct {
 	Config *configs.Config
-
-	// 路由注册器
-	RouteRegistrar RouteRegistrarInterface
 
 	// 处理器
 	UserHandler  *handler.UserHandler
@@ -32,11 +29,10 @@ func NewRouter(config *configs.Config, userHandler *handler.UserHandler, fileHan
 	r := gin.New()
 
 	// 添加中间件
-	r.Use(gin.Recovery())
 	r.Use(middleware.RequestLoggerMiddleware())
 	r.Use(middleware.Cors())
 
-	// 添加错误处理中间件
+	// 添加错误处理中间件（替换gin.Recovery()）
 	r.Use(middleware.PanicRecovery())
 	r.Use(middleware.GlobalErrorHandler())
 
@@ -44,7 +40,7 @@ func NewRouter(config *configs.Config, userHandler *handler.UserHandler, fileHan
 	registrar := &RouteRegistrar{}
 
 	// 注册路由
-	registrar.RegisterRoutesSimple(r, config, userHandler, fileHandler, adminHandler)
+	registrar.RegisterRoutes(r, config, userHandler, fileHandler, adminHandler)
 
 	// 打印路由信息
 	logger.Info("==================================================")

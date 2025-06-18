@@ -28,7 +28,7 @@ type App struct {
 	db          *gorm.DB
 	redis       *redis.Client
 	cache       cache.Cache
-	storage     *filestore.Storage
+	storage     filestore.FileStorage
 	handlers    *Handlers
 	router      *gin.Engine
 	server      *http.Server
@@ -185,13 +185,15 @@ func (a *App) initRedis() error {
 
 // initStorage 初始化文件存储
 func (a *App) initStorage() error {
-	storage, err := filestore.NewWithConfig(*a.config)
+	// 初始化统一存储接口
+	storage, err := filestore.NewFileStorage(*a.config)
 	if err != nil {
 		return fmt.Errorf("failed to create storage service: %w", err)
 	}
-
 	a.storage = storage
-	logger.Info("Storage service initialized successfully")
+
+	logger.Info("Storage services initialized successfully",
+		"type", storage.GetStorageType())
 	return nil
 }
 
@@ -199,7 +201,7 @@ func (a *App) initStorage() error {
 func (a *App) initHandlers() error {
 	a.handlers = &Handlers{
 		User:  handler.NewUserHandler(a.db, a.config),
-		File:  handler.NewFileHandler(a.db, a.config, a.storage),
+		File:  handler.NewFileHandler(a.db, a.storage),
 		Admin: handler.NewAdminHandler(a.db, a.config),
 	}
 

@@ -8,7 +8,16 @@ import (
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
-// registerRoutes 注册应用路由
+// registerPublicRoutes 注册公开路由（无需认证）
+func registerPublicRoutes(r *gin.Engine, params RouterParams) {
+	// 公开文件访问
+	publicFiles := r.Group("/public")
+	{
+		publicFiles.GET("/files/:id", params.FileHandler.GetFileInfo)
+	}
+}
+
+// registerAppRoutes 注册应用路由
 func registerAppRoutes(r *gin.RouterGroup, params RouterParams) {
 	ctx := context.Background()
 	logger.InfoContext(ctx, "Registering application routes")
@@ -16,10 +25,8 @@ func registerAppRoutes(r *gin.RouterGroup, params RouterParams) {
 	// 公共路由
 	public := r.Group("")
 	{
-		// 用户登录
+		// 用户登录（管理员和普通用户使用同一接口）
 		public.POST("/login", params.UserHandler.UserLogin)
-		// 在lite版本中，管理员登录也使用普通用户登录接口
-		public.POST("/admin/login", params.UserHandler.UserLogin)
 
 		// 用户注册
 		public.POST("/register", params.UserHandler.UserRegister)
@@ -34,29 +41,20 @@ func registerAppRoutes(r *gin.RouterGroup, params RouterParams) {
 		// 文件管理
 		files := admin.Group("/files")
 		{
-			// 获取上传预签名URL（推荐方式）
 			files.POST("/upload-url", params.FileHandler.GetUploadURL)
-			// 确认上传完成
-			files.POST("/confirm-upload", params.FileHandler.ConfirmUpload)
-			// 上传文件（废弃，保留兼容性）
-			files.POST("/upload", params.FileHandler.UploadFile)
-			// 获取文件列表
-			files.GET("/list", params.FileHandler.ListFiles)
-			// 获取文件信息
-			files.GET("/:id", params.FileHandler.GetFileInfo)
-			// 获取文件访问URL
-			files.GET("/:id/url", params.FileHandler.GetFileURL)
+			files.POST("/confirm", params.FileHandler.ConfirmUpload)
+			files.GET("/:id/download", params.FileHandler.GetDownloadURL)
+			files.DELETE("/:id", params.FileHandler.DeleteFile)
 		}
 
 		// 系统设置
 		admin.GET("/settings", params.AdminHandler.GetSystemSettings)
 	}
 
-	// 公开文件访问（无需认证）
-	publicFiles := r.Group("/public")
+	// 文件上传接口（统一支持本地和MinIO存储，需要认证但不需要管理员权限）
+	upload := authenticated.Group("/upload")
 	{
-		// 公开文件访问（长期URL的实现）
-		publicFiles.GET("/files/:id", params.FileHandler.ServePublicFile)
+		upload.POST("/file", params.FileHandler.UploadFile) // 统一上传接口
 	}
 
 	// 普通用户路由 - 使用JWT认证

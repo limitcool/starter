@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/api/response"
+	"github.com/limitcool/starter/internal/dto"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -32,11 +33,9 @@ func (h *AdminHandler) GetSystemSettings(ctx *gin.Context) {
 	logger.InfoContext(reqCtx, "GetSystemSettings 获取系统设置")
 
 	// 返回系统设置
-	settings := map[string]any{
-		"app_name":    h.Config.App.Name,
-		"app_version": "1.0.0",
-		"app_mode":    h.Config.App.Mode,
-	}
-
-	response.Success(ctx, settings)
+	response.Success(ctx, &dto.SystemSettingsResponse{
+		AppName:    h.Config.App.Name,
+		AppVersion: "1.0.0",
+		AppMode:    h.Config.App.Mode,
+	})
 }

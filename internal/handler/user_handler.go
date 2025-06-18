@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/api/response"
-	v1 "github.com/limitcool/starter/internal/api/v1"
+	"github.com/limitcool/starter/internal/dto"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	"github.com/limitcool/starter/internal/pkg/errorx"
@@ -42,7 +42,7 @@ func (h *UserHandler) UserLogin(ctx *gin.Context) {
 		"client_ip", ctx.ClientIP(),
 		"user_agent", ctx.Request.UserAgent())
 
-	var req v1.LoginRequest
+	var req dto.UserLoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		// 记录参数验证错误
 		logger.WarnContext(reqCtx, "UserLogin request validation failed",
@@ -145,7 +145,7 @@ func (h *UserHandler) UserRegister(ctx *gin.Context) {
 	// 获取请求上下文
 	reqCtx := ctx.Request.Context()
 
-	var req v1.UserRegisterRequest
+	var req dto.UserRegisterRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logger.WarnContext(reqCtx, "UserRegister request validation failed",
 			"error", err,
@@ -263,7 +263,7 @@ func (h *UserHandler) UserChangePassword(ctx *gin.Context) {
 	}
 
 	// 绑定请求参数
-	var req v1.UserChangePasswordRequest
+	var req dto.UserChangePasswordRequest
 	if !h.Helper.BindJSON(ctx, &req, "UserChangePassword") {
 		return
 	}

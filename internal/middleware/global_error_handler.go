@@ -19,6 +19,10 @@ func GlobalErrorHandler() gin.HandlerFunc {
 
 		// 检查是否有错误
 		if len(c.Errors) > 0 {
+			// 检查是否已经有响应写入，避免重复响应
+			if c.Writer.Written() {
+				return
+			}
 			err := c.Errors.Last().Err
 			handleError(c, err)
 			c.Abort()
@@ -26,7 +30,7 @@ func GlobalErrorHandler() gin.HandlerFunc {
 		}
 
 		// 检查响应状态码，如果是错误状态码，统一处理
-		if c.Writer.Status() >= 400 {
+		if c.Writer.Status() >= 400 && !c.Writer.Written() {
 			handleError(c, fmt.Errorf("HTTP %d: %s", c.Writer.Status(), http.StatusText(c.Writer.Status())))
 			c.Abort()
 			return

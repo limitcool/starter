@@ -8,19 +8,17 @@ import (
 
 // BaseHandler 基础处理器，包含所有Handler的公共字段和方法
 type BaseHandler struct {
-	DB       *gorm.DB
-	Config   *configs.Config
-	Helper   *HandlerHelper
-	FileUtil *FileUtil
+	DB     *gorm.DB
+	Config *configs.Config
+	Helper *HandlerHelper
 }
 
 // NewBaseHandler 创建基础处理器
 func NewBaseHandler(db *gorm.DB, config *configs.Config) *BaseHandler {
 	return &BaseHandler{
-		DB:       db,
-		Config:   config,
-		Helper:   NewHandlerHelper(),
-		FileUtil: NewFileUtil("/uploads"), // 默认基础URL
+		DB:     db,
+		Config: config,
+		Helper: NewHandlerHelper(),
 	}
 }
 

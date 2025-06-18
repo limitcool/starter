@@ -46,8 +46,11 @@ func PanicRecovery() gin.HandlerFunc {
 					appErr = errorx.ErrInternal.WithMsg(fmt.Sprintf("%v", err))
 				}
 
-				// 返回错误响应
-				response.Error(c, appErr)
+				// 检查是否已经有响应写入，避免重复响应
+				if !c.Writer.Written() {
+					// 返回错误响应
+					response.Error(c, appErr)
+				}
 				c.Abort()
 			}
 		}()

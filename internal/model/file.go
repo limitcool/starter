@@ -29,7 +29,7 @@ const (
 
 // File 文件模型
 type File struct {
-	BaseModel
+	UUIDModel
 
 	Name           string    `json:"name" gorm:"size:255;comment:文件名称"`
 	OriginalName   string    `json:"original_name" gorm:"size:255;comment:原始文件名"`

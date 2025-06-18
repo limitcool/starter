@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/limitcool/starter/configs"
-	v1 "github.com/limitcool/starter/internal/api/v1"
+	"github.com/limitcool/starter/internal/dto"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
@@ -34,12 +34,12 @@ type Claims struct {
 }
 
 // GenerateTokens 生成令牌
-func (s *AuthService) GenerateTokens(userID uint, username string, isAdmin bool, roles []string) (*v1.LoginResponse, error) {
+func (s *AuthService) GenerateTokens(userID uint, username string, isAdmin bool, roles []string) (*dto.LoginResponse, error) {
 	return s.GenerateTokensWithContext(context.Background(), userID, username, isAdmin, roles)
 }
 
 // GenerateTokensWithContext 使用上下文生成令牌
-func (s *AuthService) GenerateTokensWithContext(ctx context.Context, userID uint, username string, isAdmin bool, roles []string) (*v1.LoginResponse, error) {
+func (s *AuthService) GenerateTokensWithContext(ctx context.Context, userID uint, username string, isAdmin bool, roles []string) (*dto.LoginResponse, error) {
 	// 获取当前时间
 	now := time.Now()
 
@@ -92,7 +92,7 @@ func (s *AuthService) GenerateTokensWithContext(ctx context.Context, userID uint
 	}
 
 	// 返回令牌响应
-	return &v1.LoginResponse{
+	return &dto.LoginResponse{
 		AccessToken:       accessTokenString,
 		RefreshToken:      refreshTokenString,
 		ExpiresIn:         3600,
