@@ -1,0 +1,151 @@
+# 应用配置
+app:
+  port: 8080
+  name: "Starter"
+  mode: "debug"  # debug, release, test
+  read_timeout: 60s
+  write_timeout: 60s
+  idle_timeout: 60s
+  max_header_bytes: 1048576
+
+# 数据库驱动
+driver: "mysql"
+
+# 数据库配置
+database:
+  enabled: true
+  username: "root"
+  password: "root"
+  db_name: "starter"
+  host: "localhost"
+  port: 3306
+  table_prefix: ""
+  charset: "utf8mb4"
+  parse_time: true
+  loc: "Local"
+  show_log: true
+  max_idle_conn: 10
+  max_open_conn: 100
+  conn_max_life_time: 3600s
+  slow_threshold: 500ms
+  ssl_mode: "disable"
+
+# JWT配置
+jwt_auth:
+  access_secret: "your_access_secret_here"
+  access_expire: 86400  # 24小时
+  refresh_secret: "your_refresh_secret_here"
+  refresh_expire: 604800  # 7天
+
+# MongoDB配置
+mongo:
+  enabled: false
+  uri: "mongodb://localhost:27017"
+  user: ""
+  password: ""
+  db: "starter"
+
+# Redis配置
+redis:
+  instances:
+    default:
+      enabled: true
+      addr: "localhost:6379"
+      password: ""
+      db: 0
+      min_idle_conn: 10
+      dial_timeout: 5s
+      read_timeout: 3s
+      write_timeout: 3s
+      pool_size: 100
+      pool_timeout: 4s
+      enable_trace: false
+    session:
+      enabled: false
+      addr: "localhost:6379"
+      password: ""
+      db: 1
+      min_idle_conn: 5
+      dial_timeout: 5s
+      read_timeout: 3s
+      write_timeout: 3s
+      pool_size: 50
+      pool_timeout: 4s
+      enable_trace: false
+  cache:
+    default_ttl: 30m
+    key_prefix: "cache:"
+    enable_prewarm: true
+    enable_protection: true
+    protection_timeout: 5s
+    nil_value_ttl: 1m
+    local_cache: false
+    local_cache_ttl: 5m
+    local_cache_size: 10000
+
+# 日志配置
+log:
+  level: "info"
+  format: "json"  # json, text
+  output: "stdout"  # stdout, stderr, file
+  file_path: "logs/app.log"
+  max_size: 100
+  max_backups: 3
+  max_age: 28
+  compress: true
+  enable_caller: true
+  enable_stacktrace: true
+
+# 文件存储配置
+storage:
+  enabled: true
+  type: "local"  # local, s3, oss
+  local:
+    path: "storage"
+    url: "/static"
+  s3:
+    access_key: ""
+    secret_key: ""
+    region: ""
+    bucket: ""
+    endpoint: ""
+  oss:
+    access_key: ""
+    secret_key: ""
+    region: ""
+    bucket: ""
+    endpoint: ""
+  path_config:
+    avatar: "avatars"
+    document: "documents"
+    image: "images"
+    video: "videos"
+    audio: "audios"
+    temporary: "temp"
+
+# 管理员配置
+admin:
+  username: "admin"
+  password: "admin123"
+  nickname: "管理员"
+
+# 国际化配置
+i18n:
+  enabled: true
+  default_language: "zh-CN"
+  support_languages: ["zh-CN", "en-US"]
+  resources_path: "locales"
+
+# 性能分析配置
+pprof:
+  enabled: false
+  port: 0  # 0表示使用主服务端口
+
+# Casbin权限配置
+casbin:
+  enabled: true
+  model_path: "configs/rbac_model.conf"
+  policy_table: "casbin_rule"
+  auto_load_interval: 0  # 0表示不自动加载
+  enable_auto_save: true
+  enable_log: false

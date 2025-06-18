@@ -30,6 +30,7 @@ type Config struct {
 	Admin    Admin               // 管理员配置
 	I18n     I18n                // 国际化配置
 	Pprof    Pprof               // 性能分析配置
+	Casbin   Casbin              // Casbin权限配置
 }
 
 // Config app config
@@ -117,7 +118,15 @@ type CacheConfig struct {
 	LocalCacheSize    int           `yaml:"local_cache_size" json:"local_cache_size"`     // 本地缓存大小
 }
 
-// 在lite版本中移除Casbin配置
+// Casbin 权限配置
+type Casbin struct {
+	Enabled          bool   `yaml:"enabled" json:"enabled"`                       // 是否启用Casbin
+	ModelPath        string `yaml:"model_path" json:"model_path"`                 // 模型文件路径
+	PolicyTable      string `yaml:"policy_table" json:"policy_table"`             // 策略表名
+	AutoLoadInterval int    `yaml:"auto_load_interval" json:"auto_load_interval"` // 自动加载策略间隔(秒)，0表示不自动加载
+	EnableAutoSave   bool   `yaml:"enable_auto_save" json:"enable_auto_save"`     // 是否启用自动保存
+	EnableLog        bool   `yaml:"enable_log" json:"enable_log"`                 // 是否启用日志
+}
 
 // Storage 文件存储配置
 type Storage struct {

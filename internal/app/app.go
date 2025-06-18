@@ -16,30 +16,45 @@ import (
 	"github.com/limitcool/starter/internal/datastore/sqldb"
 	"github.com/limitcool/starter/internal/filestore"
 	"github.com/limitcool/starter/internal/handler"
+	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/cache"
+	"github.com/limitcool/starter/internal/pkg/casbin"
 	"github.com/limitcool/starter/internal/pkg/logger"
+	"github.com/limitcool/starter/internal/pkg/permission"
 	"github.com/limitcool/starter/internal/router"
 	"gorm.io/gorm"
 )
 
 // App 应用容器
 type App struct {
-	config      *configs.Config
-	db          *gorm.DB
-	redis       *redis.Client
-	cache       cache.Cache
-	storage     filestore.FileStorage
-	handlers    *Handlers
-	router      *gin.Engine
-	server      *http.Server
-	pprofServer *http.Server // pprof服务器
+	config            *configs.Config
+	db                *gorm.DB
+	redis             *redis.Client
+	cache             cache.Cache
+	storage           filestore.FileStorage
+	casbinService     *casbin.Service
+	permissionService *permission.Service
+	repos             *Repositories
+	handlers          *Handlers
+	router            *gin.Engine
+	server            *http.Server
+	pprofServer       *http.Server // pprof服务器
+}
+
+// Repositories 仓库集合
+type Repositories struct {
+	User       *model.UserRepo
+	Role       *model.RoleRepo
+	Permission *model.PermissionRepo
+	Menu       *model.MenuRepo
 }
 
 // Handlers 处理器集合
 type Handlers struct {
-	User  *handler.UserHandler
-	File  *handler.FileHandler
-	Admin *handler.AdminHandler
+	User       *handler.UserHandler
+	File       *handler.FileHandler
+	Admin      *handler.AdminHandler
+	Permission *handler.PermissionHandler
 }
 
 // InitStep 初始化步骤
@@ -90,6 +105,11 @@ func (app *App) getInitSteps() []InitStep {
 
 		// 存储服务是可选的，某些功能可能需要它
 		{Name: "storage", Required: false, Init: app.initStorage},
+
+		// 权限系统组件
+		{Name: "repositories", Required: true, Init: app.initRepositories},
+		{Name: "casbin", Required: false, Init: app.initCasbin},
+		{Name: "permission", Required: false, Init: app.initPermission},
 
 		// 核心组件，必须成功初始化
 		{Name: "handlers", Required: true, Init: app.initHandlers},
@@ -197,6 +217,73 @@ func (a *App) initStorage() error {
 	return nil
 }
 
+// initRepositories 初始化仓库
+func (a *App) initRepositories() error {
+	if a.db == nil {
+		logger.Info("Database not available, skipping repositories initialization")
+		return nil
+	}
+
+	a.repos = &Repositories{
+		User:       model.NewUserRepo(a.db),
+		Role:       model.NewRoleRepo(a.db),
+		Permission: model.NewPermissionRepo(a.db),
+		Menu:       model.NewMenuRepo(a.db),
+	}
+
+	logger.Info("Repositories initialized successfully")
+	return nil
+}
+
+// initCasbin 初始化Casbin服务
+func (a *App) initCasbin() error {
+	if a.db == nil {
+		logger.Info("Database not available, skipping Casbin initialization")
+		return nil
+	}
+
+	casbinService, err := casbin.NewService(a.db, a.config)
+	if err != nil {
+		return fmt.Errorf("failed to create Casbin service: %w", err)
+	}
+
+	a.casbinService = casbinService
+
+	if casbinService != nil {
+		logger.Info("Casbin service initialized successfully")
+	} else {
+		logger.Info("Casbin service disabled")
+	}
+	return nil
+}
+
+// initPermission 初始化权限服务
+func (a *App) initPermission() error {
+	if a.repos == nil {
+		logger.Info("Repositories not available, skipping permission service initialization")
+		return nil
+	}
+
+	a.permissionService = permission.NewService(
+		a.casbinService,
+		a.repos.User,
+		a.repos.Role,
+		a.repos.Permission,
+		a.repos.Menu,
+	)
+
+	// 初始化权限数据
+	if a.permissionService != nil {
+		ctx := context.Background()
+		if err := a.permissionService.InitializePermissions(ctx); err != nil {
+			logger.Error("Failed to initialize permissions", "error", err)
+		}
+	}
+
+	logger.Info("Permission service initialized successfully")
+	return nil
+}
+
 // initHandlers 初始化处理器
 func (a *App) initHandlers() error {
 	a.handlers = &Handlers{
@@ -205,13 +292,24 @@ func (a *App) initHandlers() error {
 		Admin: handler.NewAdminHandler(a.db, a.config),
 	}
 
+	// 如果权限系统可用，初始化权限处理器
+	if a.permissionService != nil && a.repos != nil {
+		a.handlers.Permission = handler.NewPermissionHandler(
+			a.permissionService,
+			a.repos.Role,
+			a.repos.Permission,
+			a.repos.Menu,
+			a.repos.User,
+		)
+	}
+
 	logger.Info("Handlers initialized successfully")
 	return nil
 }
 
 // initRouter 初始化路由
 func (a *App) initRouter() error {
-	r, err := router.NewRouter(a.config, a.handlers.User, a.handlers.File, a.handlers.Admin)
+	r, err := router.NewRouter(a.config, a.handlers.User, a.handlers.File, a.handlers.Admin, a.handlers.Permission)
 	if err != nil {
 		return fmt.Errorf("failed to create router: %w", err)
 	}

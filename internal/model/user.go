@@ -35,6 +35,8 @@ type User struct {
 
 	// 管理员字段
 	IsAdmin bool `json:"is_admin" gorm:"default:false;comment:是否管理员"`
+
+	// 注意：用户角色关系由Casbin管理，不再需要Roles字段
 }
 
 func (User) TableName() string {
@@ -179,3 +181,6 @@ func (r *UserRepo) UpdateLastLogin(ctx context.Context, userID int64, ip string)
 		"last_ip":    ip,
 	}).Error
 }
+
+// 注意：在基于Casbin的设计中，用户角色分配和查询由Casbin管理
+// AssignRoles 和 GetUserRoles 方法已移除，请使用权限服务中的相应方法

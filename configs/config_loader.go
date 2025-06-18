@@ -127,6 +127,14 @@ func LoadConfig(configPath string) *Config {
 			SupportLanguages: []string{"zh-CN", "en-US"},
 			ResourcesPath:    "locales",
 		},
+		Casbin: Casbin{
+			Enabled:          true,
+			ModelPath:        "configs/rbac_model.conf",
+			PolicyTable:      "casbin_rule",
+			AutoLoadInterval: 0,
+			EnableAutoSave:   true,
+			EnableLog:        false,
+		},
 	}
 
 	// 如果未指定配置文件路径，使用默认路径
@@ -176,6 +184,7 @@ func PrintConfig(config *Config) {
 	logger.InfoContext(ctx, "Redis configuration", "redis_instances", len(config.Redis.Instances), "redis_default_enabled", config.Redis.Instances["default"].Enabled)
 	logger.InfoContext(ctx, "Storage configuration", "storage_enabled", config.Storage.Enabled, "storage_type", config.Storage.Type)
 	logger.InfoContext(ctx, "I18n configuration", "i18n_enabled", config.I18n.Enabled, "i18n_default", config.I18n.DefaultLanguage)
+	logger.InfoContext(ctx, "Casbin configuration", "casbin_enabled", config.Casbin.Enabled, "casbin_model", config.Casbin.ModelPath)
 }
 
 // SaveConfig 保存配置到文件
@@ -224,5 +233,6 @@ func structToMap(config *Config) map[string]any {
 	v.Set("storage", config.Storage)
 	v.Set("admin", config.Admin)
 	v.Set("i18n", config.I18n)
+	v.Set("casbin", config.Casbin)
 	return v.AllSettings()
 }

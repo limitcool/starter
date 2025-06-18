@@ -14,7 +14,7 @@ import (
 type RouteRegistrar struct{}
 
 // RegisterRoutes 注册路由
-func (rr *RouteRegistrar) RegisterRoutes(r *gin.Engine, config *configs.Config, userHandler *handler.UserHandler, fileHandler *handler.FileHandler, adminHandler *handler.AdminHandler) {
+func (rr *RouteRegistrar) RegisterRoutes(r *gin.Engine, config *configs.Config, userHandler *handler.UserHandler, fileHandler *handler.FileHandler, adminHandler *handler.AdminHandler, permissionHandler *handler.PermissionHandler) {
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, &dto.HealthResponse{
@@ -29,10 +29,11 @@ func (rr *RouteRegistrar) RegisterRoutes(r *gin.Engine, config *configs.Config, 
 
 	// 创建参数结构
 	params := RouterParams{
-		Config:       config,
-		UserHandler:  userHandler,
-		FileHandler:  fileHandler,
-		AdminHandler: adminHandler,
+		Config:            config,
+		UserHandler:       userHandler,
+		FileHandler:       fileHandler,
+		AdminHandler:      adminHandler,
+		PermissionHandler: permissionHandler,
 	}
 
 	// 注册公开路由（无需认证）

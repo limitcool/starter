@@ -65,5 +65,43 @@ func registerAppRoutes(r *gin.RouterGroup, params RouterParams) {
 
 		// 修改密码
 		user.POST("/change-password", params.UserHandler.UserChangePassword)
+
+		// 用户权限相关（如果权限处理器存在）
+		if params.PermissionHandler != nil {
+			user.GET("/menus", params.PermissionHandler.GetUserMenus)
+			user.GET("/permissions", params.PermissionHandler.GetUserPermissions)
+			user.POST("/check-permission", params.PermissionHandler.CheckPermission)
+		}
+	}
+
+	// 权限管理路由（管理员专用）
+	if params.PermissionHandler != nil {
+		permission := admin.Group("/permissions")
+		{
+			// 角色管理
+			roles := permission.Group("/roles")
+			{
+				roles.GET("", params.PermissionHandler.ListRoles)
+				roles.POST("", params.PermissionHandler.CreateRole)
+				roles.PUT("", params.PermissionHandler.UpdateRole)
+				roles.DELETE("/:id", params.PermissionHandler.DeleteRole)
+				roles.POST("/assign-permissions", params.PermissionHandler.AssignRolePermissions)
+			}
+
+			// 权限管理
+			perms := permission.Group("/permissions")
+			{
+				perms.GET("", params.PermissionHandler.ListPermissions)
+			}
+
+			// 菜单管理
+			menus := permission.Group("/menus")
+			{
+				menus.GET("", params.PermissionHandler.ListMenus)
+			}
+
+			// 用户角色分配
+			permission.POST("/assign-user-roles", params.PermissionHandler.AssignUserRoles)
+		}
 	}
 }

@@ -77,6 +77,28 @@ func SuccessNoData(c *gin.Context, msg ...string) {
 	})
 }
 
+// SuccessWithPagination 返回分页成功响应
+func SuccessWithPagination[T any](c *gin.Context, list T, total int64, page, pageSize int, msg ...string) {
+	message := "success"
+	if len(msg) > 0 {
+		message = msg[0]
+	}
+
+	// 创建分页结果
+	pageResult := NewPageResult(list, total, page, pageSize)
+
+	// 获取请求ID
+	requestID := getRequestID(c)
+
+	c.JSON(http.StatusOK, Response[*PageResult[T]]{
+		Code:  0, // 成功码为0
+		Msg:   message,
+		Data:  pageResult,
+		ReqID: requestID,
+		Time:  time.Now().Unix(),
+	})
+}
+
 // Error 返回错误响应
 func Error(c *gin.Context, err error, msg ...string) {
 	var (

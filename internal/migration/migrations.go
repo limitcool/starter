@@ -121,4 +121,58 @@ func RegisterMigrations(migrator *Migrator) {
 			return tx.Where("username = ? AND is_admin = ?", username, true).Delete(&model.User{}).Error
 		},
 	})
+
+	// 添加权限系统表迁移
+	migrator.Register(&MigrationEntry{
+		Version: "202506180001",
+		Name:    "create_permission_tables",
+		Up: func(tx *gorm.DB) error {
+			return CreatePermissionTables20250618(tx)
+		},
+		Down: func(tx *gorm.DB) error {
+			// 删除权限相关表
+			tables := []string{
+				"menu_permissions",
+				"role_menus",
+				"role_permissions",
+				"user_roles",
+				"menus",
+				"permissions",
+				"roles",
+			}
+			for _, table := range tables {
+				if err := tx.Migrator().DropTable(table); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	})
+
+	// 添加权限系统初始数据迁移
+	migrator.Register(&MigrationEntry{
+		Version: "202506180002",
+		Name:    "init_permission_data",
+		Up: func(tx *gorm.DB) error {
+			return InitPermissionData20250618(tx)
+		},
+		Down: func(tx *gorm.DB) error {
+			// 清空权限数据
+			tables := []string{
+				"menu_permissions",
+				"role_menus",
+				"role_permissions",
+				"user_roles",
+				"menus",
+				"permissions",
+				"roles",
+			}
+			for _, table := range tables {
+				if err := tx.Exec("DELETE FROM " + table).Error; err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	})
 }

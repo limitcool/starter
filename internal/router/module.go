@@ -15,13 +15,14 @@ type RouterParams struct {
 	Config *configs.Config
 
 	// 处理器
-	UserHandler  *handler.UserHandler
-	FileHandler  *handler.FileHandler
-	AdminHandler *handler.AdminHandler
+	UserHandler       *handler.UserHandler
+	FileHandler       *handler.FileHandler
+	AdminHandler      *handler.AdminHandler
+	PermissionHandler *handler.PermissionHandler
 }
 
 // NewRouter 创建路由器（不依赖fx）
-func NewRouter(config *configs.Config, userHandler *handler.UserHandler, fileHandler *handler.FileHandler, adminHandler *handler.AdminHandler) (*gin.Engine, error) {
+func NewRouter(config *configs.Config, userHandler *handler.UserHandler, fileHandler *handler.FileHandler, adminHandler *handler.AdminHandler, permissionHandler *handler.PermissionHandler) (*gin.Engine, error) {
 	// 设置Gin模式
 	gin.SetMode(config.App.Mode)
 
@@ -40,7 +41,7 @@ func NewRouter(config *configs.Config, userHandler *handler.UserHandler, fileHan
 	registrar := &RouteRegistrar{}
 
 	// 注册路由
-	registrar.RegisterRoutes(r, config, userHandler, fileHandler, adminHandler)
+	registrar.RegisterRoutes(r, config, userHandler, fileHandler, adminHandler, permissionHandler)
 
 	// 打印路由信息
 	logger.Info("==================================================")
