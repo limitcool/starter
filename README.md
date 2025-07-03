@@ -1,11 +1,11 @@
-# Starter (Lite Version)
+# Starter
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/limitcool/starter.svg)](https://pkg.go.dev/github.com/limitcool/starter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/limitcool/starter)](https://goreportcard.com/report/github.com/limitcool/starter)
 
 [English](README_EN.md) | 中文
 
-> 这是 Starter 框架的轻量级版本，采用单用户模式设计，适合快速开发和简单应用场景。如果您需要更多企业级功能，请查看 `enterprise` 分支。
+> 这是 Starter 框架，采用简化架构设计，适合快速开发和简单应用场景。专注于提供轻量级、高效的 Go Web 开发体验。
 
 ## 特征
 - 提供基于 Gin 框架的轻量级项目模板
@@ -88,7 +88,7 @@ func New(config *configs.Config) (*App, error) {
 
 ```bash
 go install github.com/go-eagle/eagle/cmd/eagle@latest
-eagle new <project name> -r https://github.com/limitcool/starter -b lite
+eagle new <project name> -r https://github.com/limitcool/starter
 ```
 
 ## 使用方法
@@ -152,7 +152,7 @@ eagle new <project name> -r https://github.com/limitcool/starter -b lite
 
 ## 用户管理设计
 
-Lite 版本采用简化的用户管理设计，专注于快速开发和简单应用场景：
+框架采用简化的用户管理设计，专注于快速开发和简单应用场景：
 
 ### 单一用户表设计
 
@@ -176,7 +176,7 @@ admin:
 
 ## 数据库迁移系统
 
-Lite 版本实现了一个简洁的数据库迁移系统，用于管理数据库表结构的创建和更新。
+框架实现了一个简洁的数据库迁移系统，用于管理数据库表结构的创建和更新。
 
 ### 迁移系统特点
 
@@ -205,7 +205,7 @@ migrator.Register(&MigrationEntry{
 
 ### 预定义迁移
 
-Lite 版本已预定义了基础的迁移项：
+框架已预定义了基础的迁移项：
 
 1. 用户表 (`users`)
 2. 文件表 (`files`)
@@ -721,7 +721,7 @@ GRPC:
 
 ## 权限系统
 
-Lite 版本采用简化的权限系统，基于用户的 `is_admin` 字段进行权限控制：
+框架采用简化的权限系统，基于用户的 `is_admin` 字段进行权限控制：
 
 ### 权限控制中间件
 
@@ -771,11 +771,11 @@ regularUserGroup.Use(middleware.RegularUserCheck())
 
 ## 数据库操作
 
-Lite 版本采用简化的数据库操作方式，直接在 Model 层提供数据库操作方法：
+框架采用简化的数据库操作方式，直接在 Model 层提供数据库操作方法：
 
 ### Model 层设计
 
-在 Lite 版本中，Model 层直接提供数据库操作方法，简化了代码结构：
+在框架中，Model 层直接提供数据库操作方法，简化了代码结构：
 
 ```go
 // User 用户模型
@@ -891,7 +891,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 
 ## 错误处理
 
-Lite 版本提供了简洁而强大的错误处理系统，支持错误码和多语言错误消息。
+框架提供了简洁而强大的错误处理系统，支持错误码和多语言错误消息。
 
 ### 错误处理特点
 

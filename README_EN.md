@@ -1,11 +1,11 @@
-# Starter (Lite Version)
+# Starter
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/limitcool/starter.svg)](https://pkg.go.dev/github.com/limitcool/starter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/limitcool/starter)](https://goreportcard.com/report/github.com/limitcool/starter)
 
 English | [中文](README.md)
 
-> This is the lightweight version of the Starter framework, designed with a single-user mode, suitable for rapid development and simple application scenarios. If you need more enterprise-level features, please check the `enterprise` branch.
+> This is the Starter framework, designed with simplified architecture, suitable for rapid development and simple application scenarios. Focused on providing lightweight and efficient Go web development experience.
 
 ## Features
 - Provides a lightweight Gin framework project template
@@ -88,7 +88,7 @@ func New(config *configs.Config) (*App, error) {
 
 ```bash
 go install github.com/go-eagle/eagle/cmd/eagle@latest
-eagle new <project name> -r https://github.com/limitcool/starter -b lite
+eagle new <project name> -r https://github.com/limitcool/starter
 ```
 
 ## Usage
@@ -152,7 +152,7 @@ Database migration commands are used to initialize or update the database struct
 
 ## Database Migration System
 
-The Lite version implements a concise database migration system for managing the creation and update of database table structures.
+The framework implements a concise database migration system for managing the creation and update of database table structures.
 
 ### Migration System Features
 
@@ -181,7 +181,7 @@ migrator.Register(&MigrationEntry{
 
 ### Predefined Migrations
 
-The Lite version has predefined basic migration items:
+The framework has predefined basic migration items:
 
 1. User table (`users`)
 2. File table (`files`)
@@ -610,7 +610,7 @@ GRPC:
 
 ## Permission System
 
-The Lite version adopts a simplified permission system, based on the user's `is_admin` field for permission control:
+The framework adopts a simplified permission system, based on the user's `is_admin` field for permission control:
 
 ### Permission Control Middleware
 
@@ -660,11 +660,11 @@ regularUserGroup.Use(middleware.RegularUserCheck())
 
 ## Database Operations
 
-The Lite version adopts a simplified database operation approach, providing database operation methods directly in the Model layer:
+The framework adopts a simplified database operation approach, providing database operation methods directly in the Model layer:
 
 ### Model Layer Design
 
-In the Lite version, the Model layer directly provides database operation methods, simplifying the code structure:
+In the framework, the Model layer directly provides database operation methods, simplifying the code structure:
 
 ```go
 // User model
@@ -780,7 +780,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 
 ## Error Handling
 
-The Lite version provides a concise yet powerful error handling system, supporting error codes and multilingual error messages.
+The framework provides a concise yet powerful error handling system, supporting error codes and multilingual error messages.
 
 ### Error Handling Features
 
