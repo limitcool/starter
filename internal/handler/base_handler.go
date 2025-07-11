@@ -1,10 +1,24 @@
 package handler
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
+	"github.com/limitcool/starter/internal/filestore"
+	"github.com/limitcool/starter/internal/pkg/cache"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"gorm.io/gorm"
 )
+
+type IHandler interface {
+	InitRouters(g *gin.RouterGroup, root *gin.Engine)
+}
+
+type IAPP interface {
+	GetConfig() *configs.Config
+	GetDB() *gorm.DB
+	GetCache() cache.Cache
+	GetStorage() filestore.FileStorage
+}
 
 // BaseHandler 基础处理器，包含所有Handler的公共字段和方法
 type BaseHandler struct {

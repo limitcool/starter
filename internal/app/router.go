@@ -1,6 +1,8 @@
-package router
+package app
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"net/http/pprof"
 
@@ -8,13 +10,26 @@ import (
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/dto"
 	"github.com/limitcool/starter/internal/handler"
+	"github.com/limitcool/starter/internal/middleware"
+	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
-// RouteRegistrar 路由注册器
-type RouteRegistrar struct{}
+// newRouter 创建路由器（不依赖fx）
+func newRouter(config *configs.Config, handlers ...handler.IHandler) (*gin.Engine, error) {
+	// 设置Gin模式
+	gin.SetMode(config.App.Mode)
 
-// RegisterRoutes 注册路由
-func (rr *RouteRegistrar) RegisterRoutes(r *gin.Engine, config *configs.Config, userHandler *handler.UserHandler, fileHandler *handler.FileHandler, adminHandler *handler.AdminHandler) {
+	// 创建路由器
+	r := gin.New()
+
+	// 添加中间件
+	r.Use(middleware.RequestLoggerMiddleware())
+	r.Use(middleware.Cors())
+
+	// 添加错误处理中间件（替换gin.Recovery()）
+	r.Use(middleware.PanicRecovery())
+	r.Use(middleware.GlobalErrorHandler())
+
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, &dto.HealthResponse{
@@ -24,29 +39,37 @@ func (rr *RouteRegistrar) RegisterRoutes(r *gin.Engine, config *configs.Config, 
 
 	// 如果启用了pprof且使用主服务器端口，则添加pprof路由
 	if config.Pprof.Enabled && config.Pprof.Port == 0 {
-		rr.registerPprofRoutes(r)
+		registerPprofRoutes(r)
 	}
 
-	// 创建参数结构
-	params := RouterParams{
-		Config:       config,
-		UserHandler:  userHandler,
-		FileHandler:  fileHandler,
-		AdminHandler: adminHandler,
-	}
-
-	// 注册公开路由（无需认证）
-	registerPublicRoutes(r, params)
+	ctx := context.Background()
+	logger.InfoContext(ctx, "Registering application routes")
 
 	// 创建API路由组
 	api := r.Group("/api/v1")
 
 	// 注册应用路由
-	registerAppRoutes(api, params)
+	for _, h := range handlers {
+		h.InitRouters(api, r)
+	}
+
+	// 打印路由信息
+	logger.Info("==================================================")
+	logger.Info("Route information:")
+
+	// 获取所有路由
+	routes := r.Routes()
+	for _, route := range routes {
+		logger.Info(fmt.Sprintf("%-7s %s", route.Method, route.Path))
+	}
+
+	logger.Info("==================================================")
+
+	return r, nil
 }
 
 // registerPprofRoutes 注册pprof路由
-func (rr *RouteRegistrar) registerPprofRoutes(r *gin.Engine) {
+func registerPprofRoutes(r *gin.Engine) {
 	// 创建pprof路由组
 	pprofGroup := r.Group("/debug/pprof")
 	{

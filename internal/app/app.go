@@ -18,7 +18,6 @@ import (
 	"github.com/limitcool/starter/internal/handler"
 	"github.com/limitcool/starter/internal/pkg/cache"
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"github.com/limitcool/starter/internal/router"
 	"gorm.io/gorm"
 )
 
@@ -29,17 +28,9 @@ type App struct {
 	redis       *redis.Client
 	cache       cache.Cache
 	storage     filestore.FileStorage
-	handlers    *Handlers
 	router      *gin.Engine
 	server      *http.Server
 	pprofServer *http.Server // pprof服务器
-}
-
-// Handlers 处理器集合
-type Handlers struct {
-	User  *handler.UserHandler
-	File  *handler.FileHandler
-	Admin *handler.AdminHandler
 }
 
 // InitStep 初始化步骤
@@ -81,6 +72,22 @@ func New(config *configs.Config) (*App, error) {
 	return app, nil
 }
 
+func (app *App) GetConfig() *configs.Config {
+	return app.config
+}
+
+func (app *App) GetDB() *gorm.DB {
+	return app.db
+}
+
+func (app *App) GetCache() cache.Cache {
+	return app.cache
+}
+
+func (app *App) GetStorage() filestore.FileStorage {
+	return app.storage
+}
+
 // getInitSteps 获取初始化步骤列表
 func (app *App) getInitSteps() []InitStep {
 	steps := []InitStep{
@@ -92,7 +99,6 @@ func (app *App) getInitSteps() []InitStep {
 		{Name: "storage", Required: false, Init: app.initStorage},
 
 		// 核心组件，必须成功初始化
-		{Name: "handlers", Required: true, Init: app.initHandlers},
 		{Name: "router", Required: true, Init: app.initRouter},
 		{Name: "server", Required: true, Init: app.initServer},
 		{Name: "pprof", Required: false, Init: app.initPprof},
@@ -197,21 +203,14 @@ func (a *App) initStorage() error {
 	return nil
 }
 
-// initHandlers 初始化处理器
-func (a *App) initHandlers() error {
-	a.handlers = &Handlers{
-		User:  handler.NewUserHandler(a.db, a.config),
-		File:  handler.NewFileHandler(a.db, a.storage),
-		Admin: handler.NewAdminHandler(a.db, a.config),
-	}
-
-	logger.Info("Handlers initialized successfully")
-	return nil
-}
-
 // initRouter 初始化路由
 func (a *App) initRouter() error {
-	r, err := router.NewRouter(a.config, a.handlers.User, a.handlers.File, a.handlers.Admin)
+	r, err := newRouter(
+		a.config,
+		handler.NewUserHandler(a),
+		handler.NewFileHandler(a),
+		handler.NewAdminHandler(a),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create router: %w", err)
 	}

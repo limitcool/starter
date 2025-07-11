@@ -8,6 +8,7 @@ import (
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/dto"
 	"github.com/limitcool/starter/internal/filestore"
+	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
@@ -17,17 +18,52 @@ import (
 
 // FileHandler 文件处理器（基于接口）
 type FileHandler struct {
+	app         IAPP
 	db          *gorm.DB
 	storage     filestore.FileStorage
 	pathManager *filestore.PathManager
 }
 
+var _ IHandler = (*FileHandler)(nil) // 用于接口断言，_ 变量编译后会被移除
+
 // NewFileHandler 创建文件处理器
-func NewFileHandler(db *gorm.DB, storage filestore.FileStorage) *FileHandler {
+func NewFileHandler(app IAPP) *FileHandler {
 	return &FileHandler{
-		db:          db,
-		storage:     storage,
+		app:         app,
+		db:          app.GetDB(),
+		storage:     app.GetStorage(),
 		pathManager: filestore.NewPathManager(),
+	}
+}
+
+func (h *FileHandler) InitRouters(g *gin.RouterGroup, root *gin.Engine) {
+
+	// 公开文件访问
+	publicFiles := root.Group("/public")
+	{
+		publicFiles.GET("/files/:id", h.GetFileInfo)
+	}
+
+	// 需要认证的路由
+	authenticated := g.Group("", middleware.JWTAuth(h.app.GetConfig()))
+
+	// 管理员路由 - 使用简化的管理员检查中间件
+	admin := authenticated.Group("/admin", middleware.AdminCheck())
+	{
+		// 文件管理
+		files := admin.Group("/files")
+		{
+			files.POST("/upload-url", h.GetUploadURL)
+			files.POST("/confirm", h.ConfirmUpload)
+			files.GET("/:id/download", h.GetDownloadURL)
+			files.DELETE("/:id", h.DeleteFile)
+		}
+	}
+
+	// 文件上传接口（统一支持本地和MinIO存储，需要认证但不需要管理员权限）
+	upload := authenticated.Group("/upload")
+	{
+		upload.POST("/file", h.UploadFile) // 统一上传接口
 	}
 }
 
