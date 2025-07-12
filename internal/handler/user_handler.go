@@ -5,31 +5,60 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/dto"
+	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
-	"gorm.io/gorm"
 )
 
 // UserHandler 用户处理器
 type UserHandler struct {
 	*BaseHandler
+	app         AppContext
 	authService *AuthService
 }
 
+var _ RouterInitializer = (*UserHandler)(nil) // 用于接口断言，_ 变量编译后会被移除
+
 // NewUserHandler 创建用户处理器
-func NewUserHandler(db *gorm.DB, config *configs.Config) *UserHandler {
+func NewUserHandler(app AppContext) *UserHandler {
 	handler := &UserHandler{
-		BaseHandler: NewBaseHandler(db, config),
-		authService: NewAuthService(config),
+		BaseHandler: NewBaseHandler(app.GetDB(), app.GetConfig()),
+		authService: NewAuthService(app.GetConfig()), // TODO: service 应该移到 services 文件夹
+		app:         app,
 	}
 
 	handler.LogInit("UserHandler")
 	return handler
+}
+
+func (h *UserHandler) InitRouters(g *gin.RouterGroup, root *gin.Engine) {
+
+	// 公共路由
+	public := g.Group("")
+	{
+		// 用户登录（管理员和普通用户使用同一接口）
+		public.POST("/login", h.UserLogin)
+
+		// 用户注册
+		public.POST("/register", h.UserRegister)
+	}
+
+	// 需要认证的路由
+	authenticated := g.Group("", middleware.JWTAuth(h.Config))
+
+	// 普通用户路由 - 使用JWT认证
+	user := authenticated.Group("/user")
+	{
+		// 用户信息
+		user.GET("/info", h.UserInfo)
+
+		// 修改密码
+		user.POST("/change-password", h.UserChangePassword)
+	}
 }
 
 // UserLogin 用户登录
