@@ -15,7 +15,7 @@ import (
 )
 
 // newRouter 创建路由器（不依赖fx）
-func newRouter(config *configs.Config, handlers ...handler.IHandler) (*gin.Engine, error) {
+func newRouter(config *configs.Config, handlers ...handler.RouterInitializer) (*gin.Engine, error) {
 	// 设置Gin模式
 	gin.SetMode(config.App.Mode)
 

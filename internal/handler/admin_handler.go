@@ -11,13 +11,13 @@ import (
 // AdminHandler 管理员处理器
 type AdminHandler struct {
 	*BaseHandler
-	app IAPP
+	app AppContext
 }
 
-var _ IHandler = (*AdminHandler)(nil) // 用于接口断言，_ 变量编译后会被移除
+var _ RouterInitializer = (*AdminHandler)(nil) // 用于接口断言，_ 变量编译后会被移除
 
 // NewAdminHandler 创建管理员处理器
-func NewAdminHandler(app IAPP) *AdminHandler {
+func NewAdminHandler(app AppContext) *AdminHandler {
 	handler := &AdminHandler{
 		BaseHandler: NewBaseHandler(app.GetDB(), app.GetConfig()),
 		app:         app,

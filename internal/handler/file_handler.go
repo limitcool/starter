@@ -18,16 +18,16 @@ import (
 
 // FileHandler 文件处理器（基于接口）
 type FileHandler struct {
-	app         IAPP
+	app         AppContext
 	db          *gorm.DB
 	storage     filestore.FileStorage
 	pathManager *filestore.PathManager
 }
 
-var _ IHandler = (*FileHandler)(nil) // 用于接口断言，_ 变量编译后会被移除
+var _ RouterInitializer = (*FileHandler)(nil) // 用于接口断言，_ 变量编译后会被移除
 
 // NewFileHandler 创建文件处理器
-func NewFileHandler(app IAPP) *FileHandler {
+func NewFileHandler(app AppContext) *FileHandler {
 	return &FileHandler{
 		app:         app,
 		db:          app.GetDB(),

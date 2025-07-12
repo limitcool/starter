@@ -17,14 +17,14 @@ import (
 // UserHandler 用户处理器
 type UserHandler struct {
 	*BaseHandler
-	app         IAPP
+	app         AppContext
 	authService *AuthService
 }
 
-var _ IHandler = (*UserHandler)(nil) // 用于接口断言，_ 变量编译后会被移除
+var _ RouterInitializer = (*UserHandler)(nil) // 用于接口断言，_ 变量编译后会被移除
 
 // NewUserHandler 创建用户处理器
-func NewUserHandler(app IAPP) *UserHandler {
+func NewUserHandler(app AppContext) *UserHandler {
 	handler := &UserHandler{
 		BaseHandler: NewBaseHandler(app.GetDB(), app.GetConfig()),
 		authService: NewAuthService(app.GetConfig()), // TODO: service 应该移到 services 文件夹

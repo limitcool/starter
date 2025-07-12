@@ -9,11 +9,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type IHandler interface {
+type RouterInitializer interface {
 	InitRouters(g *gin.RouterGroup, root *gin.Engine)
 }
 
-type IAPP interface {
+type AppContext interface {
 	GetConfig() *configs.Config
 	GetDB() *gorm.DB
 	GetCache() cache.Cache
