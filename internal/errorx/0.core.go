@@ -1,7 +1,6 @@
 package errorx
 
 import (
-	"context"
 	"fmt"
 	"runtime"
 	"strings"
@@ -15,21 +14,12 @@ type none = struct{}
 
 var None = none{}
 
-func defineErr[Args any](i18n *i18n.I18n, code int, format string, httpStatus int) *errorx.Definition[*AppError, Args] {
+func Define[Args any](i18n *i18n.I18n, code int, format string, httpStatus int) *errorx.Definition[*AppError, Args] {
 	return errorx.Define[Args](i18n, format, wrapAppError(code, httpStatus))
 }
 
-type SimpleError struct {
-	*errorx.Definition[*AppError, none]
-}
-
-func (e *SimpleError) New(ctx context.Context) *AppError {
-	return e.Definition.New(ctx, None)
-}
-
-func defineErrSimple(i18n *i18n.I18n, code int, format string, httpStatus int) *SimpleError {
-	def := errorx.Define[none](i18n, format, wrapAppError(code, httpStatus))
-	return &SimpleError{def}
+func DefineSimple(i18n *i18n.I18n, code int, format string, httpStatus int) *errorx.DefinitionSimple[*AppError] {
+	return errorx.DefineSimple(i18n, format, wrapAppError(code, httpStatus))
 }
 
 func wrapAppError(code, httpStatus int) errorx.Wrapper[*AppError] {

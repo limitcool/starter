@@ -216,6 +216,10 @@ github.com/epkgs/i18n v0.0.0-20250723103021-ed3cf2c516f4 h1:tFnpM53Ss+UR/peqyVA/
 github.com/epkgs/i18n v0.0.0-20250723103021-ed3cf2c516f4/go.mod h1:dP6dijzAJqU5fRmuITnS2LWi4IjiCL3t/i3FQ9lQLho=
 github.com/epkgs/i18n v0.0.0-20250723143334-367ed2a2ab81 h1:THW35QpRcXsU1cGYOzukD40VJNXCv2YcJc905ZZRPlo=
 github.com/epkgs/i18n v0.0.0-20250723143334-367ed2a2ab81/go.mod h1:dP6dijzAJqU5fRmuITnS2LWi4IjiCL3t/i3FQ9lQLho=
+github.com/epkgs/i18n v0.0.0-20250723163348-d19a95fee7d6 h1:blcwzqYRxRIl7OMPR+5lc4nzxuSJfEWHQH2WKZFSNI4=
+github.com/epkgs/i18n v0.0.0-20250723163348-d19a95fee7d6/go.mod h1:dP6dijzAJqU5fRmuITnS2LWi4IjiCL3t/i3FQ9lQLho=
+github.com/epkgs/i18n v0.0.0-20250723163622-8da43aa20b7a h1:DauleRUANOzSiCVC+rhg+PC2vB8+RGifIMafojEoVX0=
+github.com/epkgs/i18n v0.0.0-20250723163622-8da43aa20b7a/go.mod h1:dP6dijzAJqU5fRmuITnS2LWi4IjiCL3t/i3FQ9lQLho=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/frankban/quicktest v1.14.6 h1:7Xjx+VpznH+oBnejlPUj8oUpdxnVs4f8XU8WnHkI4W8=
