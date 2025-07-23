@@ -1,7 +1,6 @@
 package errorx
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/epkgs/i18n"
@@ -9,8 +8,6 @@ import (
 
 func init() {
 	commonI18n.LoadTranslations()
-
-	ErrFileTest.New(context.Background())
 }
 
 var commonI18n = i18n.NewCatalog("common")
@@ -31,6 +28,4 @@ var (
 	ErrUserAuthFailed  = defineErrSimple(commonI18n, 1008, "user authentication failed", http.StatusUnauthorized)                       // 用户认证失败
 	ErrCasbinService   = defineErrSimple(commonI18n, 1009, "casbin service error", http.StatusInternalServerError)                      // Casbin服务错误
 	ErrFileStorage     = defineErrSimple(commonI18n, 1010, "file storage error", http.StatusInternalServerError)                        // 文件存储错误
-
-	ErrFileTest = defineErrSimple(commonI18n, 1011, "file test error", http.StatusInternalServerError)
 )
