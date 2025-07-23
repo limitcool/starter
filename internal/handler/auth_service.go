@@ -8,7 +8,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/dto"
-	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
@@ -80,7 +80,7 @@ func (s *AuthService) GenerateTokensWithContext(ctx context.Context, userID uint
 	accessTokenString, err := accessToken.SignedString([]byte(s.config.JwtAuth.AccessSecret))
 	if err != nil {
 		logger.ErrorContext(ctx, "生成访问令牌失败", "error", err)
-		return nil, errorx.WrapError(err, "生成访问令牌失败")
+		return nil, errorx.ErrGenVisitToken.New(ctx, errorx.None).Wrap(err)
 	}
 
 	// 创建刷新令牌
@@ -88,7 +88,7 @@ func (s *AuthService) GenerateTokensWithContext(ctx context.Context, userID uint
 	refreshTokenString, err := refreshToken.SignedString([]byte(s.config.JwtAuth.RefreshSecret))
 	if err != nil {
 		logger.ErrorContext(ctx, "生成刷新令牌失败", "error", err)
-		return nil, errorx.WrapError(err, "生成刷新令牌失败")
+		return nil, errorx.ErrGenRefreshToken.New(ctx, errorx.None).Wrap(err)
 	}
 
 	// 返回令牌响应
@@ -125,20 +125,20 @@ func (s *AuthService) ParseTokenWithContext(ctx context.Context, tokenString str
 
 	if err != nil {
 		logger.WarnContext(ctx, "解析令牌失败", "error", err)
-		return nil, errorx.WrapError(err, "解析令牌失败")
+		return nil, errorx.ErrParseToken.New(ctx, errorx.None).Wrap(err)
 	}
 
 	// 验证令牌
 	if !token.Valid {
 		logger.WarnContext(ctx, "无效的令牌")
-		return nil, errorx.Errorf(errorx.ErrUserTokenError, "无效的令牌")
+		return nil, errorx.ErrInvalidToken.New(ctx, errorx.None).Wrap(err)
 	}
 
 	// 获取声明
 	claims, ok := token.Claims.(*Claims)
 	if !ok {
 		logger.WarnContext(ctx, "无效的令牌声明")
-		return nil, errorx.Errorf(errorx.ErrUserTokenError, "无效的令牌声明")
+		return nil, errorx.ErrInvalidTokenClaim.New(ctx, errorx.None).Wrap(err)
 	}
 
 	return claims, nil

@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/errorx"
 	"github.com/limitcool/starter/internal/pkg/jwt"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
@@ -36,7 +36,7 @@ func JWTAuth(config *configs.Config) gin.HandlerFunc {
 		if token == "" {
 			ctx := c.Request.Context()
 			logger.ErrorContext(ctx, "No authentication token provided")
-			response.Error(c, errorx.ErrUserNoLogin)
+			response.Error(c, errorx.ErrUserNotLogin.New(ctx, errorx.None))
 			c.Abort()
 			return
 		}
@@ -46,7 +46,7 @@ func JWTAuth(config *configs.Config) gin.HandlerFunc {
 		claims, err := jwt.ParseTokenWithContext(ctx, token, config.JwtAuth.AccessSecret)
 		if err != nil {
 			logger.ErrorContext(ctx, "Authentication token parse failed", "error", err)
-			response.Error(c, errorx.ErrUserTokenError)
+			response.Error(c, errorx.ErrUserTokenError.New(ctx, errorx.None))
 			c.Abort()
 			return
 		}

@@ -65,9 +65,6 @@ Admin:
 I18n:
   Enabled: true
   DefaultLanguage: zh-CN
-  SupportLanguages:
-    - zh-CN
-    - en-US
   ResourcesPath: locales
 
 # 性能分析配置

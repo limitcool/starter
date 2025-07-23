@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/errorx"
 	"gorm.io/gorm"
 )
 
@@ -66,7 +66,7 @@ type FileURLBuilder interface {
 // NewFileRepo 创建文件仓库
 func NewFileRepo(db *gorm.DB) *FileRepo {
 	genericRepo := NewGenericRepo[File](db)
-	genericRepo.ErrorCode = errorx.ErrorFileNotFoundCode
+	genericRepo.ErrorCode = errorx.ErrFileNotFound.Code()
 
 	return &FileRepo{
 		GenericRepo: genericRepo,
@@ -77,7 +77,7 @@ func NewFileRepo(db *gorm.DB) *FileRepo {
 // NewFileRepoWithURLBuilder 创建带有自定义URL构建器的文件仓库
 func NewFileRepoWithURLBuilder(db *gorm.DB, urlBuilder FileURLBuilder) *FileRepo {
 	genericRepo := NewGenericRepo[File](db)
-	genericRepo.ErrorCode = errorx.ErrorFileNotFoundCode
+	genericRepo.ErrorCode = errorx.ErrFileNotFound.Code()
 
 	return &FileRepo{
 		GenericRepo: genericRepo,
@@ -99,7 +99,7 @@ func (d *defaultFileURLBuilder) BuildFileURL(path string) string {
 func (r *FileRepo) GetByID(ctx context.Context, id uint) (*File, error) {
 	file, err := r.Get(ctx, id, nil)
 	if err != nil {
-		return nil, errorx.WrapError(err, "查询文件失败")
+		return nil, errorx.ErrQueryFile.New(ctx, errorx.None).Wrap(err)
 	}
 
 	// 设置URL字段
@@ -125,7 +125,7 @@ func (r *FileRepo) ListByUser(ctx context.Context, userID int64, page, pageSize 
 	}
 	files, err := r.List(ctx, page, pageSize, opts)
 	if err != nil {
-		return nil, errorx.WrapError(err, "查询用户文件列表失败")
+		return nil, errorx.ErrQueryUserFileList.New(ctx, errorx.None).Wrap(err)
 	}
 
 	// 为所有文件设置URL
@@ -145,7 +145,7 @@ func (r *FileRepo) CountByUser(ctx context.Context, userID int64) (int64, error)
 		Args:      []any{userID, 2},
 	})
 	if err != nil {
-		return 0, errorx.WrapError(err, "查询用户文件总数失败")
+		return 0, errorx.ErrQueryUserFileTotal.New(ctx, errorx.None).Wrap(err)
 	}
 	return count, nil
 }
@@ -186,7 +186,7 @@ func (r *FileRepo) ListFiles(ctx context.Context, page, pageSize int, fileType, 
 	// 获取文件列表
 	files, err := r.List(ctx, page, pageSize, opts)
 	if err != nil {
-		return nil, 0, errorx.WrapError(err, "查询文件列表失败")
+		return nil, 0, errorx.ErrQueryFileList.New(ctx, errorx.None).Wrap(err)
 	}
 
 	// 为所有文件设置URL
@@ -199,7 +199,7 @@ func (r *FileRepo) ListFiles(ctx context.Context, page, pageSize int, fileType, 
 	// 获取总数
 	total, err := r.Count(ctx, opts)
 	if err != nil {
-		return nil, 0, errorx.WrapError(err, "查询文件总数失败")
+		return nil, 0, errorx.ErrQueryFileTotal.New(ctx, errorx.None).Wrap(err)
 	}
 
 	return files, total, nil

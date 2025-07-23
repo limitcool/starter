@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/errorx"
 	"github.com/limitcool/starter/pkg/logconfig"
 	"github.com/pkg/errors"
 )
@@ -19,9 +19,6 @@ func Setup(config logconfig.LogConfig) {
 		config.StackTraceLevel,
 		config.MaxStackFrames,
 	)
-
-	// 设置errorx包的最大堆栈帧数
-	errorx.SetMaxStackFrames(config.MaxStackFrames)
 
 	// 创建并设置logger
 	// 使用ZapLogger代替CharmLogger以提高性能
@@ -77,7 +74,7 @@ func LogErrorWithStackContext(ctx context.Context, msg string, err error, keyval
 		// 处理 AppError 类型
 		if appErr, ok := err.(*errorx.AppError); ok {
 			// 添加错误码
-			fields = append(fields, "error_code", appErr.GetErrorCode())
+			fields = append(fields, "error_code", appErr.Code())
 
 			// 添加错误链
 			errorChain := errorx.FormatErrorChain(appErr)

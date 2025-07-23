@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 
+	"github.com/epkgs/i18n"
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/configs"
 	"github.com/limitcool/starter/internal/dto"
@@ -25,6 +26,11 @@ func newRouter(config *configs.Config, handlers ...handler.RouterInitializer) (*
 	// 添加中间件
 	r.Use(middleware.RequestLoggerMiddleware())
 	r.Use(middleware.Cors())
+
+	// 添加国际化中间件
+	if config.I18n.Enabled {
+		r.Use(i18n.GinMiddleware(config.I18n.DefaultLanguage))
+	}
 
 	// 添加错误处理中间件（替换gin.Recovery()）
 	r.Use(middleware.PanicRecovery())

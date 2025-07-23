@@ -122,10 +122,9 @@ func LoadConfig(configPath string) *Config {
 			Nickname: "管理员",
 		},
 		I18n: I18n{
-			Enabled:          true,
-			DefaultLanguage:  "zh-CN",
-			SupportLanguages: []string{"zh-CN", "en-US"},
-			ResourcesPath:    "locales",
+			Enabled:         true,
+			DefaultLanguage: "zh-CN",
+			ResourcesPath:   "locales",
 		},
 	}
 
