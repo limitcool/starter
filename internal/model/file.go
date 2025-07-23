@@ -99,7 +99,7 @@ func (d *defaultFileURLBuilder) BuildFileURL(path string) string {
 func (r *FileRepo) GetByID(ctx context.Context, id uint) (*File, error) {
 	file, err := r.Get(ctx, id, nil)
 	if err != nil {
-		return nil, errorx.ErrQueryFile.New(ctx, errorx.None).Wrap(err)
+		return nil, errorx.ErrQueryFile.New(ctx).Wrap(err)
 	}
 
 	// 设置URL字段
@@ -125,7 +125,7 @@ func (r *FileRepo) ListByUser(ctx context.Context, userID int64, page, pageSize 
 	}
 	files, err := r.List(ctx, page, pageSize, opts)
 	if err != nil {
-		return nil, errorx.ErrQueryUserFileList.New(ctx, errorx.None).Wrap(err)
+		return nil, errorx.ErrQueryUserFileList.New(ctx).Wrap(err)
 	}
 
 	// 为所有文件设置URL
@@ -145,7 +145,7 @@ func (r *FileRepo) CountByUser(ctx context.Context, userID int64) (int64, error)
 		Args:      []any{userID, 2},
 	})
 	if err != nil {
-		return 0, errorx.ErrQueryUserFileTotal.New(ctx, errorx.None).Wrap(err)
+		return 0, errorx.ErrQueryUserFileTotal.New(ctx).Wrap(err)
 	}
 	return count, nil
 }
@@ -186,7 +186,7 @@ func (r *FileRepo) ListFiles(ctx context.Context, page, pageSize int, fileType, 
 	// 获取文件列表
 	files, err := r.List(ctx, page, pageSize, opts)
 	if err != nil {
-		return nil, 0, errorx.ErrQueryFileList.New(ctx, errorx.None).Wrap(err)
+		return nil, 0, errorx.ErrQueryFileList.New(ctx).Wrap(err)
 	}
 
 	// 为所有文件设置URL
@@ -199,7 +199,7 @@ func (r *FileRepo) ListFiles(ctx context.Context, page, pageSize int, fileType, 
 	// 获取总数
 	total, err := r.Count(ctx, opts)
 	if err != nil {
-		return nil, 0, errorx.ErrQueryFileTotal.New(ctx, errorx.None).Wrap(err)
+		return nil, 0, errorx.ErrQueryFileTotal.New(ctx).Wrap(err)
 	}
 
 	return files, total, nil

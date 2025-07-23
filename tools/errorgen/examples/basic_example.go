@@ -30,7 +30,7 @@ func ErrorHandler() gin.HandlerFunc {
 			var appErr *errorx.AppError
 			if !errors.As(err, appErr) {
 				// 对于非应用错误，返回通用错误
-				appErr = errorx.ErrUnknown.New(c.Request.Context(), errorx.None)
+				appErr = errorx.ErrUnknown.New(c.Request.Context())
 			}
 
 			c.JSON(appErr.HttpStatus(), Result{
@@ -52,19 +52,19 @@ func UserLoginHandler(c *gin.Context) {
 
 	// 参数验证
 	if username == "" || password == "" {
-		c.Error(errorx.ErrUserNameOrPasswordEmpty.New(ctx, errorx.None))
+		c.Error(errorx.ErrUserNameOrPasswordEmpty.New(ctx))
 		return
 	}
 
 	// 模拟用户查询
 	if username != "admin" {
-		c.Error(errorx.ErrUserNotFound.New(ctx, errorx.None))
+		c.Error(errorx.ErrUserNotFound.New(ctx))
 		return
 	}
 
 	// 模拟密码验证
 	if password != "123456" {
-		c.Error(errorx.ErrPassword.New(ctx, errorx.None))
+		c.Error(errorx.ErrPassword.New(ctx))
 		return
 	}
 
@@ -81,14 +81,14 @@ func main() {
 	ctx := context.TODO()
 
 	// 演示直接使用错误
-	fmt.Println("错误示例:", errorx.ErrUserNotFound.New(ctx, errorx.None))
+	fmt.Println("错误示例:", errorx.ErrUserNotFound.New(ctx))
 
 	// 演示使用GetError
-	unknownErr := errorx.ErrInternal.New(ctx, errorx.None)
+	unknownErr := errorx.ErrInternal.New(ctx)
 	fmt.Println("通过错误码获取错误:", unknownErr.Error())
 
 	// 演示添加额外信息
-	customErr := errorx.ErrNotFound.New(ctx, errorx.None).WithMessage("用户ID为123的用户")
+	customErr := errorx.ErrNotFound.New(ctx).WithMessage("用户ID为123的用户")
 	fmt.Println("自定义错误消息:", customErr.Error())
 
 	// 设置Gin路由

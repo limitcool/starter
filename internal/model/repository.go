@@ -121,13 +121,13 @@ func (r *GenericRepo[T]) Get(ctx context.Context, id any, opts *QueryOptions) (*
 		err = query.First(&entity).Error
 	} else {
 		// 没有ID和条件，返回错误
-		return nil, errorx.ErrQueryParamEmpty.New(ctx, errorx.None)
+		return nil, errorx.ErrQueryParamEmpty.New(ctx)
 	}
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			// 使用ErrorCode创建特定的错误
-			return nil, errorx.ErrRecordNotExist.New(ctx, errorx.None).Wrap(err)
+			return nil, errorx.ErrRecordNotExist.New(ctx).Wrap(err)
 		}
 		return nil, err
 	}

@@ -39,11 +39,11 @@ func PanicRecovery() gin.HandlerFunc {
 				case *errorx.AppError:
 					appErr = e
 				case error:
-					appErr = errorx.ErrInternal.New(ctx, errorx.None).Wrap(e)
+					appErr = errorx.ErrInternal.New(ctx).Wrap(e)
 				case string:
-					appErr = errorx.ErrInternal.New(ctx, errorx.None).WithMessage(e)
+					appErr = errorx.ErrInternal.New(ctx).WithMessage(e)
 				default:
-					appErr = errorx.ErrInternal.New(ctx, errorx.None).WithMessage(fmt.Sprintf("%v", err))
+					appErr = errorx.ErrInternal.New(ctx).WithMessage(fmt.Sprintf("%v", err))
 				}
 
 				// 检查是否已经有响应写入，避免重复响应

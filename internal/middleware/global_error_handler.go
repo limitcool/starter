@@ -55,15 +55,15 @@ func handleError(c *gin.Context, err error) {
 			case gin.ErrorTypeBind:
 				appErr = errorx.ErrInvalidParams.New(ctx, struct{ Params string }{e.Error()}).Wrap(e)
 			case gin.ErrorTypeRender:
-				appErr = errorx.ErrInternal.New(ctx, errorx.None).Wrap(e)
+				appErr = errorx.ErrInternal.New(ctx).Wrap(e)
 			default:
-				appErr = errorx.ErrInternal.New(ctx, errorx.None).Wrap(e)
+				appErr = errorx.ErrInternal.New(ctx).Wrap(e)
 			}
 		} else {
-			appErr = errorx.ErrInternal.New(ctx, errorx.None).Wrap(e)
+			appErr = errorx.ErrInternal.New(ctx).Wrap(e)
 		}
 	default:
-		appErr = errorx.ErrInternal.New(ctx, errorx.None).WithMessage(fmt.Sprintf("%v", err))
+		appErr = errorx.ErrInternal.New(ctx).WithMessage(fmt.Sprintf("%v", err))
 	}
 
 	// 记录错误日志

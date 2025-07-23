@@ -36,7 +36,7 @@ func JWTAuth(config *configs.Config) gin.HandlerFunc {
 		if token == "" {
 			ctx := c.Request.Context()
 			logger.ErrorContext(ctx, "No authentication token provided")
-			response.Error(c, errorx.ErrUserNotLogin.New(ctx, errorx.None))
+			response.Error(c, errorx.ErrUserNotLogin.New(ctx))
 			c.Abort()
 			return
 		}
@@ -46,7 +46,7 @@ func JWTAuth(config *configs.Config) gin.HandlerFunc {
 		claims, err := jwt.ParseTokenWithContext(ctx, token, config.JwtAuth.AccessSecret)
 		if err != nil {
 			logger.ErrorContext(ctx, "Authentication token parse failed", "error", err)
-			response.Error(c, errorx.ErrUserTokenError.New(ctx, errorx.None))
+			response.Error(c, errorx.ErrUserTokenError.New(ctx))
 			c.Abort()
 			return
 		}

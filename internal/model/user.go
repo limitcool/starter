@@ -63,7 +63,7 @@ func NewUserRepo(db *gorm.DB) *UserRepo {
 func (r *UserRepo) GetByID(ctx context.Context, id int64) (*User, error) {
 	user, err := r.Get(ctx, id, nil)
 	if err != nil {
-		return nil, errorx.ErrQueryUser.New(ctx, errorx.None).Wrap(err)
+		return nil, errorx.ErrQueryUser.New(ctx).Wrap(err)
 	}
 	return user, nil
 }
@@ -73,7 +73,7 @@ func (r *UserRepo) GetUserWithAvatar(ctx context.Context, id int64) (*User, erro
 	// 先查询用户基本信息
 	user, err := r.GenericRepo.Get(ctx, id, nil)
 	if err != nil {
-		return nil, errorx.ErrQueryUser.New(ctx, errorx.None)
+		return nil, errorx.ErrQueryUser.New(ctx)
 	}
 
 	// 如果用户有头像，再预加载头像
@@ -82,7 +82,7 @@ func (r *UserRepo) GetUserWithAvatar(ctx context.Context, id int64) (*User, erro
 			Preloads: []string{"AvatarFile"},
 		})
 		if err != nil {
-			return nil, errorx.ErrQueryUserAvatar.New(ctx, errorx.None).Wrap(err)
+			return nil, errorx.ErrQueryUserAvatar.New(ctx).Wrap(err)
 		}
 
 		// 设置头像URL
@@ -102,9 +102,9 @@ func (r *UserRepo) GetByUsername(ctx context.Context, username string) (*User, e
 	})
 	if err != nil {
 		if errorx.ErrNotFound.Is(err) {
-			return nil, errorx.ErrNotFound.New(ctx, errorx.None)
+			return nil, errorx.ErrNotFound.New(ctx)
 		}
-		return nil, errorx.ErrQueryUser.New(ctx, errorx.None)
+		return nil, errorx.ErrQueryUser.New(ctx)
 	}
 	return user, nil
 }
@@ -116,7 +116,7 @@ func (r *UserRepo) IsExist(ctx context.Context, username string) (bool, error) {
 		Args:      []any{username},
 	})
 	if err != nil {
-		return false, errorx.ErrCheckUserExist.New(ctx, errorx.None)
+		return false, errorx.ErrCheckUserExist.New(ctx)
 	}
 	return count > 0, nil
 }
@@ -141,7 +141,7 @@ func (r *UserRepo) ListUsers(ctx context.Context, page, pageSize int, keyword st
 	// 获取用户列表
 	users, err := r.List(ctx, page, pageSize, opts)
 	if err != nil {
-		return nil, 0, errorx.ErrQueryUserList.New(ctx, errorx.None).Wrap(err)
+		return nil, 0, errorx.ErrQueryUserList.New(ctx).Wrap(err)
 	}
 
 	// 设置头像URL
@@ -154,7 +154,7 @@ func (r *UserRepo) ListUsers(ctx context.Context, page, pageSize int, keyword st
 	// 获取总数
 	total, err := r.Count(ctx, opts)
 	if err != nil {
-		return nil, 0, errorx.ErrQueryUserTotal.New(ctx, errorx.None).Wrap(err)
+		return nil, 0, errorx.ErrQueryUserTotal.New(ctx).Wrap(err)
 	}
 
 	return users, total, nil

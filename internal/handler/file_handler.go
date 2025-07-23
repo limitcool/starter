@@ -81,7 +81,7 @@ func (h *FileHandler) GetUploadURL(c *gin.Context) {
 	// 获取用户ID
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Error(c, errorx.ErrUserNotLogin.New(ctx, errorx.None))
+		response.Error(c, errorx.ErrUserNotLogin.New(ctx))
 		return
 	}
 
@@ -107,7 +107,7 @@ func (h *FileHandler) GetUploadURL(c *gin.Context) {
 	uploadURL, method, err := h.storage.GetUploadURL(c.Request.Context(), filePath, req.ContentType, req.IsPublic)
 	if err != nil {
 		logger.ErrorContext(c.Request.Context(), "获取上传URL失败", "error", err)
-		response.Error(c, errorx.ErrGetUploadURL.New(ctx, errorx.None))
+		response.Error(c, errorx.ErrGetUploadURL.New(ctx))
 		return
 	}
 
@@ -128,7 +128,7 @@ func (h *FileHandler) GetUploadURL(c *gin.Context) {
 
 	if err := h.db.Create(fileRecord).Error; err != nil {
 		logger.ErrorContext(c.Request.Context(), "创建文件记录失败", "error", err)
-		response.Error(c, errorx.ErrFileCreate.New(ctx, errorx.None))
+		response.Error(c, errorx.ErrFileCreate.New(ctx))
 		return
 	}
 
@@ -158,7 +158,7 @@ func (h *FileHandler) ConfirmUpload(ctx *gin.Context) {
 	// 获取文件记录
 	var fileRecord model.File
 	if err := h.db.Where("id = ?", req.FileID).First(&fileRecord).Error; err != nil {
-		response.Error(ctx, errorx.ErrFileNotFound.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileNotFound.New(ctx))
 		return
 	}
 
@@ -166,12 +166,12 @@ func (h *FileHandler) ConfirmUpload(ctx *gin.Context) {
 	exists, err := h.storage.FileExists(ctx.Request.Context(), fileRecord.Path, fileRecord.IsPublic)
 	if err != nil {
 		logger.ErrorContext(ctx.Request.Context(), "检查文件存在性失败", "error", err)
-		response.Error(ctx, errorx.ErrFileVerify.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileVerify.New(ctx))
 		return
 	}
 
 	if !exists {
-		response.Error(ctx, errorx.ErrFileUploadNotComplete.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileUploadNotComplete.New(ctx))
 		return
 	}
 
@@ -179,7 +179,7 @@ func (h *FileHandler) ConfirmUpload(ctx *gin.Context) {
 	downloadURL, err := h.storage.GetDownloadURL(ctx.Request.Context(), fileRecord.Path, fileRecord.IsPublic)
 	if err != nil {
 		logger.ErrorContext(ctx.Request.Context(), "生成下载URL失败", "error", err)
-		response.Error(ctx, errorx.ErrFileGenerateDownloadURL.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileGenerateDownloadURL.New(ctx))
 		return
 	}
 
@@ -191,7 +191,7 @@ func (h *FileHandler) ConfirmUpload(ctx *gin.Context) {
 
 	if err := h.db.Save(&fileRecord).Error; err != nil {
 		logger.ErrorContext(ctx.Request.Context(), "更新文件记录失败", "error", err)
-		response.Error(ctx, errorx.ErrFileUpdateRecord.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileUpdateRecord.New(ctx))
 		return
 	}
 
@@ -202,13 +202,13 @@ func (h *FileHandler) ConfirmUpload(ctx *gin.Context) {
 func (h *FileHandler) GetFileInfo(ctx *gin.Context) {
 	fileID := ctx.Param("id")
 	if fileID == "" {
-		response.Error(ctx, errorx.ErrFileIDEmpty.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileIDEmpty.New(ctx))
 		return
 	}
 
 	var fileRecord model.File
 	if err := h.db.Where("id = ?", fileID).First(&fileRecord).Error; err != nil {
-		response.Error(ctx, errorx.ErrFileNotFound.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileNotFound.New(ctx))
 		return
 	}
 
@@ -219,13 +219,13 @@ func (h *FileHandler) GetFileInfo(ctx *gin.Context) {
 func (h *FileHandler) GetDownloadURL(ctx *gin.Context) {
 	fileID := ctx.Param("id")
 	if fileID == "" {
-		response.Error(ctx, errorx.ErrFileIDEmpty.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileIDEmpty.New(ctx))
 		return
 	}
 
 	var fileRecord model.File
 	if err := h.db.Where("id = ?", fileID).First(&fileRecord).Error; err != nil {
-		response.Error(ctx, errorx.ErrFileNotFound.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileNotFound.New(ctx))
 		return
 	}
 
@@ -233,7 +233,7 @@ func (h *FileHandler) GetDownloadURL(ctx *gin.Context) {
 	downloadURL, err := h.storage.GetDownloadURL(ctx.Request.Context(), fileRecord.Path, fileRecord.IsPublic)
 	if err != nil {
 		logger.ErrorContext(ctx.Request.Context(), "生成下载URL失败", "error", err)
-		response.Error(ctx, errorx.ErrFileGenerateDownloadURL.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileGenerateDownloadURL.New(ctx))
 		return
 	}
 
@@ -264,14 +264,14 @@ func (h *FileHandler) UploadFile(ctx *gin.Context) {
 	// 获取用户ID
 	userID, exists := ctx.Get("user_id")
 	if !exists {
-		response.Error(ctx, errorx.ErrUnauthorized.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrUnauthorized.New(ctx))
 		return
 	}
 
 	// 获取上传的文件
 	file, err := ctx.FormFile("file")
 	if err != nil {
-		response.Error(ctx, errorx.ErrGetUploadFile.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrGetUploadFile.New(ctx))
 		return
 	}
 
@@ -302,7 +302,7 @@ func (h *FileHandler) UploadFile(ctx *gin.Context) {
 	// 打开文件
 	src, err := file.Open()
 	if err != nil {
-		response.Error(ctx, errorx.ErrOpenUploadFile.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrOpenUploadFile.New(ctx))
 		return
 	}
 	defer src.Close()
@@ -327,7 +327,7 @@ func (h *FileHandler) UploadFile(ctx *gin.Context) {
 	// 上传文件到存储
 	if err := h.storage.UploadFile(ctx.Request.Context(), filePath, src, req.IsPublic); err != nil {
 		logger.ErrorContext(ctx.Request.Context(), "文件上传失败", "error", err)
-		response.Error(ctx, errorx.ErrFileUpdate.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileUpdate.New(ctx))
 		return
 	}
 
@@ -343,7 +343,7 @@ func (h *FileHandler) UploadFile(ctx *gin.Context) {
 	// 保存文件记录到数据库
 	if err := h.db.Create(fileRecord).Error; err != nil {
 		logger.ErrorContext(ctx.Request.Context(), "创建文件记录失败", "error", err)
-		response.Error(ctx, errorx.ErrFileCreate.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileCreate.New(ctx))
 		return
 	}
 
@@ -368,27 +368,27 @@ func (h *FileHandler) UploadFile(ctx *gin.Context) {
 func (h *FileHandler) DeleteFile(ctx *gin.Context) {
 	fileID := ctx.Param("id")
 	if fileID == "" {
-		response.Error(ctx, errorx.ErrFileIDEmpty.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileIDEmpty.New(ctx))
 		return
 	}
 
 	var fileRecord model.File
 	if err := h.db.Where("id = ?", fileID).First(&fileRecord).Error; err != nil {
-		response.Error(ctx, errorx.ErrFileNotExist.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileNotExist.New(ctx))
 		return
 	}
 
 	// 删除存储中的文件
 	if err := h.storage.DeleteFile(ctx.Request.Context(), fileRecord.Path, fileRecord.IsPublic); err != nil {
 		logger.ErrorContext(ctx.Request.Context(), "删除存储文件失败", "error", err)
-		response.Error(ctx, errorx.ErrFileDelete.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileDelete.New(ctx))
 		return
 	}
 
 	// 删除数据库记录
 	if err := h.db.Delete(&fileRecord).Error; err != nil {
 		logger.ErrorContext(ctx.Request.Context(), "删除文件记录失败", "error", err)
-		response.Error(ctx, errorx.ErrFileDelete.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrFileDelete.New(ctx))
 		return
 	}
 

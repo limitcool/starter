@@ -29,7 +29,7 @@ func AdminCheckWithDB(userRepo *model.UserRepo) gin.HandlerFunc {
 		userID := GetUserIDInt64(c)
 		if userID == 0 {
 			logger.WarnContext(ctx, "未登录用户尝试访问管理员接口")
-			response.Error(c, errorx.ErrUserNotLogin.New(ctx, errorx.None))
+			response.Error(c, errorx.ErrUserNotLogin.New(ctx))
 			c.Abort()
 			return
 		}
@@ -38,7 +38,7 @@ func AdminCheckWithDB(userRepo *model.UserRepo) gin.HandlerFunc {
 		user, err := userRepo.GetByID(ctx, userID)
 		if err != nil {
 			logger.ErrorContext(ctx, "获取用户信息失败", "error", err, "user_id", userID)
-			response.Error(c, errorx.ErrUserNotFound.New(ctx, errorx.None))
+			response.Error(c, errorx.ErrUserNotFound.New(ctx))
 			c.Abort()
 			return
 		}
@@ -46,7 +46,7 @@ func AdminCheckWithDB(userRepo *model.UserRepo) gin.HandlerFunc {
 		// 检查用户是否是管理员
 		if !user.IsAdmin {
 			logger.WarnContext(ctx, "非管理员用户尝试访问管理员接口", "user_id", userID)
-			response.Error(c, errorx.ErrAccessDenied.New(ctx, errorx.None))
+			response.Error(c, errorx.ErrAccessDenied.New(ctx))
 			c.Abort()
 			return
 		}

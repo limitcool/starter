@@ -75,7 +75,7 @@ func CheckUserLogin(c *gin.Context) bool {
 	_, exists := c.Get("user_id")
 	if !exists {
 		logger.WarnContext(ctx, "用户ID不存在")
-		response.Error(c, errorx.ErrUserNotFound.New(ctx, errorx.None))
+		response.Error(c, errorx.ErrUserNotFound.New(ctx))
 		c.Abort()
 		return false
 	}
@@ -96,7 +96,7 @@ func CheckAdminPermission(c *gin.Context) bool {
 	isAdmin, ok := c.Get("is_admin")
 	if !ok || !isAdmin.(bool) {
 		logger.WarnContext(ctx, "用户不是管理员", "is_admin", isAdmin)
-		response.Error(c, errorx.ErrForbidden.New(ctx, errorx.None))
+		response.Error(c, errorx.ErrForbidden.New(ctx))
 		c.Abort()
 		return false
 	}

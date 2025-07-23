@@ -23,7 +23,7 @@ func (h *HandlerHelper) GetUserID(ctx *gin.Context) (int64, bool) {
 	userID, exists := ctx.Get("user_id")
 	if !exists {
 		logger.WarnContext(reqCtx, "用户ID不存在")
-		response.Error(ctx, errorx.ErrUserNotLogin.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrUserNotLogin.New(ctx))
 		return 0, false
 	}
 
@@ -119,7 +119,7 @@ func (h *HandlerHelper) CheckPermission(ctx *gin.Context, userID int64, resource
 		"user_id", userID,
 		"resource_owner_id", resourceOwnerID,
 		"is_admin", isAdmin)
-	response.Error(ctx, errorx.ErrForbidden.New(ctx, errorx.None))
+	response.Error(ctx, errorx.ErrForbidden.New(ctx))
 	return false
 }
 

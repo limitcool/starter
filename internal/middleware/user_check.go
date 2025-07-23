@@ -29,7 +29,7 @@ func UserCheckWithDB(userRepo *model.UserRepo) gin.HandlerFunc {
 		userID := GetUserIDInt64(c)
 		if userID == 0 {
 			logger.WarnContext(ctx, "用户ID不存在")
-			response.Error(c, errorx.ErrUserNotLogin.New(ctx, errorx.None))
+			response.Error(c, errorx.ErrUserNotLogin.New(ctx))
 			c.Abort()
 			return
 		}
@@ -38,7 +38,7 @@ func UserCheckWithDB(userRepo *model.UserRepo) gin.HandlerFunc {
 		_, err := userRepo.GetByID(ctx, userID)
 		if err != nil {
 			logger.ErrorContext(ctx, "获取用户失败", "error", err, "user_id", userID)
-			response.Error(c, errorx.ErrUserNotFound.New(ctx, errorx.None))
+			response.Error(c, errorx.ErrUserNotFound.New(ctx))
 			c.Abort()
 			return
 		}
@@ -62,7 +62,7 @@ func RegularUserCheck() gin.HandlerFunc {
 		if ok && isAdmin.(bool) {
 			ctx := c.Request.Context()
 			logger.WarnContext(ctx, "管理员不能访问普通用户接口")
-			response.Error(c, errorx.ErrAccessDenied.New(ctx, errorx.None))
+			response.Error(c, errorx.ErrAccessDenied.New(ctx))
 			c.Abort()
 			return
 		}

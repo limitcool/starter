@@ -155,7 +155,7 @@ func (h *UserHandler) UserLogin(ctx *gin.Context) {
 			"error", err,
 			"username", req.Username,
 			"ip", clientIP)
-		response.Error(ctx, errorx.ErrGenVisitToken.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrGenVisitToken.New(ctx))
 		return
 	}
 
@@ -215,7 +215,7 @@ func (h *UserHandler) UserRegister(ctx *gin.Context) {
 			"error", err,
 			"username", req.Username,
 			"ip", clientIP)
-		response.Error(ctx, errorx.ErrPasswordEncrypt.New(ctx, errorx.None).Wrap(err))
+		response.Error(ctx, errorx.ErrPasswordEncrypt.New(ctx).Wrap(err))
 		return
 	}
 
@@ -313,7 +313,7 @@ func (h *UserHandler) UserChangePassword(ctx *gin.Context) {
 	// 验证旧密码
 	if !crypto.CheckPassword(user.Password, req.OldPassword) {
 		h.Helper.LogWarning(ctx, "UserChangePassword old password incorrect", "user_id", id)
-		response.Error(ctx, errorx.ErrOldPasswordError.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrOldPasswordError.New(ctx))
 		return
 	}
 
@@ -321,7 +321,7 @@ func (h *UserHandler) UserChangePassword(ctx *gin.Context) {
 	hashedPassword, err := crypto.HashPassword(req.NewPassword)
 	if err != nil {
 		h.Helper.LogError(ctx, "UserChangePassword failed to hash password", "error", err, "user_id", id)
-		response.Error(ctx, errorx.ErrPasswordEncrypt.New(ctx, errorx.None))
+		response.Error(ctx, errorx.ErrPasswordEncrypt.New(ctx))
 		return
 	}
 
