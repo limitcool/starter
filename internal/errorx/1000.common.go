@@ -16,7 +16,7 @@ var (
 	// 成功
 	Success = DefineSimple(commonI18n, 0, "success", http.StatusOK)
 
-	ErrUnknown         = DefineSimple(commonI18n, 500000, "unknown error", http.StatusInternalServerError)                           // 未知错误
+	ErrUnknown         = DefineSimple(commonI18n, 5000, "unknown error", http.StatusInternalServerError)                             // 未知错误
 	ErrInvalidParams   = Define[struct{ Params string }](commonI18n, 1000, "invalid parameters: {{.Params}}", http.StatusBadRequest) // 请求参数错误
 	ErrInternal        = DefineSimple(commonI18n, 1001, "internal error", http.StatusInternalServerError)                            // 服务器内部错误
 	ErrUnauthorized    = DefineSimple(commonI18n, 1002, "unauthorized", http.StatusUnauthorized)                                     // 未授权
