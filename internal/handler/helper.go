@@ -3,7 +3,7 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/errorx"
+	"github.com/limitcool/starter/internal/errspec"
 	"github.com/limitcool/starter/internal/pkg/logger"
 	"github.com/spf13/cast"
 )
@@ -23,7 +23,7 @@ func (h *HandlerHelper) GetUserID(ctx *gin.Context) (int64, bool) {
 	userID, exists := ctx.Get("user_id")
 	if !exists {
 		logger.WarnContext(reqCtx, "用户ID不存在")
-		response.Error(ctx, errorx.ErrUserNotLogin.New(ctx))
+		response.Error(ctx, errspec.ErrUserNotLogin.New(ctx))
 		return 0, false
 	}
 
@@ -38,7 +38,7 @@ func (h *HandlerHelper) BindJSON(ctx *gin.Context, req interface{}, operation st
 		logger.WarnContext(reqCtx, operation+" request validation failed",
 			"error", err,
 			"client_ip", ctx.ClientIP())
-		response.Error(ctx, errorx.ErrInvalidParams.New(ctx, struct{ Params string }{err.Error()}))
+		response.Error(ctx, errspec.ErrInvalidParams.New(ctx, struct{ Params string }{err.Error()}))
 		return false
 	}
 
@@ -119,7 +119,7 @@ func (h *HandlerHelper) CheckPermission(ctx *gin.Context, userID int64, resource
 		"user_id", userID,
 		"resource_owner_id", resourceOwnerID,
 		"is_admin", isAdmin)
-	response.Error(ctx, errorx.ErrForbidden.New(ctx))
+	response.Error(ctx, errspec.ErrForbidden.New(ctx))
 	return false
 }
 
@@ -135,7 +135,7 @@ func (h *HandlerHelper) ValidateID(ctx *gin.Context, idStr string, operation str
 	id := cast.ToUint(idStr)
 	if id == 0 {
 		logger.WarnContext(reqCtx, operation+" invalid ID", "id", idStr)
-		response.Error(ctx, errorx.ErrInvalidParams.New(ctx, struct{ Params string }{"ID"}))
+		response.Error(ctx, errspec.ErrInvalidParams.New(ctx, struct{ Params string }{"ID"}))
 		return 0, false
 	}
 
@@ -149,7 +149,7 @@ func (h *HandlerHelper) ValidateInt64ID(ctx *gin.Context, idStr string, operatio
 	id := cast.ToInt64(idStr)
 	if id == 0 {
 		logger.WarnContext(reqCtx, operation+" invalid ID", "id", idStr)
-		response.Error(ctx, errorx.ErrInvalidParams.New(ctx, struct{ Params string }{"ID"}))
+		response.Error(ctx, errspec.ErrInvalidParams.New(ctx, struct{ Params string }{"ID"}))
 		return 0, false
 	}
 

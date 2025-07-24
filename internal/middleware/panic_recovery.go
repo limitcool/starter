@@ -6,7 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/errorx"
+	"github.com/limitcool/starter/internal/errspec"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
@@ -39,11 +40,11 @@ func PanicRecovery() gin.HandlerFunc {
 				case *errorx.AppError:
 					appErr = e
 				case error:
-					appErr = errorx.ErrInternal.New(ctx).Wrap(e)
+					appErr = errspec.ErrInternal.New(ctx).Wrap(e)
 				case string:
-					appErr = errorx.ErrInternal.New(ctx).WithMessage(e)
+					appErr = errspec.ErrInternal.New(ctx).WithMessage(e)
 				default:
-					appErr = errorx.ErrInternal.New(ctx).WithMessage(fmt.Sprintf("%v", err))
+					appErr = errspec.ErrInternal.New(ctx).WithMessage(fmt.Sprintf("%v", err))
 				}
 
 				// 检查是否已经有响应写入，避免重复响应

@@ -7,7 +7,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/limitcool/starter/internal/errorx"
+	"github.com/limitcool/starter/internal/errspec"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 )
 
 // Result 定义API响应结构
@@ -30,7 +31,7 @@ func ErrorHandler() gin.HandlerFunc {
 			var appErr *errorx.AppError
 			if !errors.As(err, appErr) {
 				// 对于非应用错误，返回通用错误
-				appErr = errorx.ErrUnknown.New(c.Request.Context())
+				appErr = errspec.ErrUnknown.New(c.Request.Context())
 			}
 
 			c.JSON(appErr.HttpStatus(), Result{
@@ -52,25 +53,25 @@ func UserLoginHandler(c *gin.Context) {
 
 	// 参数验证
 	if username == "" || password == "" {
-		c.Error(errorx.ErrUserNameOrPasswordEmpty.New(ctx))
+		c.Error(errspec.ErrUserNameOrPasswordEmpty.New(ctx))
 		return
 	}
 
 	// 模拟用户查询
 	if username != "admin" {
-		c.Error(errorx.ErrUserNotFound.New(ctx))
+		c.Error(errspec.ErrUserNotFound.New(ctx))
 		return
 	}
 
 	// 模拟密码验证
 	if password != "123456" {
-		c.Error(errorx.ErrPassword.New(ctx))
+		c.Error(errspec.ErrPassword.New(ctx))
 		return
 	}
 
 	// 登录成功
 	c.JSON(http.StatusOK, Result{
-		Code:    errorx.Success.Code(),
+		Code:    errspec.Success.Code(),
 		Message: "登录成功",
 		Data:    map[string]string{"username": username},
 	})
@@ -81,14 +82,14 @@ func main() {
 	ctx := context.TODO()
 
 	// 演示直接使用错误
-	fmt.Println("错误示例:", errorx.ErrUserNotFound.New(ctx))
+	fmt.Println("错误示例:", errspec.ErrUserNotFound.New(ctx))
 
 	// 演示使用GetError
-	unknownErr := errorx.ErrInternal.New(ctx)
+	unknownErr := errspec.ErrInternal.New(ctx)
 	fmt.Println("通过错误码获取错误:", unknownErr.Error())
 
 	// 演示添加额外信息
-	customErr := errorx.ErrNotFound.New(ctx).WithMessage("用户ID为123的用户")
+	customErr := errspec.ErrNotFound.New(ctx).WithMessage("用户ID为123的用户")
 	fmt.Println("自定义错误消息:", customErr.Error())
 
 	// 设置Gin路由

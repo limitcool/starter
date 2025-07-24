@@ -3,7 +3,7 @@ package model
 import (
 	"context"
 
-	"github.com/limitcool/starter/internal/errorx"
+	"github.com/limitcool/starter/internal/errspec"
 	"github.com/limitcool/starter/internal/pkg/options"
 	"gorm.io/gorm"
 )
@@ -69,7 +69,7 @@ type GenericRepo[T Entity] struct {
 func NewGenericRepo[T Entity](db *gorm.DB) *GenericRepo[T] {
 	return &GenericRepo[T]{
 		DB:        db,
-		ErrorCode: errorx.ErrNotFound.Code(), // 默认错误码
+		ErrorCode: errspec.ErrNotFound.Code(), // 默认错误码
 	}
 }
 
@@ -121,13 +121,13 @@ func (r *GenericRepo[T]) Get(ctx context.Context, id any, opts *QueryOptions) (*
 		err = query.First(&entity).Error
 	} else {
 		// 没有ID和条件，返回错误
-		return nil, errorx.ErrQueryParamEmpty.New(ctx)
+		return nil, errspec.ErrQueryParamEmpty.New(ctx)
 	}
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			// 使用ErrorCode创建特定的错误
-			return nil, errorx.ErrRecordNotExist.New(ctx).Wrap(err)
+			return nil, errspec.ErrRecordNotExist.New(ctx).Wrap(err)
 		}
 		return nil, err
 	}

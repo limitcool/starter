@@ -7,7 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/limitcool/starter/internal/errorx"
+	"github.com/limitcool/starter/internal/errspec"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
@@ -81,7 +82,7 @@ func SuccessNoData(c *gin.Context, msg ...string) {
 func Error(c *gin.Context, err error) {
 
 	var (
-		errorCode  = errorx.ErrUnknown.Code()
+		errorCode  = errspec.ErrUnknown.Code()
 		httpStatus = http.StatusInternalServerError
 		message    = err.Error()
 	)

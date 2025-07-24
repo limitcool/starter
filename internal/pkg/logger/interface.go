@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/limitcool/starter/internal/errorx"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/pkg/errors"
 )
 

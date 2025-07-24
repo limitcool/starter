@@ -6,7 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/errorx"
+	"github.com/limitcool/starter/internal/errspec"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
@@ -53,17 +54,17 @@ func handleError(c *gin.Context, err error) {
 		if httpErr, ok := e.(*gin.Error); ok {
 			switch httpErr.Type {
 			case gin.ErrorTypeBind:
-				appErr = errorx.ErrInvalidParams.New(ctx, struct{ Params string }{e.Error()}).Wrap(e)
+				appErr = errspec.ErrInvalidParams.New(ctx, struct{ Params string }{e.Error()}).Wrap(e)
 			case gin.ErrorTypeRender:
-				appErr = errorx.ErrInternal.New(ctx).Wrap(e)
+				appErr = errspec.ErrInternal.New(ctx).Wrap(e)
 			default:
-				appErr = errorx.ErrInternal.New(ctx).Wrap(e)
+				appErr = errspec.ErrInternal.New(ctx).Wrap(e)
 			}
 		} else {
-			appErr = errorx.ErrInternal.New(ctx).Wrap(e)
+			appErr = errspec.ErrInternal.New(ctx).Wrap(e)
 		}
 	default:
-		appErr = errorx.ErrInternal.New(ctx).WithMessage(fmt.Sprintf("%v", err))
+		appErr = errspec.ErrInternal.New(ctx).WithMessage(fmt.Sprintf("%v", err))
 	}
 
 	// 记录错误日志

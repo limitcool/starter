@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/limitcool/starter/internal/errorx"
+	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/pkg/logconfig"
 	"github.com/pkg/errors"
 )

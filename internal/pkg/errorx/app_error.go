@@ -5,28 +5,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/epkgs/i18n"
-	"github.com/epkgs/i18n/errorx"
 	"github.com/pkg/errors"
 )
-
-type none = struct{}
-
-var None = none{}
-
-func Define[Args any](i18n *i18n.I18n, code int, format string, httpStatus int) *errorx.Definition[*AppError, Args] {
-	return errorx.Define[Args](i18n, format, wrapAppError(code, httpStatus))
-}
-
-func DefineSimple(i18n *i18n.I18n, code int, format string, httpStatus int) *errorx.DefinitionSimple[*AppError] {
-	return errorx.DefineSimple(i18n, format, wrapAppError(code, httpStatus))
-}
-
-func wrapAppError(code, httpStatus int) errorx.Wrapper[*AppError] {
-	return func(err *errorx.Error) *AppError {
-		return NewAppError(code, err, httpStatus)
-	}
-}
 
 // AppError 是应用程序错误的基本结构
 type AppError struct {

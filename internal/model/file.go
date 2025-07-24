@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/limitcool/starter/internal/errorx"
+	"github.com/limitcool/starter/internal/errspec"
 	"gorm.io/gorm"
 )
 
@@ -66,7 +66,7 @@ type FileURLBuilder interface {
 // NewFileRepo 创建文件仓库
 func NewFileRepo(db *gorm.DB) *FileRepo {
 	genericRepo := NewGenericRepo[File](db)
-	genericRepo.ErrorCode = errorx.ErrFileNotFound.Code()
+	genericRepo.ErrorCode = errspec.ErrFileNotFound.Code()
 
 	return &FileRepo{
 		GenericRepo: genericRepo,
@@ -77,7 +77,7 @@ func NewFileRepo(db *gorm.DB) *FileRepo {
 // NewFileRepoWithURLBuilder 创建带有自定义URL构建器的文件仓库
 func NewFileRepoWithURLBuilder(db *gorm.DB, urlBuilder FileURLBuilder) *FileRepo {
 	genericRepo := NewGenericRepo[File](db)
-	genericRepo.ErrorCode = errorx.ErrFileNotFound.Code()
+	genericRepo.ErrorCode = errspec.ErrFileNotFound.Code()
 
 	return &FileRepo{
 		GenericRepo: genericRepo,
@@ -99,7 +99,7 @@ func (d *defaultFileURLBuilder) BuildFileURL(path string) string {
 func (r *FileRepo) GetByID(ctx context.Context, id uint) (*File, error) {
 	file, err := r.Get(ctx, id, nil)
 	if err != nil {
-		return nil, errorx.ErrQueryFile.New(ctx).Wrap(err)
+		return nil, errspec.ErrQueryFile.New(ctx).Wrap(err)
 	}
 
 	// 设置URL字段
@@ -125,7 +125,7 @@ func (r *FileRepo) ListByUser(ctx context.Context, userID int64, page, pageSize 
 	}
 	files, err := r.List(ctx, page, pageSize, opts)
 	if err != nil {
-		return nil, errorx.ErrQueryUserFileList.New(ctx).Wrap(err)
+		return nil, errspec.ErrQueryUserFileList.New(ctx).Wrap(err)
 	}
 
 	// 为所有文件设置URL
@@ -145,7 +145,7 @@ func (r *FileRepo) CountByUser(ctx context.Context, userID int64) (int64, error)
 		Args:      []any{userID, 2},
 	})
 	if err != nil {
-		return 0, errorx.ErrQueryUserFileTotal.New(ctx).Wrap(err)
+		return 0, errspec.ErrQueryUserFileTotal.New(ctx).Wrap(err)
 	}
 	return count, nil
 }
@@ -186,7 +186,7 @@ func (r *FileRepo) ListFiles(ctx context.Context, page, pageSize int, fileType, 
 	// 获取文件列表
 	files, err := r.List(ctx, page, pageSize, opts)
 	if err != nil {
-		return nil, 0, errorx.ErrQueryFileList.New(ctx).Wrap(err)
+		return nil, 0, errspec.ErrQueryFileList.New(ctx).Wrap(err)
 	}
 
 	// 为所有文件设置URL
@@ -199,7 +199,7 @@ func (r *FileRepo) ListFiles(ctx context.Context, page, pageSize int, fileType, 
 	// 获取总数
 	total, err := r.Count(ctx, opts)
 	if err != nil {
-		return nil, 0, errorx.ErrQueryFileTotal.New(ctx).Wrap(err)
+		return nil, 0, errspec.ErrQueryFileTotal.New(ctx).Wrap(err)
 	}
 
 	return files, total, nil
