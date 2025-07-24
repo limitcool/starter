@@ -7,18 +7,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/limitcool/starter/internal/errspec"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
-// Response API标准响应结构
-type Response[T any] struct {
-	Code    int    `json:"code"`                 // 错误码
-	Msg     string `json:"message"`              // 提示信息
-	Data    T      `json:"data"`                 // 数据
-	ReqID   string `json:"request_id,omitempty"` // 请求ID
-	Time    int64  `json:"timestamp,omitempty"`  // 时间戳
-	TraceID string `json:"trace_id,omitempty"`   // 链路追踪ID
+// Result API标准响应结构
+type Result[T any] struct {
+	Code      int    `json:"code"`                 // 错误码
+	Message   string `json:"message"`              // 提示信息
+	Data      T      `json:"data"`                 // 数据
+	RequestID string `json:"request_id,omitempty"` // 请求ID
+	Time      int64  `json:"timestamp,omitempty"`  // 时间戳
+	TraceID   string `json:"trace_id,omitempty"`   // 链路追踪ID
 }
 
 // PageResult 分页结果
@@ -49,12 +50,12 @@ func Success[T any](c *gin.Context, data T, msg ...string) {
 	// 获取请求ID
 	requestID := getRequestID(c)
 
-	c.JSON(http.StatusOK, Response[T]{
-		Code:  0, // 成功码为0
-		Msg:   message,
-		Data:  data,
-		ReqID: requestID,
-		Time:  time.Now().Unix(),
+	c.JSON(http.StatusOK, Result[T]{
+		Code:      0, // 成功码为0
+		Message:   message,
+		Data:      data,
+		RequestID: requestID,
+		Time:      time.Now().Unix(),
 	})
 }
 
@@ -68,45 +69,33 @@ func SuccessNoData(c *gin.Context, msg ...string) {
 	// 获取请求ID
 	requestID := getRequestID(c)
 
-	c.JSON(http.StatusOK, Response[struct{}]{
-		Code:  0, // 成功码为0
-		Msg:   message,
-		Data:  struct{}{},
-		ReqID: requestID,
-		Time:  time.Now().Unix(),
+	c.JSON(http.StatusOK, Result[struct{}]{
+		Code:      0, // 成功码为0
+		Message:   message,
+		Data:      struct{}{},
+		RequestID: requestID,
+		Time:      time.Now().Unix(),
 	})
 }
 
 // Error 返回错误响应
-func Error(c *gin.Context, err error, msg ...string) {
+func Error(c *gin.Context, err error) {
+
 	var (
-		httpStatus int
-		errorCode  int
-		message    string
+		errorCode  = errspec.ErrUnknown.Code()
+		httpStatus = http.StatusInternalServerError
+		message    = err.Error()
 	)
 
 	// 获取请求上下文
 	ctx := c.Request.Context()
 
-	// 尝试使用错误链推导错误码
-	err = errorx.WrapErrorWithContext(ctx, err, "")
-
-	// 获取错误信息
-	if appErr, ok := err.(*errorx.AppError); ok {
-		// 如果是 AppError类型，直接使用其属性
-		message = appErr.GetErrorMsg()
-		httpStatus = getHttpStatus(appErr)
-		errorCode = appErr.GetErrorCode()
-	} else {
-		// 如果不是 AppError类型，使用默认值
-		message = err.Error()
-		httpStatus = http.StatusInternalServerError
-		errorCode = errorx.ErrorUnknownCode
+	if e, ok := err.(interface{ Code() int }); ok {
+		errorCode = e.Code()
 	}
 
-	// 允许调用方覆盖原始错误消息
-	if len(msg) > 0 {
-		message = msg[0]
+	if e, ok := err.(interface{ HttpStatus() int }); ok {
+		httpStatus = e.HttpStatus()
 	}
 
 	// 获取请求ID
@@ -124,26 +113,18 @@ func Error(c *gin.Context, err error, msg ...string) {
 		"path", c.Request.URL.Path,
 		"method", c.Request.Method,
 		"client_ip", c.ClientIP(),
-		"error_chain", errorx.FormatErrorChainWithContext(ctx, err),
+		"error_chain", errorx.FormatErrorChain(err),
 	)
 
 	// 统一响应结构
-	c.JSON(httpStatus, Response[struct{}]{
-		Code:    errorCode,
-		Msg:     message,
-		Data:    struct{}{},
-		ReqID:   requestID,
-		Time:    time.Now().Unix(),
-		TraceID: traceID,
+	c.JSON(httpStatus, Result[struct{}]{
+		Code:      errorCode,
+		Message:   message,
+		Data:      struct{}{},
+		RequestID: requestID,
+		Time:      time.Now().Unix(),
+		TraceID:   traceID,
 	})
-}
-
-// getHttpStatus 获取HTTP状态码，如果AppError没有设置HttpStatus则返回500
-func getHttpStatus(err *errorx.AppError) int {
-	if err.GetHttpStatus() == 0 {
-		return http.StatusInternalServerError
-	}
-	return err.GetHttpStatus()
 }
 
 // getRequestID 获取请求ID，如果不存在则生成新的

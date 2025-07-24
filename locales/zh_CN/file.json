@@ -1,0 +1,17 @@
+{
+  "file does not exist": "文件不存在",
+  "file upload failed": "文件上传失败",
+  "file deletion failed": "文件删除失败",
+  "file update failed": "文件更新失败",
+  "file download failed": "文件下载失败",
+  "get upload url failed": "获取上传URL失败",
+  "file create failed": "创建文件记录失败",
+  "file not exist": "文件记录不存在",
+  "file verify failed": "验证文件失败",
+  "file upload not complete": "文件上传未完成",
+  "generate download url failed": "生成下载URL失败",
+  "file update record failed": "更新文件记录失败",
+  "file id can not be empty": "文件ID不能为空",
+  "get upload file failed": "获取上传文件失败",
+  "open upload file failed": "打开上传文件失败"
+}

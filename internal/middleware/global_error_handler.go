@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
+	"github.com/limitcool/starter/internal/errspec"
 	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
@@ -43,9 +44,6 @@ func handleError(c *gin.Context, err error) {
 	// 获取请求上下文
 	ctx := c.Request.Context()
 
-	// 尝试使用错误链推导错误码
-	err = errorx.WrapErrorWithContext(ctx, err, "")
-
 	// 根据错误类型返回不同的响应
 	var appErr *errorx.AppError
 	switch e := err.(type) {
@@ -56,17 +54,17 @@ func handleError(c *gin.Context, err error) {
 		if httpErr, ok := e.(*gin.Error); ok {
 			switch httpErr.Type {
 			case gin.ErrorTypeBind:
-				appErr = errorx.ErrInvalidParams.WithError(e)
+				appErr = errspec.ErrInvalidParams.New(ctx, struct{ Params string }{e.Error()}).Wrap(e)
 			case gin.ErrorTypeRender:
-				appErr = errorx.ErrInternal.WithError(e)
+				appErr = errspec.ErrInternal.New(ctx).Wrap(e)
 			default:
-				appErr = errorx.ErrInternal.WithError(e)
+				appErr = errspec.ErrInternal.New(ctx).Wrap(e)
 			}
 		} else {
-			appErr = errorx.ErrInternal.WithError(e)
+			appErr = errspec.ErrInternal.New(ctx).Wrap(e)
 		}
 	default:
-		appErr = errorx.ErrInternal.WithMsg(fmt.Sprintf("%v", err))
+		appErr = errspec.ErrInternal.New(ctx).WithMessage(fmt.Sprintf("%v", err))
 	}
 
 	// 记录错误日志

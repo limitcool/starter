@@ -253,10 +253,10 @@ func LogErrorWithContext(ctx context.Context, msg string, err error, keyvals ...
 		// 处理 AppError 类型
 		if appErr, ok := err.(*errorx.AppError); ok {
 			// 添加错误码
-			fields = append(fields, "error_code", appErr.GetErrorCode())
+			fields = append(fields, "error_code", appErr.Code())
 
 			// 添加错误链
-			errorChain := errorx.FormatErrorChain(appErr)
+			errorChain := fmt.Sprintf("%+v", appErr)
 			if errorChain != "" {
 				fields = append(fields, "error_chain", errorChain)
 

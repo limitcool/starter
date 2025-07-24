@@ -1,16 +1,15 @@
 package handler
 
 import (
-	"errors"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
 	"github.com/limitcool/starter/internal/dto"
+	"github.com/limitcool/starter/internal/errspec"
 	"github.com/limitcool/starter/internal/middleware"
 	"github.com/limitcool/starter/internal/model"
 	"github.com/limitcool/starter/internal/pkg/crypto"
-	"github.com/limitcool/starter/internal/pkg/errorx"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
@@ -77,7 +76,7 @@ func (h *UserHandler) UserLogin(ctx *gin.Context) {
 		logger.WarnContext(reqCtx, "UserLogin request validation failed",
 			"error", err,
 			"client_ip", ctx.ClientIP())
-		response.Error(ctx, errorx.ErrInvalidParams.WithError(err))
+		response.Error(ctx, errspec.ErrInvalidParams.New(ctx, struct{ Params string }{err.Error()}))
 		return
 	}
 
@@ -95,7 +94,7 @@ func (h *UserHandler) UserLogin(ctx *gin.Context) {
 	// 查询用户
 	user, err := userRepo.GetByUsername(reqCtx, req.Username)
 	if err != nil {
-		if errors.Is(err, errorx.ErrUserNotFound) {
+		if errspec.ErrUserNotFound.Is(err) {
 			// 用户不存在
 			logger.WarnContext(reqCtx, "UserLogin user not found",
 				"username", req.Username,
@@ -114,7 +113,7 @@ func (h *UserHandler) UserLogin(ctx *gin.Context) {
 
 	// 检查用户是否启用
 	if !user.Enabled {
-		disabledErr := errorx.Errorf(errorx.ErrUserDisabled, "用户 %s 已被禁用", req.Username)
+		disabledErr := errspec.ErrUserDisabled.New(ctx, struct{ Name string }{req.Username})
 		logger.WarnContext(reqCtx, "UserLogin user is disabled",
 			"username", req.Username,
 			"ip", clientIP)
@@ -124,7 +123,7 @@ func (h *UserHandler) UserLogin(ctx *gin.Context) {
 
 	// 验证密码
 	if !crypto.CheckPassword(user.Password, req.Password) {
-		passwordErr := errorx.Errorf(errorx.ErrUserPasswordError, "用户 %s 的密码错误", req.Username)
+		passwordErr := errspec.ErrUserPassword.New(ctx, struct{ Name string }{req.Username})
 		logger.WarnContext(reqCtx, "UserLogin password incorrect",
 			"username", req.Username,
 			"ip", clientIP)
@@ -156,7 +155,7 @@ func (h *UserHandler) UserLogin(ctx *gin.Context) {
 			"error", err,
 			"username", req.Username,
 			"ip", clientIP)
-		response.Error(ctx, errorx.WrapError(err, "生成令牌失败"))
+		response.Error(ctx, errspec.ErrGenVisitToken.New(ctx))
 		return
 	}
 
@@ -179,7 +178,7 @@ func (h *UserHandler) UserRegister(ctx *gin.Context) {
 		logger.WarnContext(reqCtx, "UserRegister request validation failed",
 			"error", err,
 			"client_ip", ctx.ClientIP())
-		response.Error(ctx, errorx.ErrInvalidParams.WithError(err))
+		response.Error(ctx, errspec.ErrInvalidParams.New(ctx, struct{ Params string }{err.Error()}))
 		return
 	}
 
@@ -201,7 +200,7 @@ func (h *UserHandler) UserRegister(ctx *gin.Context) {
 	}
 
 	if exists {
-		existsErr := errorx.Errorf(errorx.ErrUserExists, "用户名 %s 已存在", req.Username)
+		existsErr := errspec.ErrUserExists.New(ctx, struct{ Name string }{req.Username})
 		logger.WarnContext(reqCtx, "UserRegister username already exists",
 			"username", req.Username,
 			"ip", clientIP)
@@ -216,7 +215,7 @@ func (h *UserHandler) UserRegister(ctx *gin.Context) {
 			"error", err,
 			"username", req.Username,
 			"ip", clientIP)
-		response.Error(ctx, errorx.WrapError(err, "密码加密失败"))
+		response.Error(ctx, errspec.ErrPasswordEncrypt.New(ctx).Wrap(err))
 		return
 	}
 
@@ -268,7 +267,7 @@ func (h *UserHandler) UserInfo(ctx *gin.Context) {
 	// 查询用户信息
 	user, err := userRepo.GetByID(ctx.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, errorx.ErrUserNotFound) {
+		if errspec.ErrUserNotFound.Is(err) {
 			h.Helper.HandleNotFoundError(ctx, err, "UserInfo", "user_id", id)
 			return
 		}
@@ -303,7 +302,7 @@ func (h *UserHandler) UserChangePassword(ctx *gin.Context) {
 	// 查询用户
 	user, err := userRepo.GetByID(ctx.Request.Context(), id)
 	if err != nil {
-		if errors.Is(err, errorx.ErrUserNotFound) {
+		if errspec.ErrUserNotFound.Is(err) {
 			h.Helper.HandleNotFoundError(ctx, err, "UserChangePassword", "user_id", id)
 			return
 		}
@@ -314,7 +313,7 @@ func (h *UserHandler) UserChangePassword(ctx *gin.Context) {
 	// 验证旧密码
 	if !crypto.CheckPassword(user.Password, req.OldPassword) {
 		h.Helper.LogWarning(ctx, "UserChangePassword old password incorrect", "user_id", id)
-		response.Error(ctx, errorx.Errorf(errorx.ErrUserPasswordError, "旧密码错误"))
+		response.Error(ctx, errspec.ErrOldPasswordError.New(ctx))
 		return
 	}
 
@@ -322,7 +321,7 @@ func (h *UserHandler) UserChangePassword(ctx *gin.Context) {
 	hashedPassword, err := crypto.HashPassword(req.NewPassword)
 	if err != nil {
 		h.Helper.LogError(ctx, "UserChangePassword failed to hash password", "error", err, "user_id", id)
-		response.Error(ctx, errorx.WrapError(err, "密码加密失败"))
+		response.Error(ctx, errspec.ErrPasswordEncrypt.New(ctx))
 		return
 	}
 

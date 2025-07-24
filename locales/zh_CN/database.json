@@ -1,0 +1,21 @@
+{
+  "database error": "数据库错误",
+  "database query error": "数据库查询错误",
+  "database insert error": "数据库插入错误",
+  "database update error": "数据库更新错误",
+  "database delete error": "数据库删除错误",
+  "database connection error": "数据库连接错误",
+  "database transaction error": "数据库事务错误",
+  "query parameter cannot be empty": "查询参数不能为空",
+  "record does not exist": "记录不存在",
+  "query user failed": "查询用户失败",
+  "query user avatar failed": "查询用户头像失败",
+  "check user exist failed": "检查用户是否存在失败",
+  "query user list failed": "查询用户列表失败",
+  "query user total failed": "查询用户总数失败",
+  "query file failed": "查询文件失败",
+  "query user file list failed": "查询用户文件列表失败",
+  "query user file total failed": "查询用户文件总数失败",
+  "query file list failed": "查询文件列表失败",
+  "query file total failed": "查询文件总数失败"
+}

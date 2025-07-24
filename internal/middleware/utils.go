@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/limitcool/starter/internal/api/response"
-	"github.com/limitcool/starter/internal/pkg/errorx"
+	"github.com/limitcool/starter/internal/errspec"
 	"github.com/limitcool/starter/internal/pkg/logger"
 )
 
@@ -75,7 +75,7 @@ func CheckUserLogin(c *gin.Context) bool {
 	_, exists := c.Get("user_id")
 	if !exists {
 		logger.WarnContext(ctx, "用户ID不存在")
-		response.Error(c, errorx.ErrUserNoLogin)
+		response.Error(c, errspec.ErrUserNotFound.New(ctx))
 		c.Abort()
 		return false
 	}
@@ -96,7 +96,7 @@ func CheckAdminPermission(c *gin.Context) bool {
 	isAdmin, ok := c.Get("is_admin")
 	if !ok || !isAdmin.(bool) {
 		logger.WarnContext(ctx, "用户不是管理员", "is_admin", isAdmin)
-		response.Error(c, errorx.ErrUserNoLogin.WithMsg("用户无权限"))
+		response.Error(c, errspec.ErrForbidden.New(ctx))
 		c.Abort()
 		return false
 	}
